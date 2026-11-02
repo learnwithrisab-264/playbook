@@ -51,6 +51,11 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     var submittedQuery by mutableStateOf<String?>(null); private set
     var results by mutableStateOf(FeedState()); private set
     private var searchSession: SearchSession? = null
+    /** Search shows two separate sections; this one holds the Shorts. */
+    var shortsResults by mutableStateOf(FeedState()); private set
+    var searchShowsShorts by mutableStateOf(false)
+    private var shortsSearch: com.sourabh.jarvistube.data.ShortsSearch? = null
+    private var shortsSearchJob: Job? = null
     private var searchJob: Job? = null
     val recents = mutableStateListOf<String>()
 
@@ -436,7 +441,14 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         prefs.edit().putString(recentsKey, recents.joinToString("\n")).apply()
 
         searchJob?.cancel()
+        searchShowsShorts = false
         val session = SearchSession(text).also { searchSession = it }
+        val shortsSession = com.sourabh.jarvistube.data.ShortsSearch(text).also { shortsSearch = it }
+        shortsSearchJob?.cancel()
+        shortsSearchJob = viewModelScope.launch {
+            shortsResults = FeedState(loading = true)
+            shortsResults = runCatchingFeed { FeedState(items = shortsSession.load().distinctBy { it.url }) }
+        }
         searchJob = viewModelScope.launch {
             results = FeedState(loading = true)
             results = runCatchingFeed { FeedState(items = session.loadFirst().distinctBy { it.url }) }
@@ -456,9 +468,23 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun loadMoreSearchShorts() {
+        val session = shortsSearch ?: return
+        val cur = shortsResults
+        if (cur.loading || cur.loadingMore || !session.hasMore || cur.items.isEmpty()) return
+        shortsSearchJob = viewModelScope.launch {
+            shortsResults = cur.copy(loadingMore = true)
+            shortsResults = runCatchingFeed(fallback = cur) {
+                cur.copy(items = (cur.items + session.load()).distinctBy { it.url }, loadingMore = false)
+            }
+        }
+    }
+
     fun clearSearch() {
         searchJob?.cancel()
         query = ""
+        shortsSearchJob?.cancel()
+        shortsResults = FeedState()
         submittedQuery = null
         results = FeedState()
     }

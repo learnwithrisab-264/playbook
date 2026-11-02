@@ -325,6 +325,7 @@ fun SearchOverlay(vm: TubeViewModel, bottomPadding: Dp = 0.dp) {
     val keyboard = LocalSoftwareKeyboardController.current
     val requester = remember { FocusRequester() }
     val listState = rememberLazyListState()
+    val shortsGrid = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val submitted = vm.submittedQuery
     val showResults = submitted != null && vm.query.trim() == submitted
 
@@ -367,10 +368,32 @@ fun SearchOverlay(vm: TubeViewModel, bottomPadding: Dp = 0.dp) {
         }
 
         if (showResults) {
+            // Two sections, never mixed. No Shorts section during a study session or lock.
+            val shortsOpen = vm.searchShowsShorts && vm.shortsAllowed
+            if (vm.shortsAllowed) Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TopicChip("Videos", !shortsOpen) { vm.searchShowsShorts = false }
+                TopicChip("Shorts", shortsOpen) { vm.searchShowsShorts = true }
+            }
+            if (shortsOpen) {
+                val blockedFor = rememberShortsBlockLeft()
+                if (blockedFor > 0) ShortsLocked(blockedFor)
+                else ShortsGrid(
+                    vm.shortsResults, shortsGrid, bottomPadding,
+                    onRetry = { vm.submitSearch(submitted!!) },
+                    onPlay = { v -> vm.openShorts({ vm.shortsResults.items }, v, vm::loadMoreSearchShorts) },
+                    onMore = vm::loadMoreSearchShorts,
+                    emptyBody = "No Shorts matched this search.",
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 4.dp, bottom = bottomPadding + 24.dp)) {
                 feedItems(vm.results, onRetry = { vm.submitSearch(submitted!!) }, onPlay = vm::play)
             }
             LoadMoreEffect(listState, vm.results.items.size, vm::loadMoreSearch)
+            }
         } else {
             val rows: List<Pair<String, Boolean>> = if (vm.query.isBlank()) {
                 vm.recents.map { it to true }
