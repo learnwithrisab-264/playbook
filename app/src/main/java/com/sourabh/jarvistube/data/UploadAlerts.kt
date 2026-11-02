@@ -33,24 +33,37 @@ object UploadAlerts {
     fun init(context: Context) {
         appCtx = context.applicationContext
         prefs = appCtx.getSharedPreferences("alerts", Context.MODE_PRIVATE)
-        runCatching {
-            val arr = JSONArray(prefs.getString("channels", "[]"))
-            for (i in 0 until arr.length()) {
-                val o = arr.getJSONObject(i)
-                channels += ChannelRef(o.getString("url"), o.getString("name"), o.optString("avatar").ifEmpty { null })
-            }
+        // The old shared bells go to the account in use; after that each account has its own.
+        prefs.getString("channels", null)?.let { shared ->
+            prefs.edit().putString("channels:" + Session.dataKey, shared).remove("channels").apply()
         }
+        load(Session.dataKey)
+        Session.onDataKeyChange { load(it); schedule() }
         appCtx.getSystemService(NotificationManager::class.java)?.createNotificationChannel(
             NotificationChannel(CHANNEL_ID, "New uploads", NotificationManager.IMPORTANCE_DEFAULT)
         )
         schedule()
     }
 
+    private var storeKey = "channels"
+
+    private fun load(key: String) {
+        storeKey = "channels:$key"
+        channels.clear()
+        runCatching {
+            val arr = JSONArray(prefs.getString(storeKey, "[]"))
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                channels += ChannelRef(o.getString("url"), o.getString("name"), o.optString("avatar").ifEmpty { null })
+            }
+        }
+    }
+
     fun isOn(url: String) = channels.any { it.url == url }
 
     fun toggle(ref: ChannelRef) {
         if (isOn(ref.url)) channels.removeAll { it.url == ref.url } else channels += ref
-        prefs.edit().putString("channels", JSONArray().apply {
+        prefs.edit().putString(storeKey, JSONArray().apply {
             channels.forEach { put(JSONObject().put("url", it.url).put("name", it.name).put("avatar", it.avatar.orEmpty())) }
         }.toString()).apply()
         schedule()

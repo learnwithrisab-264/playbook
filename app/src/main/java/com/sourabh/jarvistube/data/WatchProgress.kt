@@ -17,10 +17,23 @@ object WatchProgress {
     private lateinit var prefs: SharedPreferences
     val items = mutableStateListOf<InProgress>()
 
+    private var storeKey = "items"
+
     fun init(context: Context) {
         prefs = context.getSharedPreferences("progress", Context.MODE_PRIVATE)
+        // The old shared list goes to the account in use; after that each account has its own.
+        prefs.getString("items", null)?.let { shared ->
+            prefs.edit().putString("items:" + Session.dataKey, shared).remove("items").apply()
+        }
+        load(Session.dataKey)
+        Session.onDataKeyChange(::load)
+    }
+
+    private fun load(key: String) {
+        storeKey = "items:$key"
+        items.clear()
         runCatching {
-            val arr = JSONArray(prefs.getString("items", "[]"))
+            val arr = JSONArray(prefs.getString(storeKey, "[]"))
             for (i in 0 until arr.length()) {
                 val o = arr.getJSONObject(i)
                 items += InProgress(
@@ -56,6 +69,6 @@ object WatchProgress {
                     .put("channelUrl", it.video.channelUrl.orEmpty()).put("pos", it.positionMs).put("dur", it.durationMs)
             )
         }
-        prefs.edit().putString("items", arr.toString()).apply()
+        prefs.edit().putString(storeKey, arr.toString()).apply()
     }
 }

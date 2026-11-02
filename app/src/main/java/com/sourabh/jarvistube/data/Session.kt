@@ -21,7 +21,9 @@ data class Account(
     val name: String? = null,
     val email: String? = null,
     val handle: String? = null,
-    val photo: String? = null
+    val photo: String? = null,
+    /** Names this account's own saved data (feed, history, ...). Stays the same across re-sign-ins. */
+    val dataId: String = id
 )
 
 /**
@@ -38,6 +40,26 @@ object Session {
     val active: Account? get() = accounts.firstOrNull { it.id == activeId }
     val cookie: String? get() = active?.cookie
 
+    /** Whose data is in use right now: the active account, or "guest" when signed out. */
+    val dataKey: String get() = active?.dataId ?: "guest"
+
+    private val dataListeners = ArrayList<(String) -> Unit>()
+    private var lastDataKey = "guest"
+    /** Email -> dataId, kept after sign-out so signing in again finds the same data. */
+    private val dataByEmail = HashMap<String, String>()
+
+    /** [listener] runs at once whenever the data owner changes, so it can swap to that account's data. */
+    fun onDataKeyChange(listener: (String) -> Unit) { dataListeners += listener }
+    fun removeDataKeyListener(listener: (String) -> Unit) { dataListeners -= listener }
+
+    private fun dataKeyMaybeChanged() {
+        val key = dataKey
+        if (key != lastDataKey) {
+            lastDataKey = key
+            dataListeners.toList().forEach { it(key) }
+        }
+    }
+
     fun init(context: Context) {
         prefs = context.getSharedPreferences("session", Context.MODE_PRIVATE)
         val raw = prefs.getString("accounts", null)
@@ -49,7 +71,8 @@ object Session {
                     Account(
                         o.getString("id"), o.getString("cookie"),
                         o.optString("name").ifEmpty { null }, o.optString("email").ifEmpty { null },
-                        o.optString("handle").ifEmpty { null }, o.optString("photo").ifEmpty { null }
+                        o.optString("handle").ifEmpty { null }, o.optString("photo").ifEmpty { null },
+                        o.optString("dataId").ifEmpty { o.getString("id") }
                     )
                 }
             }.getOrDefault(emptyList())
@@ -65,6 +88,12 @@ object Session {
                 prefs.edit().remove("cookie").apply()
             }
         }
+        runCatching {
+            val saved = JSONObject(prefs.getString("dataByEmail", "{}").orEmpty())
+            saved.keys().forEach { dataByEmail[it] = saved.getString(it) }
+        }
+        accounts.forEach { a -> a.email?.let { dataByEmail.getOrPut(it) { a.dataId } } }
+        lastDataKey = dataKey
     }
 
     val isSignedIn: Boolean get() = sapisid != null
@@ -82,6 +111,7 @@ object Session {
         accounts = if (existing != null) accounts.map { if (it.id == existing.id) account else it } else accounts + account
         activeId = account.id
         persist()
+        dataKeyMaybeChanged()
         return account
     }
 
@@ -89,6 +119,7 @@ object Session {
         if (accounts.none { it.id == id }) return
         activeId = id
         persist()
+        dataKeyMaybeChanged()
     }
 
     /**
@@ -97,14 +128,18 @@ object Session {
      */
     fun updateProfile(id: String, name: String?, email: String?, handle: String?, photo: String?) {
         val a = accounts.firstOrNull { it.id == id } ?: return
+        // A Google account seen before gets its old data back, even after signing out in between.
+        val dataId = email?.let { dataByEmail.getOrPut(it) { a.dataId } } ?: a.dataId
         val updated = a.copy(
-            name = name ?: a.name, email = email ?: a.email, handle = handle ?: a.handle, photo = photo ?: a.photo
+            name = name ?: a.name, email = email ?: a.email, handle = handle ?: a.handle, photo = photo ?: a.photo,
+            dataId = dataId
         )
         // Same Google account signed in twice: keep one entry.
         val dupe = accounts.firstOrNull { it.id != a.id && email != null && it.email == email }
         accounts = accounts.filter { it.id != dupe?.id }.map { if (it.id == a.id) updated else it }
         if (activeId == dupe?.id) activeId = a.id
         persist()
+        dataKeyMaybeChanged()
     }
 
     private fun save(id: String, newCookie: String) {
@@ -159,6 +194,7 @@ object Session {
         if (activeId == id) activeId = accounts.firstOrNull()?.id
         persist()
         clearWebCookies()
+        dataKeyMaybeChanged() // the removed account's saved data stays on the phone for its next sign-in
     }
 
     fun accountById(id: String): Account? = accounts.firstOrNull { it.id == id }
@@ -175,9 +211,11 @@ object Session {
             arr.put(
                 JSONObject().put("id", it.id).put("cookie", it.cookie).put("name", it.name.orEmpty())
                     .put("email", it.email.orEmpty()).put("handle", it.handle.orEmpty()).put("photo", it.photo.orEmpty())
+                    .put("dataId", it.dataId)
             )
         }
-        prefs.edit().putString("accounts", arr.toString()).putString("active", activeId).apply()
+        prefs.edit().putString("accounts", arr.toString()).putString("active", activeId)
+            .putString("dataByEmail", JSONObject(dataByEmail as Map<*, *>).toString()).apply()
     }
 
     private fun newId() = java.util.UUID.randomUUID().toString()

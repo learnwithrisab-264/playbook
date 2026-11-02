@@ -38,8 +38,23 @@ class StudyState(context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var feedJob: Job? = null
 
-    val allowed = mutableStateListOf<String>().apply {
-        addAll(p.getString("allowed", "").orEmpty().split("\n").filter { it.isNotBlank() })
+    /** "Your channels" in the Study tab: each account has its own list. Locks stay device-wide. */
+    val allowed = mutableStateListOf<String>()
+    private var allowedKey = "allowed"
+
+    private fun loadAllowed(key: String) {
+        allowedKey = "allowed:$key"
+        allowed.clear()
+        allowed.addAll(p.getString(allowedKey, "").orEmpty().split("\n").filter { it.isNotBlank() })
+    }
+
+    init {
+        // The old shared list goes to the account in use.
+        p.getString("allowed", null)?.let { shared ->
+            p.edit().putString("allowed:" + com.sourabh.jarvistube.data.Session.dataKey, shared).remove("allowed").apply()
+        }
+        loadAllowed(com.sourabh.jarvistube.data.Session.dataKey)
+        com.sourabh.jarvistube.data.Session.onDataKeyChange(::loadAllowed)
     }
 
     // Session
@@ -247,7 +262,7 @@ class StudyState(context: Context) {
         saveAllowed()
     }
 
-    private fun saveAllowed() = p.edit().putString("allowed", allowed.joinToString("\n")).apply()
+    private fun saveAllowed() = p.edit().putString(allowedKey, allowed.joinToString("\n")).apply()
 
     // ---- Session ----
     fun start() {

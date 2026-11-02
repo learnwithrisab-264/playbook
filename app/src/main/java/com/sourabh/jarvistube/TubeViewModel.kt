@@ -81,8 +81,35 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
 
     private val prefs = app.getSharedPreferences("tube", Context.MODE_PRIVATE)
 
+    /** Each account has its own recent searches. */
+    private var recentsKey = "recents"
+
+    private fun loadRecents(key: String) {
+        recentsKey = "recents:$key"
+        recents.clear()
+        recents.addAll(prefs.getString(recentsKey, "").orEmpty().split("\n").filter { it.isNotBlank() })
+    }
+
+    /** Runs when the account changes: nothing from the previous account stays on screen. */
+    private val accountChanged: (String) -> Unit = { key ->
+        loadRecents(key)
+        studyFeed = FeedState()
+        channelFilter = null
+        clearSearch()
+        loadStudyFeed()
+    }
+
     init {
-        recents.addAll(prefs.getString("recents", "").orEmpty().split("\n").filter { it.isNotBlank() })
+        // The old shared list goes to the account in use.
+        prefs.getString("recents", null)?.let { shared ->
+            prefs.edit().putString("recents:" + com.sourabh.jarvistube.data.Session.dataKey, shared).remove("recents").apply()
+        }
+        loadRecents(com.sourabh.jarvistube.data.Session.dataKey)
+        com.sourabh.jarvistube.data.Session.onDataKeyChange(accountChanged)
+    }
+
+    override fun onCleared() {
+        com.sourabh.jarvistube.data.Session.removeDataKeyListener(accountChanged)
     }
 
     fun play(video: VideoItem) {
@@ -334,7 +361,7 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         recents.remove(rawText)
         recents.add(0, rawText)
         while (recents.size > 10) recents.removeAt(recents.lastIndex)
-        prefs.edit().putString("recents", recents.joinToString("\n")).apply()
+        prefs.edit().putString(recentsKey, recents.joinToString("\n")).apply()
 
         searchJob?.cancel()
         val session = SearchSession(text).also { searchSession = it }
@@ -366,12 +393,12 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearRecents() {
         recents.clear()
-        prefs.edit().remove("recents").apply()
+        prefs.edit().remove(recentsKey).apply()
     }
 
     fun removeRecent(text: String) {
         recents.remove(text)
-        prefs.edit().putString("recents", recents.joinToString("\n")).apply()
+        prefs.edit().putString(recentsKey, recents.joinToString("\n")).apply()
     }
 
     private suspend fun runCatchingFeed(fallback: FeedState = FeedState(), block: suspend () -> FeedState): FeedState =

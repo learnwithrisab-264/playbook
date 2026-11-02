@@ -29,13 +29,27 @@ data class ChannelRef(val url: String, val name: String, val avatar: String?)
  */
 object StudyChannels {
     val list = mutableStateListOf<ChannelRef>()
+    private lateinit var dir: File
     private lateinit var file: File
 
     fun init(context: Context) {
-        file = File(context.filesDir, "study_channels.json")
+        dir = context.filesDir
+        // Before accounts had their own lists there was one shared file: it goes to the account in use.
+        val shared = File(dir, "study_channels.json")
+        val own = fileFor(Session.dataKey)
+        if (shared.exists() && !own.exists()) shared.renameTo(own)
+        load(Session.dataKey)
+        Session.onDataKeyChange(::load)
+    }
+
+    private fun fileFor(key: String) = File(dir, "study_channels_$key.json")
+
+    /** Each account has its own channels: its own file, read again whenever the account changes. */
+    private fun load(key: String) {
+        file = fileFor(key)
         list.clear()
+        if (!file.exists()) return
         runCatching {
-            if (!file.exists()) return
             val arr = JSONArray(file.readText())
             for (i in 0 until arr.length()) {
                 val o = arr.getJSONObject(i)

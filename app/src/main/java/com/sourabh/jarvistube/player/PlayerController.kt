@@ -177,7 +177,7 @@ class PlayerController(val app: Context, http: OkHttpClient) {
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED) {
-                    preparedUrl?.let { resume.edit().remove(it).apply() }
+                    preparedUrl?.let(::forgetPosition)
                     // Ended within moments of resuming = a stale resume point at the very end:
                     // start the video from the beginning instead of skipping to the next one.
                     if (resumedFrom > 0 && android.os.SystemClock.elapsedRealtime() - preparedAt < 5_000) {
@@ -229,6 +229,20 @@ class PlayerController(val app: Context, http: OkHttpClient) {
 
     /** What played before the current item (most recent last), for Previous. */
     private val history = ArrayDeque<VideoItem>()
+
+    /** Each account keeps its own queue while the app runs; Previous never crosses accounts. */
+    private val queues = HashMap<String, List<VideoItem>>()
+    private var queueOwner = com.sourabh.jarvistube.data.Session.dataKey
+
+    init {
+        com.sourabh.jarvistube.data.Session.onDataKeyChange { key ->
+            queues[queueOwner] = queue.toList()
+            queueOwner = key
+            queue.clear()
+            queue.addAll(queues[key].orEmpty())
+            history.clear()
+        }
+    }
 
     fun enqueue(video: VideoItem) {
         if (queue.none { it.url == video.url } && _now.value?.video?.url != video.url) queue.add(video)
@@ -375,8 +389,8 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         val pos = player.currentPosition
         val dur = player.duration
         val nearEnd = dur != C.TIME_UNSET && dur > 0 && pos > dur - 10_000
-        if (pos > 10_000 && !nearEnd) resume.edit().putLong(url, pos).apply()
-        else if (nearEnd) resume.edit().remove(url).apply()
+        if (pos > 10_000 && !nearEnd) resume.edit().putLong(resumeKey(url), pos).apply()
+        else if (nearEnd) forgetPosition(url)
         // "Continue watching" in You › History (online videos only, not downloads).
         val video = _now.value?.video?.takeIf { it.url == url && it.url.startsWith("http") }
         if (nearEnd) com.sourabh.jarvistube.data.WatchProgress.remove(url)
@@ -393,7 +407,13 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         }
     }
 
-    private fun savedPosition(url: String): Long = resume.getLong(url, 0L).takeIf { it > 10_000 } ?: 0L
+    // Each account has its own place in a video. A position saved before this existed has no account.
+    private fun resumeKey(url: String) = com.sourabh.jarvistube.data.Session.dataKey + "|" + url
+
+    private fun forgetPosition(url: String) { resume.edit().remove(resumeKey(url)).remove(url).apply() }
+
+    private fun savedPosition(url: String): Long =
+        (resume.getLong(resumeKey(url), 0L).takeIf { it > 0 } ?: resume.getLong(url, 0L)).takeIf { it > 10_000 } ?: 0L
 
     fun updateSponsorBlock(on: Boolean) {
         sponsorBlock = on

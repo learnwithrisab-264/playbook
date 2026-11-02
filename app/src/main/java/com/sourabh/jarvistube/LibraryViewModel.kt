@@ -140,11 +140,21 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         reloadForAccount()
     }
 
+    /**
+     * Each account has its own trusted channels, so changing account during a study session or
+     * lock could swap in a list that lets anything play. The change waits until the lock ends.
+     */
+    private fun accountLocked(): Boolean {
+        val locked = Graph.study.active || Graph.study.lockActive
+        if (locked) toast("Accounts can't be changed during a study session or lock.")
+        return locked
+    }
+
     /** Clears the sign-in page's cookies so the next sign-in adds a different Google account. */
     fun prepareAddAccount() = Session.clearWebCookies()
 
     fun switchAccount(id: String) {
-        if (id == Session.activeId) return
+        if (id == Session.activeId || accountLocked()) return
         Session.switchTo(id)
         reloadForAccount()
     }
@@ -159,6 +169,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
      * to the next account (or signed out) and reloads the library for it.
      */
     fun removeAccount(id: String) {
+        if (accountLocked()) return
         val wasActive = id == Session.activeId
         Session.remove(id)
         if (wasActive) reloadForAccount()
