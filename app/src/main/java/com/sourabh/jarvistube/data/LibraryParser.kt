@@ -127,6 +127,7 @@ object LibraryParser {
                 views = -1,
                 uploaded = meta.ifEmpty { null },
                 isLive = false,
+                isShort = marksShort(o),
                 avatar = lastThumb(
                     findFirstArray(o.optJSONObject("channelThumbnailSupportedRenderers") ?: o.optJSONObject("channelThumbnail"), "thumbnails")
                 )
@@ -134,6 +135,12 @@ object LibraryParser {
             feedbackToken = findString(o, "feedbackToken"),
             setVideoId = o.optString("setVideoId").ifEmpty { null }
         )
+    }
+
+    /** YouTube's own signs of a Short: its Shorts player link or Shorts badge. Works at any length. */
+    private fun marksShort(o: JSONObject): Boolean {
+        val s = o.toString()
+        return s.contains("reelWatchEndpoint") || s.contains("\\/shorts\\/") || s.contains("/shorts/") || s.contains("\"SHORTS\"")
     }
 
     private fun playlist(o: JSONObject): LibItem? {
@@ -187,6 +194,7 @@ object LibraryParser {
                         views = -1,
                         uploaded = rest.ifEmpty { null },
                         isLive = false,
+                        isShort = marksShort(o),
                         avatar = findFirstArray(meta?.optJSONObject("image"), "sources")?.let { lastThumb(it) }
                     ),
                     feedbackToken = findString(o, "feedbackToken")

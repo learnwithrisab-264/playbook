@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.sourabh.jarvistube.data.ContentFilter
 import com.sourabh.jarvistube.data.SearchSession
 import com.sourabh.jarvistube.data.VideoItem
+import com.sourabh.jarvistube.data.looksShort
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -268,7 +269,9 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
             val json = if (token == null) com.sourabh.jarvistube.data.InnerTube.browse("FEwhat_to_watch")
             else com.sourabh.jarvistube.data.InnerTube.browse(continuation = token)
             val page = com.sourabh.jarvistube.data.LibraryParser.parse(json)
+            // Shorts have their own tab: they never appear in Recommended.
             val videos = page.items.filterIsInstance<com.sourabh.jarvistube.data.LibVideo>().map { it.video }
+                .filterNot { it.looksShort }
             if (videos.isNotEmpty()) sawVideos = true
             token = page.next
             val shown = ContentFilter.filter(videos)

@@ -40,6 +40,9 @@ data class VideoItem(
     val isShort: Boolean = false
 )
 
+/** Shorts never belong in a normal video list: marked by YouTube, or a minute or less. */
+val VideoItem.looksShort: Boolean get() = isShort || durationSec in 1L..60L
+
 object Repo {
     private class Entry(val at: Long, val deferred: Deferred<StreamInfo>)
 

@@ -185,7 +185,10 @@ fun RecommendedScreen(
     val feed = vm.recommended
     // Re-applied on screen so turning the filter on (or a lock forcing it) hides items already loaded.
     val filterOn = Graph.study.entertainmentBlocked
-    val shown = remember(feed, filterOn) { feed.copy(items = com.sourabh.jarvistube.data.ContentFilter.filter(feed.items)) }
+    // Last check before the list is drawn: no Shorts here, whichever source the videos came from.
+    val shown = remember(feed, filterOn) {
+        feed.copy(items = com.sourabh.jarvistube.data.ContentFilter.filter(feed.items).filterNot { it.isShort || it.durationSec in 1L..60L })
+    }
 
     androidx.compose.material3.pulltorefresh.PullToRefreshBox(
         isRefreshing = feed.loading && feed.items.isNotEmpty(),
