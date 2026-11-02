@@ -61,6 +61,7 @@ import com.sourabh.jarvistube.data.InnerTube
 import com.sourabh.jarvistube.data.LibChannel
 import com.sourabh.jarvistube.data.LibPlaylist
 import com.sourabh.jarvistube.data.LibVideo
+import androidx.compose.foundation.layout.imePadding
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -74,7 +75,7 @@ fun LibraryScreen(
 ) {
     val tabs = LibTab.entries.toList()
     if (!lib.signedIn) {
-        SignedOut(bottomPadding, onSignIn, onOpenDownloads, onOpenSettings)
+        SignedOut(vm, bottomPadding, onSignIn, onOpenDownloads, onOpenSettings)
         return
     }
     val detail = lib.detail
@@ -88,6 +89,9 @@ fun LibraryScreen(
     LaunchedEffect(lib.tab, detail) { listState.scrollToItem(0) }
     var accountSheet by remember { mutableStateOf(false) }
     var newPlaylist by remember { mutableStateOf(false) }
+    var historyQuery by remember { mutableStateOf("") }
+    var clearHistory by remember { mutableStateOf(false) }
+    if (clearHistory) ClearHistoryDialog(onDismiss = { clearHistory = false })
     if (accountSheet) {
         AccountSheet(lib, onAddAccount = { lib.prepareAddAccount(); onSignIn() }, onDismiss = { accountSheet = false })
     }
@@ -95,13 +99,12 @@ fun LibraryScreen(
 
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxSize().statusBarsPadding(),
+        modifier = Modifier.fillMaxSize().statusBarsPadding().imePadding(),
         contentPadding = PaddingValues(bottom = bottomPadding + 16.dp)
     ) {
         if (detail == null) {
             item { YouHeader(onOpenDownloads, onOpenSettings) }
             item { ProfileHeader(lib, onSwitch = { accountSheet = true }) }
-            item { ShortsBlockCard() }
             item { ShortsBlockCard() }
             stickyHeader {
                 Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
@@ -160,6 +163,16 @@ fun LibraryScreen(
         }
         if (detail == null && lib.tab == LibTab.History && com.sourabh.jarvistube.data.WatchProgress.items.isNotEmpty()) {
             item { ContinueWatchingRow(vm) }
+        }
+        if (detail == null && lib.tab == LibTab.History) {
+            historySection(vm, historyQuery, { historyQuery = it }, onClearAll = { clearHistory = true })
+            if (state.items.isNotEmpty()) item(key = "youtube-history") {
+                Text(
+                    "From your YouTube account",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 8.dp)
+                )
+            }
         }
         libItems(state, vm, lib, inHistory = detail == null && lib.tab == LibTab.History, inPlaylist = detail != null, onRetry = { loader?.refresh() })
     }
@@ -396,23 +409,36 @@ private fun YouHeader(onOpenDownloads: () -> Unit, onOpenSettings: () -> Unit) {
 
 @Composable
 private fun SignedOut(
+    vm: TubeViewModel,
     bottomPadding: Dp,
     onSignIn: () -> Unit,
     onOpenDownloads: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(bottom = bottomPadding)) {
-        YouHeader(onOpenDownloads, onOpenSettings)
-        ShortsBlockCard()
-        ShortsBlockCard()
-        SignedOutBody(onSignIn)
+    var query by remember { mutableStateOf("") }
+    var clearHistory by remember { mutableStateOf(false) }
+    if (clearHistory) ClearHistoryDialog(onDismiss = { clearHistory = false })
+    LazyColumn(
+        Modifier.fillMaxSize().statusBarsPadding().imePadding(),
+        contentPadding = PaddingValues(bottom = bottomPadding + 16.dp)
+    ) {
+        item { YouHeader(onOpenDownloads, onOpenSettings) }
+        item { ShortsBlockCard() }
+        item { SignedOutBody(onSignIn) }
+        item {
+            Text(
+                "History", style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 4.dp)
+            )
+        }
+        historySection(vm, query, { query = it }, onClearAll = { clearHistory = true })
     }
 }
 
 @Composable
 private fun SignedOutBody(onSignIn: () -> Unit) {
     Column(
-        Modifier.fillMaxSize(),
+        Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

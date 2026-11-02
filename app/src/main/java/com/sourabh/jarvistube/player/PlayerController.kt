@@ -482,6 +482,7 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         segments = emptyList()
         val video = VideoItem(item.url, item.title, item.channel, item.thumb, item.durationSec, -1, null, false)
         _now.value = NowPlaying(video, loading = false, quality = 0)
+        com.sourabh.jarvistube.data.WatchHistory.add(video)
         app.startService(Intent(app, PlaybackService::class.java))
         val meta = MediaMetadata.Builder().setTitle(item.title).setArtist(item.channel)
             .setArtworkUri(item.thumb?.toUri()).build()
@@ -560,6 +561,16 @@ class PlayerController(val app: Context, http: OkHttpClient) {
                 _now.update { it?.copy(info = info, loading = false, error = reason) }
                 return
             }
+            // Saved here, for every video that really starts, with its full title and channel.
+            com.sourabh.jarvistube.data.WatchHistory.add(
+                video.copy(
+                    title = info.name?.takeIf { it.isNotBlank() } ?: video.title,
+                    channel = info.uploaderName?.takeIf { it.isNotBlank() } ?: video.channel,
+                    channelUrl = info.uploaderUrl?.takeIf { it.isNotBlank() } ?: video.channelUrl,
+                    thumb = video.thumb ?: runCatching { info.thumbnails.bestUrl() }.getOrNull(),
+                    durationSec = if (video.durationSec > 0) video.durationSec else info.duration
+                )
+            )
             val heights = availableHeights(info)
             // Always start on the original-language track; other dubs are an opt-in choice.
             _now.update {
