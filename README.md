@@ -28,16 +28,18 @@ The Kotlin package (`com.sourabh.jarvistube`) can stay as it is; only `applicati
 
 | Area | Files |
 |---|---|
-| App start, shared objects | `JarvisTubeApp.kt` (`Graph`), `MainActivity.kt` (tabs, bottom bar) |
-| Player | `player/PlayerController.kt` (ExoPlayer, quality, captions, queue), `ui/PlayerScreen.kt`, `ui/PlayerMoreSheet.kt`, `ui/SeekBar.kt`, `ui/SeekPreview.kt` |
-| YouTube data | `data/Repo.kt` (NewPipeExtractor), `data/Channels.kt`, `data/InnerTube.kt` (signed-in API), `data/LibraryParser.kt` |
-| Sign-in & accounts | `ui/LoginScreen.kt`, `data/Session.kt`, `ui/AccountUi.kt` |
-| Study / focus locks | `StudyState.kt`, `ui/StudyScreen.kt`, `data/TrustedClock.kt` (tamper-proof time) |
-| Content filter | `data/ContentFilter.kt` |
-| Downloads | `data/Downloads.kt`, `ui/DownloadSheet.kt`, `ui/SavedScreen.kt` |
-| Upload notifications | `data/UploadAlerts.kt` |
-| Theme | `ui/theme/` |
+| App start, shared objects | `JarvisTubeApp.kt` (`Graph`), `MainActivity.kt` (tabs, bottom bar, PiP) |
+| Screens, by feature | `ui/home`, `ui/search`, `ui/shorts`, `ui/you`, `ui/channel`, `ui/player`, `ui/study`, `ui/downloads` |
+| Shared screen parts | `ui/common`, `ui/theme` |
+| Player engine | `player/` (ExoPlayer, background media service) |
+| YouTube data, saved lists | `data/` |
+| Study / focus locks | `StudyState.kt`, `lock/` (phone-wide Lock Study Session), `ui/study`, `data/TrustedClock.kt` |
+| Feeds and library state | `TubeViewModel.kt`, `LibraryViewModel.kt` |
 
+Don't move `lock/StudyGuardService`, `player/PlaybackService` or `data/UploadAlerts`: Android stores their class
+names, so moving them turns off the accessibility permission or scheduled upload checks on installed phones.
+
+Old instruction notes are in `docs/`.
 ## Notes
 
 - Video data comes from [NewPipeExtractor](https://github.com/TeamNewPipe/NewPipeExtractor); if YouTube changes
