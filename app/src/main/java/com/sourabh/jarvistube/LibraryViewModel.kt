@@ -21,7 +21,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 enum class LibTab(val label: String, val browseId: String) {
-    Subscriptions("Subscriptions", "FEsubscriptions"),
     History("History", "FEhistory"),
     Playlists("Playlists", "FEplaylist_aggregation"),
     Channels("Subscription", "FEchannels")
@@ -97,7 +96,7 @@ class LibLoader(
 
 class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     var signedIn by mutableStateOf(Session.isSignedIn); private set
-    var tab by mutableStateOf(LibTab.Subscriptions); private set
+    var tab by mutableStateOf(LibTab.History); private set
     var detail by mutableStateOf<LibDetail?>(null); private set
     var detailLoader by mutableStateOf<LibLoader?>(null); private set
 
@@ -177,7 +176,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun reloadForAccount() {
         signedIn = Session.isSignedIn
-        // Drop every loaded list (Subscriptions, History, Playlists, Channels) so nothing from the
+        // Drop every loaded list (History, Playlists, Subscription) so nothing from the
         // previous account stays on screen; the current tab reloads now, the others when opened.
         loaders.values.forEach { it.reset() }
         closeDetail()
@@ -241,7 +240,6 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     fun unsubscribe(c: LibChannel) {
         act("Unsubscribed from ${c.name}", { InnerTube.unsubscribe(c.id) }) {
             loader(LibTab.Channels).remove(c.key)
-            loader(LibTab.Subscriptions).reset()
         }
     }
 

@@ -11,7 +11,7 @@ import com.sourabh.jarvistube.LibraryViewModel
 import com.sourabh.jarvistube.TubeViewModel
 
 /**
- * The "You" tab: library (subscriptions, history, playlists, channels) plus Downloads and
+ * The "You" tab: library (history, playlists, subscription) plus Downloads and
  * Settings as sub-pages, so the bottom bar only needs Home / Study / You.
  */
 @Composable
