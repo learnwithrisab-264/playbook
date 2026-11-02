@@ -15,6 +15,7 @@ import com.sourabh.jarvistube.data.FeedStore
 import com.sourabh.jarvistube.data.SearchSession
 import com.sourabh.jarvistube.data.SeenVideos
 import com.sourabh.jarvistube.data.VideoItem
+import com.sourabh.jarvistube.data.interleave
 import com.sourabh.jarvistube.data.looksShort
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -522,13 +523,6 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
             }
             saveShorts()
         }
-    }
-
-    /** One from each list in turn, so no subject dominates. */
-    private fun interleave(pages: Collection<List<VideoItem>>): List<VideoItem> {
-        val mixed = ArrayList<VideoItem>()
-        for (i in 0 until (pages.maxOfOrNull { it.size } ?: 0)) pages.forEach { p -> p.getOrNull(i)?.let(mixed::add) }
-        return mixed.distinctBy { it.url }
     }
 
     // ---- Search suggestions (the autocomplete list under the search box) ----

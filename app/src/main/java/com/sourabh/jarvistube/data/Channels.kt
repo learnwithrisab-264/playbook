@@ -20,6 +20,9 @@ import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
+/** The channel id in a link such as https://www.youtube.com/channel/UCxxx, or null. */
+fun channelIdOf(url: String?): String? = url?.let { Regex("channel/(UC[\\w-]{22})").find(it)?.groupValues?.get(1) }
+
 /** A channel the user can open or add to their study list. */
 data class ChannelRef(val url: String, val name: String, val avatar: String?)
 
@@ -64,7 +67,7 @@ object StudyChannels {
 
     /** Same channel by its UC… id, whatever form the link takes. */
     fun containsChannelUrl(url: String?): Boolean {
-        val id = url?.let { Regex("channel/(UC[\\w-]{22})").find(it)?.groupValues?.get(1) } ?: return false
+        val id = channelIdOf(url) ?: return false
         return list.any { it.url.contains(id) }
     }
 

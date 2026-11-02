@@ -51,11 +51,8 @@ import com.sourabh.jarvistube.data.InnerTube
 import com.sourabh.jarvistube.data.PlaylistChoice
 import com.sourabh.jarvistube.data.Session
 import com.sourabh.jarvistube.data.VideoItem
+import com.sourabh.jarvistube.data.channelIdOf
 import kotlinx.coroutines.launch
-
-/** "UC…" id from a channel URL such as https://www.youtube.com/channel/UC…, or null. */
-fun channelIdOf(url: String?): String? =
-    url?.let { Regex("channel/(UC[\\w-]{22})").find(it)?.groupValues?.get(1) }
 
 /**
  * YouTube's Subscribe / Subscribed button for the signed-in account. Hidden when signed out

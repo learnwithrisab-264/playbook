@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.sourabh.jarvistube.data.SearchSession
 import com.sourabh.jarvistube.data.VideoItem
+import com.sourabh.jarvistube.data.interleave
 import com.sourabh.jarvistube.data.looksShort
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -510,20 +511,13 @@ class StudyState(context: Context) {
                         }.getOrDefault(emptyList()).filter { it.channel.equals(ch, ignoreCase = true) }
                     }
                 }.awaitAll()
-                feed = FeedState(items = roundRobin(perChannel).distinctBy { it.url })
+                feed = FeedState(items = interleave(perChannel))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 feed = FeedState(error = e.message ?: e.javaClass.simpleName)
             }
         }
-    }
-
-    private fun roundRobin(lists: List<List<VideoItem>>): List<VideoItem> {
-        val out = ArrayList<VideoItem>()
-        val max = lists.maxOfOrNull { it.size } ?: 0
-        for (i in 0 until max) lists.forEach { l -> l.getOrNull(i)?.let(out::add) }
-        return out
     }
 
     init {
