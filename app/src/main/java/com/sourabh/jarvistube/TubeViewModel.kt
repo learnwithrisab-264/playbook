@@ -40,15 +40,9 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         "Computer Science", "History", "Economics", "Languages", "Exam prep"
     )
 
-    /** null = the "All" chip: a mix of every subject. */
-    var topic by mutableStateOf<String?>(null); private set
-    var explore by mutableStateOf(FeedState(loading = true)); private set
-
     var searchOpen by mutableStateOf(false)
     val suggestions = mutableStateListOf<String>()
     private var suggestJob: Job? = null
-    private var exploreSession: SearchSession? = null
-    private var exploreJob: Job? = null
 
     var query by mutableStateOf("")
     var submittedQuery by mutableStateOf<String?>(null); private set
@@ -541,34 +535,6 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         return mixed.distinctBy { it.url }
     }
 
-    // ---- Explore ----
-    fun selectTopic(t: String?) {
-        if (t == topic) return
-        topic = t
-        loadExplore()
-    }
-
-    fun loadExplore() {
-        exploreJob?.cancel()
-        val t = topic
-        if (t == null) {
-            // "All": one page from several subjects, interleaved so no subject dominates.
-            exploreSession = null
-            exploreJob = viewModelScope.launch {
-                explore = FeedState(loading = true)
-                explore = runCatchingFeed { FeedState(items = subjectMix()) }
-                explore.items.take(4).forEach { com.sourabh.jarvistube.data.Repo.prefetch(it.url) }
-            }
-            return
-        }
-        val session = SearchSession("$t full lecture explained").also { exploreSession = it }
-        exploreJob = viewModelScope.launch {
-            explore = FeedState(loading = true)
-            explore = runCatchingFeed { FeedState(items = session.loadFirst().distinctBy { it.url }) }
-            explore.items.take(4).forEach { com.sourabh.jarvistube.data.Repo.prefetch(it.url) }
-        }
-    }
-
     // ---- Search suggestions (the autocomplete list under the search box) ----
     fun updateSuggestions(text: String) {
         suggestJob?.cancel()
@@ -597,18 +563,6 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     fun closeSearch() {
         searchOpen = false
         suggestions.clear()
-    }
-
-    fun loadMoreExplore() {
-        val session = exploreSession ?: return
-        val cur = explore
-        if (cur.loading || cur.loadingMore || !session.hasMore || cur.items.isEmpty()) return
-        exploreJob = viewModelScope.launch {
-            explore = cur.copy(loadingMore = true)
-            explore = runCatchingFeed(fallback = cur) {
-                cur.copy(items = (cur.items + session.loadMore()).distinctBy { it.url }, loadingMore = false)
-            }
-        }
     }
 
     // ---- Search ----

@@ -22,7 +22,6 @@ data class PlaylistChoice(val id: String, val title: String, val contains: Boole
 object InnerTube {
     private const val ORIGIN = "https://www.youtube.com"
     private const val CLIENT_VERSION = "2.20261001.01.00"
-    const val VIDEOS_TAB = "EgZ2aWRlb3PyBgQKAjoA"
 
     suspend fun browse(
         browseId: String? = null,

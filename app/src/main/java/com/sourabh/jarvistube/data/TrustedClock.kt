@@ -63,9 +63,6 @@ object TrustedClock {
         return t
     }
 
-    /** How far the phone's own clock is off from trusted time (positive = phone is ahead). */
-    fun skewMs(): Long = System.currentTimeMillis() - now()
-
     /** Re-anchors on Google's server time (the Date header of a tiny request). */
     fun syncWithNetwork(context: Context) {
         runCatching {

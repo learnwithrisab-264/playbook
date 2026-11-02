@@ -598,7 +598,6 @@ private fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier: 
     var audioMenu by remember { mutableStateOf(false) }
     var captionsMenu by remember { mutableStateOf(false) }
     var showQueue by remember { mutableStateOf(false) }
-    var downloadMenu by remember { mutableStateOf(false) }
     val desc = remember(info) {
         androidx.core.text.HtmlCompat.fromHtml(
             info?.description?.content.orEmpty(),

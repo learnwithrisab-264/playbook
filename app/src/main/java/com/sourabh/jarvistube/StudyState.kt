@@ -122,7 +122,6 @@ class StudyState(context: Context) {
     /** date -> focused seconds, last 14 days. */
     val history = androidx.compose.runtime.mutableStateMapOf<String, Int>()
 
-    fun updateGoal(m: Int) { dailyGoal = m; p.edit().putInt("goal", m).apply() }
     fun updateBreaks(on: Boolean, block: Int = focusBlockMin, brk: Int = breakMin) {
         breaksEnabled = on; focusBlockMin = block; breakMin = brk
         p.edit().putBoolean("breaks", on).putInt("focusBlock", block).putInt("breakMin", brk).apply()
@@ -179,9 +178,6 @@ class StudyState(context: Context) {
             while ((history[d.toString()] ?: 0) >= goalSec) { n++; d = d.minusDays(1) }
             return n
         }
-
-    fun lastDays(n: Int): List<Pair<LocalDate, Int>> =
-        (n - 1 downTo 0).map { LocalDate.now().minusDays(it.toLong()) }.map { it to (history[it.toString()] ?: 0) }
 
     private fun rollDay() {
         val today = LocalDate.now().toString()

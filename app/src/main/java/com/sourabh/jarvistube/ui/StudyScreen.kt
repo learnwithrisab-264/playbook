@@ -99,7 +99,6 @@ fun StudyScreen(vm: TubeViewModel, lib: LibraryViewModel, bottomPadding: Dp) {
 // ---------------------------------------------------------------- setup
 
 // PlayBook palette: yellow -> orange -> deep orange.
-private val JarvisGradient = Brush.linearGradient(listOf(Color(0xFFFFC107), Color(0xFFFF8C00), Color(0xFFE64A19)))
 private val JarvisViolet = Color(0xFFFF6D00)
 private val JarvisCyan = Color(0xFFFFC107)
 

@@ -179,11 +179,6 @@ object Session {
         if (changed) save(id, jar.entries.joinToString("; ") { "${it.key}=${it.value}" })
     }
 
-    /** Signs out of the active account only; the next one (if any) becomes active. */
-    fun signOutActive() {
-        activeId?.let(::remove)
-    }
-
     /**
      * Removes one account (signs it out of PlayBook). The others stay signed in; if it was the
      * active one, the next saved account takes over.
@@ -196,8 +191,6 @@ object Session {
         clearWebCookies()
         dataKeyMaybeChanged() // the removed account's saved data stays on the phone for its next sign-in
     }
-
-    fun accountById(id: String): Account? = accounts.firstOrNull { it.id == id }
 
     /** Empties the sign-in WebView's cookies, so "Add account" starts at a clean Google login. */
     fun clearWebCookies() {
