@@ -356,7 +356,18 @@ private fun VideoBox(
 
         if (Graph.player.audioOnly) {
             Box(Modifier.matchParentSize().background(Color.Black), contentAlignment = Alignment.Center) {
-                Text("Audio only", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.titleMedium)
+                // The Listen player: thumbnail instead of video, with the way back to the picture.
+                Thumb(now.video.thumb, Modifier.matchParentSize())
+                Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.55f)))
+                // Low in the frame, between the time and the full-screen button: the centre is for Play.
+                TextButton(
+                    onClick = { Graph.player.updateAudioOnly(false) },
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 30.dp)
+                ) {
+                    Icon(Icons.Rounded.Headphones, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.size(6.dp))
+                    Text("Watch video", color = Color.White, fontWeight = FontWeight.Bold)
+                }
             }
         }
 

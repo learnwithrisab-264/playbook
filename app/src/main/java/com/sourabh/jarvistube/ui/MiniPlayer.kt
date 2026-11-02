@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,9 +47,9 @@ fun MiniPlayer(now: NowPlaying, ui: PlayerUi, onExpand: () -> Unit, modifier: Mo
             ) {
                 Thumb(
                     now.video.thumb,
-                    Modifier.width(72.dp).size(width = 72.dp, height = 40.dp).clip(RoundedCornerShape(10.dp))
+                    Modifier.width(56.dp).size(width = 56.dp, height = 40.dp).clip(RoundedCornerShape(10.dp))
                 )
-                Spacer(Modifier.size(12.dp))
+                Spacer(Modifier.size(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
                         now.info?.name ?: now.video.title,
@@ -62,19 +63,23 @@ fun MiniPlayer(now: NowPlaying, ui: PlayerUi, onExpand: () -> Unit, modifier: Mo
                         maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                 }
-                IconButton(onClick = { Graph.player.skipPrevious() }, modifier = Modifier.size(40.dp)) {
+                // Back to the picture, at the same position.
+                IconButton(onClick = { Graph.player.updateAudioOnly(false) }, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Rounded.Videocam, "Watch video")
+                }
+                IconButton(onClick = { Graph.player.skipPrevious() }, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Rounded.SkipPrevious, "Previous")
                 }
-                IconButton(onClick = { Graph.player.togglePlay() }, modifier = Modifier.size(40.dp)) {
+                IconButton(onClick = { Graph.player.togglePlay() }, modifier = Modifier.size(36.dp)) {
                     Icon(
                         if (ui.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                         if (ui.isPlaying) "Pause" else "Play"
                     )
                 }
-                IconButton(onClick = { Graph.player.skipNext() }, modifier = Modifier.size(40.dp)) {
+                IconButton(onClick = { Graph.player.skipNext() }, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Rounded.SkipNext, "Next")
                 }
-                IconButton(onClick = { Graph.player.stop() }) {
+                IconButton(onClick = { Graph.player.stop() }, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Rounded.Close, "Close player")
                 }
             }

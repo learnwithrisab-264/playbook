@@ -2,11 +2,18 @@ package com.sourabh.jarvistube.player
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.os.Bundle
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
+import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import com.sourabh.jarvistube.Graph
 import com.sourabh.jarvistube.MainActivity
 import java.lang.reflect.Proxy
@@ -30,7 +37,25 @@ class PlaybackService : MediaSessionService() {
         )
         session = MediaSession.Builder(this, SessionPlayer(Graph.player))
             .setSessionActivity(open) // tapping the notification opens the app
+            .setCallback(SeekButtons)
+            // Previous, Play/Pause and Next come from the player; these add Rewind and Forward.
+            .setMediaButtonPreferences(
+                ImmutableList.of(
+                    CommandButton.Builder(CommandButton.ICON_SKIP_BACK_10)
+                        .setDisplayName("Rewind 10 seconds")
+                        .setSessionCommand(REWIND)
+                        .setSlots(CommandButton.SLOT_OVERFLOW)
+                        .build(),
+                    CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_10)
+                        .setDisplayName("Forward 10 seconds")
+                        .setSessionCommand(FORWARD)
+                        .setSlots(CommandButton.SLOT_OVERFLOW)
+                        .build()
+                )
+            )
             .build()
+            // Without this the notification waits for a controller to connect, and none does.
+            .also(::addSession)
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
@@ -46,6 +71,30 @@ class PlaybackService : MediaSessionService() {
         session?.release()
         session = null
         super.onDestroy()
+    }
+}
+
+private val REWIND = SessionCommand("com.sourabh.jarvistube.REWIND", Bundle.EMPTY)
+private val FORWARD = SessionCommand("com.sourabh.jarvistube.FORWARD", Bundle.EMPTY)
+
+/** Rewind and Forward are custom commands: the system media card ignores any other extra button. */
+@OptIn(UnstableApi::class)
+private object SeekButtons : MediaSession.Callback {
+    override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult =
+        MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+            .setAvailableSessionCommands(
+                MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon().add(REWIND).add(FORWARD).build()
+            )
+            .build()
+
+    override fun onCustomCommand(
+        session: MediaSession, controller: MediaSession.ControllerInfo, customCommand: SessionCommand, args: Bundle
+    ): ListenableFuture<SessionResult> {
+        when (customCommand) {
+            REWIND -> Graph.player.player.seekBack()
+            FORWARD -> Graph.player.player.seekForward()
+        }
+        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
     }
 }
 

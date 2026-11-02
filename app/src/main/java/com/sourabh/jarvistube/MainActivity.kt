@@ -286,7 +286,8 @@ class MainActivity : ComponentActivity() {
         super.onUserLeaveHint()
         // No picture-in-picture during a study lock: the locked video stays full-screen. A video
         // in the in-app floating window carries on in system PiP when you leave the app.
-        val showingVideo = (vm.playerExpanded || !Graph.player.audioOnly) && vm.shortsViewer == null
+        // In Listen mode there is no picture to float: the sound simply carries on in the background.
+        val showingVideo = !Graph.player.audioOnly && vm.shortsViewer == null
         if (showingVideo && Graph.player.player.isPlaying && !Graph.study.lockActive) {
             enterPictureInPictureMode(
                 pipParams()

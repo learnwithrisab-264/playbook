@@ -87,6 +87,9 @@ class PlayerController(val app: Context, http: OkHttpClient) {
             true
         )
         .setHandleAudioBecomingNoisy(true)
+        // Rewind / Forward on the notification, lock screen and headphones.
+        .setSeekBackIncrementMs(10_000)
+        .setSeekForwardIncrementMs(10_000)
         .setWakeMode(C.WAKE_MODE_NETWORK)
         // Smoothness: async codec queueing keeps the decoder fed without main-thread hops,
         // decoder fallback avoids hard failures on picky hardware, and a deeper buffer rides
@@ -554,6 +557,8 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         player.clearMediaItems()
         preparedUrl = null
         _now.value = null
+        // Closing the player ends the background service, and with it the notification.
+        app.stopService(Intent(app, PlaybackService::class.java))
     }
 
     private suspend fun resolve(video: VideoItem, startMs: Long) {
