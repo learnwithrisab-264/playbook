@@ -403,7 +403,7 @@ private fun SignedOutBody(onSignIn: () -> Unit) {
         EmptyState(
             Icons.Rounded.VideoLibrary,
             "Your library",
-            "Sign in to see your subscriptions, watch history, playlists and channels, without the recommendations."
+            "Sign in to see your subscription, watch history and playlists, without the recommendations."
         )
         Button(onClick = onSignIn) { Text("Sign in with Google") }
         Spacer(Modifier.height(12.dp))

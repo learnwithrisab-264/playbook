@@ -24,7 +24,7 @@ enum class LibTab(val label: String, val browseId: String) {
     Subscriptions("Subscriptions", "FEsubscriptions"),
     History("History", "FEhistory"),
     Playlists("Playlists", "FEplaylist_aggregation"),
-    Channels("Channels", "FEchannels")
+    Channels("Subscription", "FEchannels")
 }
 
 data class LibFeed(
