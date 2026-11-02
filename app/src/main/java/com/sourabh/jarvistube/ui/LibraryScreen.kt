@@ -101,6 +101,8 @@ fun LibraryScreen(
         if (detail == null) {
             item { YouHeader(onOpenDownloads, onOpenSettings) }
             item { ProfileHeader(lib, onSwitch = { accountSheet = true }) }
+            item { ShortsBlockCard() }
+            item { ShortsBlockCard() }
             stickyHeader {
                 Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
                     LazyRow(
@@ -401,6 +403,8 @@ private fun SignedOut(
 ) {
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(bottom = bottomPadding)) {
         YouHeader(onOpenDownloads, onOpenSettings)
+        ShortsBlockCard()
+        ShortsBlockCard()
         SignedOutBody(onSignIn)
     }
 }

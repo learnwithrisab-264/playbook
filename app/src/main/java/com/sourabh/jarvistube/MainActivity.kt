@@ -237,7 +237,7 @@ class MainActivity : ComponentActivity() {
         super.onUserLeaveHint()
         // No picture-in-picture during a study lock: the locked video stays full-screen. A video
         // in the in-app floating window carries on in system PiP when you leave the app.
-        val showingVideo = vm.playerExpanded || !Graph.player.audioOnly
+        val showingVideo = (vm.playerExpanded || !Graph.player.audioOnly) && vm.shortsViewer == null
         if (showingVideo && Graph.player.player.isPlaying && !Graph.study.lockActive) {
             enterPictureInPictureMode(
                 PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build()
@@ -309,7 +309,7 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
     // Collapsed player: video keeps playing in a floating window above every screen; in audio-only
     // mode (nothing to show) the bottom mini-player bar is used instead. Never during a study
     // lock, where the locked video stays full-screen.
-    val collapsed = now != null && !expanded && !inPip && !study.lockActive
+    val collapsed = now != null && !expanded && !inPip && !study.lockActive && vm.shortsViewer == null
     val showFloating = collapsed && !controller.audioOnly
     val showMini = collapsed && controller.audioOnly
     val barHeight = if (study.active) 0.dp else 56.5.dp
@@ -420,6 +420,8 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
                 onClose = { showLogin = false }
             )
         }
+        // Full-screen Shorts sit above every screen.
+        vm.shortsViewer?.let { com.sourabh.jarvistube.ui.ShortsViewerScreen(vm, it, ui) }
         com.sourabh.jarvistube.ui.SaveToPlaylistHost()
         com.sourabh.jarvistube.ui.DownloadSheetHost()
     }

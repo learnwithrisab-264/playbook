@@ -1,6 +1,20 @@
 package com.sourabh.jarvistube.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.sourabh.jarvistube.data.TrustedClock
+import com.sourabh.jarvistube.data.nextMidnightAfter
+import com.sourabh.jarvistube.data.timeLeftText
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -109,11 +123,93 @@ fun ShortsGrid(
     LaunchedEffect(nearEnd, feed.items.size) { if (nearEnd) onMore() }
 }
 
+/** Milliseconds left on the Block Shorts timer, updated every second; 0 when not blocked. */
+@Composable
+fun rememberShortsBlockLeft(): Long {
+    val until = com.sourabh.jarvistube.Graph.study.shortsBlockUntil
+    var left by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(until) {
+        while (true) {
+            left = (until - TrustedClock.now()).coerceAtLeast(0L)
+            if (left == 0L) break
+            delay(1000)
+        }
+    }
+    return left
+}
+
+/** Shown instead of Shorts while the timer runs. */
+@Composable
+fun ShortsLocked(leftMs: Long) {
+    EmptyState(
+        Icons.Rounded.Lock,
+        "Shorts are blocked",
+        "${timeLeftText(leftMs)} left. You set this in the You tab."
+    )
+}
+
+/** Block Shorts in the You tab: pick a time; it can be made longer but not ended early. */
+@Composable
+fun ShortsBlockCard() {
+    val study = com.sourabh.jarvistube.Graph.study
+    val left = rememberShortsBlockLeft()
+    var asking by remember { mutableStateOf<Pair<String, Long>?>(null) }
+    fun untilIn(min: Long) = TrustedClock.now() + min * 60_000L
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(14.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Lock, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.size(8.dp))
+            Text("Block Shorts", style = MaterialTheme.typography.titleMedium)
+        }
+        Text(
+            if (left > 0) "Blocked: ${timeLeftText(left)} left. You can make it longer, not shorter."
+            else "Lock the Shorts tab for a while. It stays locked even if you close the app or restart the phone.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp, bottom = 10.dp)
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            item { TopicChip("15 min", false) { asking = "15 minutes" to untilIn(15) } }
+            item { TopicChip("30 min", false) { asking = "30 minutes" to untilIn(30) } }
+            item { TopicChip("1 hour", false) { asking = "1 hour" to untilIn(60) } }
+            item {
+                TopicChip("Until tomorrow", false) {
+                    asking = "the rest of today" to nextMidnightAfter(TrustedClock.now(), java.time.ZoneId.systemDefault())
+                }
+            }
+        }
+    }
+    asking?.let { (label, until) ->
+        val shorter = until <= study.shortsBlockUntil
+        AlertDialog(
+            onDismissRequest = { asking = null },
+            title = { Text(if (shorter) "Already blocked for longer" else "Block Shorts?") },
+            text = {
+                Text(
+                    if (shorter) "The timer already runs past that, and it can't be shortened."
+                    else "Shorts stay locked for $label. You can't turn this off early."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { if (!shorter) study.blockShortsUntil(until); asking = null }) {
+                    Text(if (shorter) "OK" else "Block")
+                }
+            },
+            dismissButton = { if (!shorter) TextButton(onClick = { asking = null }) { Text("Cancel") } }
+        )
+    }
+}
+
 /** The Shorts tab. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShortsScreen(vm: TubeViewModel, state: LazyGridState, bottomPadding: Dp, onProfile: () -> Unit) {
-    LaunchedEffect(Unit) { vm.ensureShorts() }
+    val study = com.sourabh.jarvistube.Graph.study
+    val left = rememberShortsBlockLeft()
+    LaunchedEffect(left > 0) { if (left <= 0) vm.ensureShorts() }
     val feed = vm.shorts
     androidx.compose.material3.pulltorefresh.PullToRefreshBox(
         isRefreshing = feed.loading && feed.items.isNotEmpty(),
@@ -122,9 +218,14 @@ fun ShortsScreen(vm: TubeViewModel, state: LazyGridState, bottomPadding: Dp, onP
     ) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             HomeTopBar(onSearch = vm::openSearch, onProfile = onProfile)
+            if (left > 0) {
+                ShortsLocked(left)
+                return@Column
+            }
             ShortsGrid(
                 feed, state, bottomPadding,
-                onRetry = vm::loadShorts, onPlay = vm::play, onMore = vm::loadMoreShorts,
+                onRetry = vm::loadShorts, onMore = vm::loadMoreShorts,
+                onPlay = { v -> vm.openShorts({ vm.shorts.items }, v, vm::loadMoreShorts) },
                 emptyBody = "With the entertainment filter on, only learning Shorts show here. Pull down to refresh.",
                 modifier = Modifier.fillMaxSize().padding(top = 4.dp)
             )

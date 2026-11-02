@@ -290,6 +290,28 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     private var shortsSessions: List<com.sourabh.jarvistube.data.ShortsSearch> = emptyList()
     private var shortsJob: Job? = null
 
+    /** The full-screen Shorts viewer, while it is open. */
+    var shortsViewer by mutableStateOf<ShortsViewer?>(null); private set
+
+    fun openShorts(items: () -> List<VideoItem>, video: VideoItem, onMore: () -> Unit) {
+        if (!shortsAllowed) return
+        playerExpanded = false
+        shortsViewer = ShortsViewer(items, items().indexOfFirst { it.url == video.url }.coerceAtLeast(0), onMore)
+    }
+
+    fun closeShorts() {
+        if (shortsViewer == null) return
+        shortsViewer = null
+        Graph.player.stop()
+    }
+
+    /** The same checks as play(), without opening the normal player. */
+    fun playShort(video: VideoItem) {
+        val reason = ContentFilter.blockReason(null, video.channel, video.title) ?: Graph.study.blockReason(video)
+        if (reason != null) Toast.makeText(getApplication(), reason, Toast.LENGTH_LONG).show()
+        else Graph.player.play(video)
+    }
+
     /** Like Recommended: never during a study session, multi-day lock, schedule or video lock. */
     val shortsAllowed: Boolean get() = !Graph.study.active && !Graph.study.lockActive
 
@@ -460,6 +482,9 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
             fallback.copy(loading = false, loadingMore = false, error = e.message ?: e.javaClass.simpleName)
         }
 }
+
+/** What the Shorts viewer is showing: a live list, where to start, and how to load more. */
+class ShortsViewer(val items: () -> List<VideoItem>, val start: Int, val onMore: () -> Unit)
 
 sealed interface Page {
     data class Channel(val url: String, val name: String) : Page

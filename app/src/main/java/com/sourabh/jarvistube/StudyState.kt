@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.sourabh.jarvistube.data.SearchSession
 import com.sourabh.jarvistube.data.VideoItem
+import com.sourabh.jarvistube.data.looksShort
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -87,6 +88,22 @@ class StudyState(context: Context) {
         if (dailyLimit <= 0 || days <= 0) return
         limitLockUntil = maxOf(limitLockUntil, com.sourabh.jarvistube.data.TrustedClock.now()) + days * 86_400_000L
         p.edit().putLong("limitLockUntil", limitLockUntil).apply()
+    }
+
+    // ---- Block Shorts: one timer for the whole phone, so switching account can't get around it ----
+    var shortsBlockUntil by mutableLongStateOf(p.getLong("shortsBlockUntil", 0L)); private set
+    val shortsBlocked: Boolean get() = shortsBlockUntil > com.sourabh.jarvistube.data.TrustedClock.now()
+
+    /**
+     * Blocks Shorts until [until] (trusted time). Like the other locks it can only be extended:
+     * an earlier time changes nothing. Written to disk at once, so a crash or restart can't end it.
+     */
+    fun blockShortsUntil(until: Long) {
+        if (until <= shortsBlockUntil) return
+        shortsBlockUntil = until
+        p.edit().putLong("shortsBlockUntil", until).commit()
+        val playing = Graph.player.now.value?.video
+        if (playing != null && playing.looksShort) Graph.player.stop()
     }
 
     // ---- Research-backed focus helpers ----
@@ -244,6 +261,8 @@ class StudyState(context: Context) {
         onBreak -> "Break time: rest your eyes for a few minutes."
         lockActive -> "Study lock: only the locked video can play until the timer ends."
         active && !isAllowed(video.channel, video.channelUrl) -> "Study mode: only your allowed channels can be played."
+        shortsBlocked && video.looksShort -> "Shorts are blocked for " +
+            com.sourabh.jarvistube.data.timeLeftText(shortsBlockUntil - com.sourabh.jarvistube.data.TrustedClock.now()) + "."
         !active && dailyLimit > 0 && usageSec >= dailyLimit * 60 -> "Daily free-time limit reached."
         else -> null
     }

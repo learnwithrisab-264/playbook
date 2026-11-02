@@ -392,7 +392,7 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         if (pos > 10_000 && !nearEnd) resume.edit().putLong(resumeKey(url), pos).apply()
         else if (nearEnd) forgetPosition(url)
         // "Continue watching" in You › History (online videos only, not downloads).
-        val video = _now.value?.video?.takeIf { it.url == url && it.url.startsWith("http") }
+        val video = _now.value?.video?.takeIf { it.url == url && it.url.startsWith("http") && !it.isShort }
         if (nearEnd) com.sourabh.jarvistube.data.WatchProgress.remove(url)
         else if (video != null && pos > 10_000 && dur > 0) {
             val info = _now.value?.info
@@ -468,9 +468,11 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         val default = com.sourabh.jarvistube.AppSettings.defaultQuality
         val auto = default <= 0
         preferredQuality = if (auto) autoHeight() else default
+        // A Short's "height" is its long side: 480 would pick a 240-wide stream, blurry full-screen.
+        if (video.isShort) preferredQuality = maxOf(preferredQuality, 1280)
         _now.value = NowPlaying(video, quality = preferredQuality, autoQuality = auto)
         app.startService(Intent(app, PlaybackService::class.java))
-        job = scope.launch { resolve(video, savedPosition(video.url)) }
+        job = scope.launch { resolve(video, if (video.isShort) 0L else savedPosition(video.url)) }
         queue.firstOrNull()?.let { com.sourabh.jarvistube.data.Repo.prefetch(it.url) }
     }
 
