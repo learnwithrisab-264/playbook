@@ -141,7 +141,7 @@ private fun LockDurationDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) 
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
                     "Until the timer ends, only this video and the Phone app work. Other apps, Home, Recents " +
-                        "Settings and Shorts are blocked. Calls and alarms still work. It can't be ended early.",
+                        "Settings and Shorts are blocked. Calls and alarms still work.",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 if (!guardOn) {
@@ -196,8 +196,8 @@ private fun ConfirmLockDialog(minutes: Int, onConfirm: () -> Unit, onBack: () ->
         title = { Text("Lock until $endText?") },
         text = {
             Text(
-                "Your phone stays locked for ${minutes / 60}h ${minutes % 60}m. Nothing in the app can end it early, " +
-                    "and restarting the phone won't either. Phone calls and emergency calls keep working.",
+                "Your phone stays locked for ${minutes / 60}h ${minutes % 60}m. Only the emergency exit can end it early, " +
+                    "once in 24 hours and 3 times in 7 days. Phone calls and emergency calls keep working.",
                 style = MaterialTheme.typography.bodyMedium
             )
         },

@@ -443,7 +443,37 @@ class StudyState(context: Context) {
             .putString("lockThumb", video.thumb).commit()
     }
 
-    /** Only for adb on a computer (LockEndReceiver). Nothing in the app may call this. */
+    // ---- Emergency exit: limited for the whole phone, so switching account can't get around it ----
+    private fun exitUses(): List<Long> =
+        p.getString("exitUses", "").orEmpty().split(",").mapNotNull { it.toLongOrNull() }
+
+    /** Used this week. Older uses stay out of the count, and their entries are dropped on the next use. */
+    val exitsUsedThisWeek: Int
+        get() = com.sourabh.jarvistube.lock.recentExits(exitUses(), com.sourabh.jarvistube.data.TrustedClock.now()).size
+
+    /** After a restart with no internet the time can't be trusted, so past uses can't be cleared yet. */
+    val exitNeedsRealTime: Boolean
+        get() = !com.sourabh.jarvistube.data.TrustedClock.reliable && exitUses().isNotEmpty()
+
+    val exitWaitMs: Long
+        get() = com.sourabh.jarvistube.lock.exitWaitMs(exitUses(), com.sourabh.jarvistube.data.TrustedClock.now())
+
+    /** Ends the session if the limits allow it. Saved to disk first, so a crash can't refund a use. */
+    fun useEmergencyExit(): Boolean {
+        if (!lockActive || exitNeedsRealTime || exitWaitMs > 0L) return false
+        val now = com.sourabh.jarvistube.data.TrustedClock.now()
+        val kept = com.sourabh.jarvistube.lock.recentExits(exitUses(), now) + now
+        p.edit().putString("exitUses", kept.joinToString(",")).commit()
+        releaseLock()
+        return true
+    }
+
+    /** Only for testing from adb on a computer (LockEndReceiver). */
+    fun resetExitUses() {
+        p.edit().remove("exitUses").commit()
+    }
+
+    /** Only for adb on a computer (LockEndReceiver). It doesn't count as an emergency exit. */
     fun endLockEarly() {
         if (lockActive) releaseLock()
     }

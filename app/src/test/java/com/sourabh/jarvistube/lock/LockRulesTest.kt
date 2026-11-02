@@ -43,6 +43,39 @@ class LockRulesTest {
     }
 
     @Test
+    fun exitNeedsBothThePhraseAndTheWait() {
+        assertFalse(exitReady(EXIT_PHRASE, EXIT_WAIT_SECONDS - 1))
+        assertFalse(exitReady("end it", EXIT_WAIT_SECONDS))
+        assertTrue(exitReady(" end my study session ", EXIT_WAIT_SECONDS))
+    }
+
+    @Test
+    fun exitIsFreeWhenNeverUsed() {
+        assertEquals(0L, exitWaitMs(emptyList(), 1_000_000L))
+    }
+
+    @Test
+    fun exitWorksOnceIn24Hours() {
+        val hour = 3_600_000L
+        val now = 100 * 24 * hour
+        assertEquals(24 * hour, exitWaitMs(listOf(now), now))
+        assertEquals(hour, exitWaitMs(listOf(now - 23 * hour), now))
+        assertEquals(0L, exitWaitMs(listOf(now - 24 * hour), now))
+    }
+
+    @Test
+    fun exitWorksThreeTimesIn7Days() {
+        val day = 86_400_000L
+        val now = 100 * day
+        // Used 6, 4 and 2 days ago: the next one waits until the oldest is 7 days old.
+        assertEquals(day, exitWaitMs(listOf(now - 6 * day, now - 4 * day, now - 2 * day), now))
+        // Two in the week still leaves one.
+        assertEquals(0L, exitWaitMs(listOf(now - 4 * day, now - 2 * day), now))
+        // Uses older than a week no longer count.
+        assertEquals(0L, exitWaitMs(listOf(now - 8 * day, now - 4 * day, now - 2 * day), now))
+    }
+
+    @Test
     fun timeLeftRoundsUp() {
         assertEquals("2 min left", minutesLeftText(120_000))
         assertEquals("1 min left", minutesLeftText(1_000))

@@ -101,5 +101,8 @@ class LockBootReceiver : BroadcastReceiver() {
 
 /** For development only. Protected by DUMP, so only adb on a computer can send it: nothing on the phone can. */
 class LockEndReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) = Graph.study.endLockEarly()
+    override fun onReceive(context: Context, intent: Intent) {
+        Graph.study.endLockEarly()
+        if (intent.getBooleanExtra("resetExits", false)) Graph.study.resetExitUses()
+    }
 }
