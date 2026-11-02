@@ -36,24 +36,24 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
-import com.sourabh.jarvistube.ui.HomeScreen
-import com.sourabh.jarvistube.ui.LocalTabActive
+import com.sourabh.jarvistube.ui.home.HomeScreen
+import com.sourabh.jarvistube.ui.common.LocalTabActive
 import androidx.compose.runtime.key
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.zIndex
-import com.sourabh.jarvistube.ui.RecommendedScreen
-import com.sourabh.jarvistube.ui.ShortsScreen
+import com.sourabh.jarvistube.ui.home.RecommendedScreen
+import com.sourabh.jarvistube.ui.shorts.ShortsScreen
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.rounded.Explore
-import com.sourabh.jarvistube.ui.YouScreen
-import com.sourabh.jarvistube.ui.PageHost
+import com.sourabh.jarvistube.ui.you.YouScreen
+import com.sourabh.jarvistube.ui.channel.PageHost
 import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.launch
-import com.sourabh.jarvistube.ui.LocalOpenChannel
+import com.sourabh.jarvistube.ui.common.LocalOpenChannel
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
@@ -69,7 +69,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.font.FontWeight
-import com.sourabh.jarvistube.ui.SearchOverlay
+import com.sourabh.jarvistube.ui.search.SearchOverlay
 import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Home
@@ -90,14 +90,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sourabh.jarvistube.ui.LoginScreen
+import com.sourabh.jarvistube.ui.you.LoginScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.sourabh.jarvistube.ui.MiniPlayer
-import com.sourabh.jarvistube.ui.FloatingPlayer
+import com.sourabh.jarvistube.ui.player.MiniPlayer
+import com.sourabh.jarvistube.ui.player.FloatingPlayer
 import androidx.compose.foundation.layout.statusBars
-import com.sourabh.jarvistube.ui.PlayerScreen
-import com.sourabh.jarvistube.ui.StudyScreen
-import com.sourabh.jarvistube.ui.rememberPlayerUi
+import com.sourabh.jarvistube.ui.player.PlayerScreen
+import com.sourabh.jarvistube.ui.study.StudyScreen
+import com.sourabh.jarvistube.ui.player.rememberPlayerUi
 import com.sourabh.jarvistube.ui.theme.JarvisTubeTheme
 
 private enum class Tab(
@@ -463,9 +463,9 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
             )
         }
         // Full-screen Shorts sit above every screen.
-        vm.shortsViewer?.let { com.sourabh.jarvistube.ui.ShortsViewerScreen(vm, it, ui) }
-        com.sourabh.jarvistube.ui.SaveToPlaylistHost()
-        com.sourabh.jarvistube.ui.DownloadSheetHost()
+        vm.shortsViewer?.let { com.sourabh.jarvistube.ui.shorts.ShortsViewerScreen(vm, it, ui) }
+        com.sourabh.jarvistube.ui.you.SaveToPlaylistHost()
+        com.sourabh.jarvistube.ui.downloads.DownloadSheetHost()
     }
     }
 }
