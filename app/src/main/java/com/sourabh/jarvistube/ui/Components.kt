@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui
 
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
@@ -386,6 +387,32 @@ fun EmptyState(icon: androidx.compose.ui.graphics.vector.ImageVector, title: Str
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
+    }
+}
+
+/** Remembers which videos of [feed] are on screen, while their tab is showing. */
+@Composable
+fun TrackSeen(state: LazyListState, feed: com.sourabh.jarvistube.data.Feed) {
+    val active = LocalTabActive.current
+    LaunchedEffect(state, feed, active) {
+        if (active) markSeen(feed) { state.layoutInfo.visibleItemsInfo.map { it.key } }
+    }
+}
+
+/** Same as [TrackSeen] for the Shorts grid. */
+@Composable
+fun TrackSeen(state: androidx.compose.foundation.lazy.grid.LazyGridState, feed: com.sourabh.jarvistube.data.Feed) {
+    val active = LocalTabActive.current
+    LaunchedEffect(state, feed, active) {
+        if (active) markSeen(feed) { state.layoutInfo.visibleItemsInfo.map { it.key } }
+    }
+}
+
+/** A video counts as seen once it has stayed on screen for a second; just flying past doesn't. */
+private suspend fun markSeen(feed: com.sourabh.jarvistube.data.Feed, keys: () -> List<Any>) {
+    androidx.compose.runtime.snapshotFlow(keys).collectLatest { visible ->
+        kotlinx.coroutines.delay(1000)
+        com.sourabh.jarvistube.data.SeenVideos.mark(feed, visible.filterIsInstance<String>().filter { it.startsWith("http") })
     }
 }
 

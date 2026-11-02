@@ -211,6 +211,7 @@ fun ShortsScreen(vm: TubeViewModel, state: LazyGridState, bottomPadding: Dp, onP
     val left = rememberShortsBlockLeft()
     LaunchedEffect(left > 0) { if (left <= 0) vm.ensureShorts() }
     val feed = vm.shorts
+    TrackSeen(state, com.sourabh.jarvistube.data.Feed.Shorts)
     androidx.compose.material3.pulltorefresh.PullToRefreshBox(
         isRefreshing = feed.loading && feed.items.isNotEmpty(),
         onRefresh = vm::loadShorts,

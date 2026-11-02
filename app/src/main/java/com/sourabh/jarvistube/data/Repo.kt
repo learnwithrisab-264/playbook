@@ -188,7 +188,7 @@ class TrendingSession {
  * Paged Shorts for a search, from YouTube's own Shorts filter (NewPipe's video search leaves most
  * Shorts out). Results pass the same content filter as every other list.
  */
-class ShortsSearch(private val query: String) {
+class ShortsSearch(private val query: String, private val filter: String = SORTS.first()) {
     private var next: String? = null
     private var started = false
 
@@ -196,11 +196,16 @@ class ShortsSearch(private val query: String) {
 
     suspend fun load(): List<VideoItem> {
         val (items, token) = withContext(Dispatchers.Default) {
-            LibraryParser.parseShorts(InnerTube.shortsSearch(if (started) null else query, next))
+            LibraryParser.parseShorts(InnerTube.shortsSearch(if (started) null else query, next, filter))
         }
         started = true
         next = token
         return ContentFilter.filter(items)
+    }
+
+    companion object {
+        /** YouTube's codes for Shorts by relevance (twice, so it stays most common), date and views. */
+        val SORTS = listOf("EgIQCQ==", "EgIQCQ==", "CAISAhAJ", "CAMSAhAJ")
     }
 }
 

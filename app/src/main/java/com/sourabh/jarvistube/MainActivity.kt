@@ -338,6 +338,31 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
     // Don't jump back to Recommended when a lock ends: the user lands on Home instead.
     LaunchedEffect(tabs) { if (tab !in tabs) tab = Tab.Home }
 
+    // Back after 30 seconds or more away counts as opening the app, so the feeds refresh. A quick
+    // look at another app doesn't: it would throw away your place in the list.
+    var reopens by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    androidx.compose.runtime.DisposableEffect(lifecycle) {
+        var stoppedAt = -1L
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            val time = android.os.SystemClock.elapsedRealtime()
+            if (event == Lifecycle.Event.ON_STOP) stoppedAt = time
+            if (event == Lifecycle.Event.ON_START && stoppedAt >= 0 && time - stoppedAt >= 30_000L) {
+                vm.expireFeeds()
+                reopens++
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(shownTab, reopens, com.sourabh.jarvistube.data.Session.dataKey) {
+        when (shownTab) {
+            Tab.Home -> if (vm.freshen(com.sourabh.jarvistube.data.Feed.MyFeed)) homeState.scrollToItem(0)
+            Tab.Recommended -> if (vm.freshen(com.sourabh.jarvistube.data.Feed.Recommended)) recommendedState.scrollToItem(0)
+            Tab.Shorts -> if (vm.freshen(com.sourabh.jarvistube.data.Feed.Shorts)) shortsState.scrollToItem(0)
+            else -> Unit
+        }
+    }
     LaunchedEffect(now == null) { if (now == null) vm.playerExpanded = false }
 
     // Lock Study Session: (re)open the locked video full-screen, including after a crash or reboot.

@@ -121,6 +121,30 @@ class ChannelPage(
 
 class PlaylistPage(val title: String, val owner: String, val count: Long, val thumb: String?, val first: EntryPage)
 
+/** A channel's Videos tab, page by page (builds the study feed). */
+class ChannelVideos(private val url: String) {
+    private var page: ChannelPage? = null
+    private var tab: ChannelTab? = null
+    private var next: Page? = null
+    private var started = false
+
+    val hasMore: Boolean get() = !started || next != null
+
+    suspend fun load(): List<VideoItem> {
+        val p = page ?: ChannelRepo.page(url).also { page = it }
+        val videos = tab ?: p.tabs.firstOrNull { it.key == ChannelTabs.VIDEOS }?.also { tab = it }
+        if (videos == null) {
+            started = true
+            return emptyList()
+        }
+        val n = next
+        val entries = if (started && n != null) ChannelRepo.tabMore(p, videos, n) else ChannelRepo.tab(p, videos)
+        started = true
+        next = entries.next
+        return entries.items.filterIsInstance<Entry.Video>().map { it.video }
+    }
+}
+
 /** Channel pages, channel tabs, playlists and channel search, all through NewPipeExtractor. */
 object ChannelRepo {
     private val infoCache = ConcurrentHashMap<String, ChannelInfo>()
@@ -161,7 +185,7 @@ object ChannelRepo {
         EntryPage(p.items.toEntries(page.ref), p.nextPage)
     }
 
-    /** First page of a channel's Videos tab (used to build the study feed). */
+    /** First page of a channel's Videos tab. */
     suspend fun latestVideos(url: String): List<VideoItem> {
         val p = page(url)
         val videos = p.tabs.firstOrNull { it.key == ChannelTabs.VIDEOS } ?: return emptyList()

@@ -162,6 +162,8 @@ fun HomeScreen(
                 feedItems(shown, onRetry = vm::loadStudyFeed, onPlay = vm::play)
             }
         }
+        TrackSeen(listState, com.sourabh.jarvistube.data.Feed.MyFeed)
+        LoadMoreEffect(listState, shown.items.size, vm::loadMoreStudy)
     }
 }
 
@@ -220,6 +222,7 @@ fun RecommendedScreen(
                 else "No recommendations right now. Pull down to refresh."
             )
         }
+        TrackSeen(listState, com.sourabh.jarvistube.data.Feed.Recommended)
         LoadMoreEffect(listState, feed.items.size, vm::loadMoreRecommended)
     }
 }

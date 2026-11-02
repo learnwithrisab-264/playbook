@@ -38,10 +38,10 @@ object InnerTube {
 
     /**
      * One page of YouTube's search with its Shorts filter on. Needs no sign-in and sends no cookies,
-     * so it works signed out and doesn't touch any account's history. [params] is YouTube's own
-     * code for "Type: Shorts".
+     * so it works signed out and doesn't touch any account's history. [filter] is YouTube's own
+     * code for "Type: Shorts", with or without a sort order.
      */
-    suspend fun shortsSearch(query: String?, continuation: String?): JSONObject = withContext(Dispatchers.IO) {
+    suspend fun shortsSearch(query: String?, continuation: String?, filter: String): JSONObject = withContext(Dispatchers.IO) {
         val body = JSONObject().put(
             "context",
             JSONObject().put(
@@ -51,7 +51,7 @@ object InnerTube {
             )
         )
         if (continuation != null) body.put("continuation", continuation)
-        else body.put("query", query).put("params", "EgIQCQ==")
+        else body.put("query", query).put("params", filter)
         val request = Request.Builder()
             .url("$ORIGIN/youtubei/v1/search?prettyPrint=false")
             .post(body.toString().toRequestBody("application/json".toMediaType()))
