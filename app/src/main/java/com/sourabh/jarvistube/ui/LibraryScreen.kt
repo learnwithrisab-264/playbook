@@ -161,9 +161,6 @@ fun LibraryScreen(
                 }
             }
         }
-        if (detail == null && lib.tab == LibTab.History && com.sourabh.jarvistube.data.WatchProgress.items.isNotEmpty()) {
-            item { ContinueWatchingRow(vm) }
-        }
         if (detail == null && lib.tab == LibTab.History) {
             historySection(vm, historyQuery, { historyQuery = it }, onClearAll = { clearHistory = true })
             if (state.items.isNotEmpty()) item(key = "youtube-history") {
@@ -333,45 +330,6 @@ private fun ProfileHeader(lib: LibraryViewModel, onSwitch: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary
             )
-        }
-    }
-}
-
-/** Videos you left part-way, with a red bar showing how far you got; tap to resume. */
-@Composable
-private fun ContinueWatchingRow(vm: TubeViewModel) {
-    val list = com.sourabh.jarvistube.data.WatchProgress.items
-        .filterNot { com.sourabh.jarvistube.data.ContentFilter.hides(it.video) }
-    if (list.isEmpty()) return
-    Column(Modifier.padding(bottom = 12.dp)) {
-        Text(
-            "Continue watching",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-        LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(list, key = { it.video.url }) { p ->
-                Column(Modifier.width(176.dp).clip(RoundedCornerShape(12.dp)).clickable { vm.play(p.video) }) {
-                    Box(Modifier.width(176.dp).height(99.dp).clip(RoundedCornerShape(12.dp))) {
-                        Thumb(p.video.thumb, Modifier.matchParentSize())
-                        Box(
-                            Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp)
-                                .background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.35f))
-                        ) {
-                            Box(Modifier.fillMaxWidth(p.fraction).height(3.dp).background(androidx.compose.ui.graphics.Color(0xFFFF6D00)))
-                        }
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text(p.video.title, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(
-                        p.video.channel,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
         }
     }
 }

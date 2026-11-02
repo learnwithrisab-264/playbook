@@ -394,20 +394,6 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         val nearEnd = dur != C.TIME_UNSET && dur > 0 && pos > dur - 10_000
         if (pos > 10_000 && !nearEnd) resume.edit().putLong(resumeKey(url), pos).apply()
         else if (nearEnd) forgetPosition(url)
-        // "Continue watching" in You › History (online videos only, not downloads).
-        val video = _now.value?.video?.takeIf { it.url == url && it.url.startsWith("http") && !it.isShort }
-        if (nearEnd) com.sourabh.jarvistube.data.WatchProgress.remove(url)
-        else if (video != null && pos > 10_000 && dur > 0) {
-            val info = _now.value?.info
-            com.sourabh.jarvistube.data.WatchProgress.update(
-                video.copy(
-                    title = info?.name ?: video.title,
-                    channel = info?.uploaderName ?: video.channel,
-                    channelUrl = info?.uploaderUrl ?: video.channelUrl
-                ),
-                pos, dur
-            )
-        }
     }
 
     // Each account has its own place in a video. A position saved before this existed has no account.
