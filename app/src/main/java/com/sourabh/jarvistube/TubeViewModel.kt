@@ -66,12 +66,14 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     val pages = mutableStateListOf<Page>()
 
     fun openChannel(url: String, name: String) {
+        if (Graph.study.lockActive) return // a locked session stays on its video
         val page = Page.Channel(url, name)
         if (pages.lastOrNull() != page) pages.add(page)
         playerExpanded = false
     }
 
     fun openPlaylist(url: String, title: String) {
+        if (Graph.study.lockActive) return
         val page = Page.Playlist(url, title)
         if (pages.lastOrNull() != page) pages.add(page)
         playerExpanded = false
@@ -587,6 +589,7 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openSearch() {
+        if (Graph.study.lockActive) return
         clearSearch()
         searchOpen = true
     }

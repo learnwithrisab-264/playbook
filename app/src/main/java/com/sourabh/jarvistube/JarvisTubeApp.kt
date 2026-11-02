@@ -40,5 +40,6 @@ class JarvisTubeApp : Application() {
         com.sourabh.jarvistube.data.SeenVideos.init(this)
         com.sourabh.jarvistube.data.FeedStore.init(this)
         com.sourabh.jarvistube.data.UploadAlerts.init(this)
+        if (Graph.study.lockActive) com.sourabh.jarvistube.lock.StudyLockService.start(this)
     }
 }

@@ -41,7 +41,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import com.sourabh.jarvistube.Graph
+import com.sourabh.jarvistube.lock.StudyGuardService
+import com.sourabh.jarvistube.lock.StudyLockService
 import com.sourabh.jarvistube.player.NowPlaying
 import kotlinx.coroutines.delay
 import java.util.Locale
@@ -97,10 +100,12 @@ object PlayerPopups {
 @Composable
 fun StudyLockDialogHost(now: NowPlaying) {
     if (!PlayerPopups.lockPicker) return
+    val context = LocalContext.current
     LockDurationDialog(
         onConfirm = { minutes ->
             PlayerPopups.lockPicker = false
             Graph.study.startLock(now.video, minutes)
+            StudyLockService.start(context)
         },
         onDismiss = { PlayerPopups.lockPicker = false }
     )
@@ -108,8 +113,20 @@ fun StudyLockDialogHost(now: NowPlaying) {
 
 @Composable
 private fun LockDurationDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) {
-    var hours by remember { mutableIntStateOf(1) }
-    var minutes by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
+    var guardOn by remember { mutableStateOf(StudyGuardService.isEnabled(context)) }
+    var overAppsOn by remember { mutableStateOf(StudyGuardService.canShowOverApps(context)) }
+    // Coming back from Settings updates this by itself.
+    LaunchedEffect(Unit) {
+        while (true) {
+            guardOn = StudyGuardService.isEnabled(context)
+            overAppsOn = StudyGuardService.canShowOverApps(context)
+            delay(1000)
+        }
+    }
+    val ready = guardOn && overAppsOn
+    var hours by remember { mutableIntStateOf(0) }
+    var minutes by remember { mutableIntStateOf(2) }
     val total = hours * 60 + minutes
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -117,10 +134,25 @@ private fun LockDurationDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) 
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
-                    "This video stays on screen until the timer ends. Back, minimise and other videos are " +
-                        "blocked, and JarvisGuard brings you back from other apps. Calls, alarms and settings still work.",
+                    "Until the timer ends, only this video and the Phone app work. Other apps, Home, Recents " +
+                        "and Shorts are blocked. Calls and alarms still work, and there is an emergency exit.",
                     style = MaterialTheme.typography.bodyMedium
                 )
+                if (!guardOn) {
+                    TextButton(onClick = {
+                        context.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    }) { Text("Step 1: turn on PlayBook Study Lock") }
+                }
+                if (!overAppsOn) {
+                    TextButton(onClick = { context.startActivity(StudyGuardService.overlaySettings(context)) }) {
+                        Text("Step 2: allow Display over other apps")
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TopicChip("2 min", hours == 0 && minutes == 2) { hours = 0; minutes = 2 }
+                    TopicChip("25 min", hours == 0 && minutes == 25) { hours = 0; minutes = 25 }
+                    TopicChip("1 hour", hours == 1 && minutes == 0) { hours = 1; minutes = 0 }
+                }
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Stepper("Hours", hours, onMinus = { if (hours > 0) hours-- }, onPlus = { if (hours < 8) hours++ })
                     Stepper(
@@ -132,8 +164,8 @@ private fun LockDurationDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) 
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(total) }, enabled = total > 0) {
-                Text(if (total > 0) "Lock for ${hours}h ${minutes}m" else "Pick a duration")
+            TextButton(onClick = { onConfirm(total) }, enabled = total > 0 && ready) {
+                Text(if (!ready) "Finish the steps first" else if (total > 0) "Lock for ${hours}h ${minutes}m" else "Pick a duration")
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }

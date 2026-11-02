@@ -769,6 +769,14 @@ private fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier: 
                     leadingIcon = { Icon(Icons.Rounded.QueueMusic, null, Modifier.size(18.dp)) }
                 )
                 if (showQueue) QueueSheet(onDismiss = { showQueue = false })
+                if (!Graph.study.lockActive) {
+                    PillChip(
+                        selected = false,
+                        onClick = { PlayerPopups.lockPicker = true },
+                        label = { Text("Lock Study Session") },
+                        leadingIcon = { Icon(Icons.Rounded.Lock, null, Modifier.size(18.dp)) }
+                    )
+                }
                 PillChip(
                     selected = Graph.player.sponsorBlock,
                     onClick = { Graph.player.updateSponsorBlock(!Graph.player.sponsorBlock) },

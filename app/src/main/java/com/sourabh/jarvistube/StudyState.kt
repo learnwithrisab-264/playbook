@@ -423,6 +423,11 @@ class StudyState(context: Context) {
             .putString("lockThumb", video.thumb).commit()
     }
 
+    /** The emergency exit. Only its deliberate steps, or adb on your computer, may call this. */
+    fun endLockEarly() {
+        if (lockActive) releaseLock()
+    }
+
     private fun releaseLock() {
         lockActive = false
         lockEndAt = 0L
