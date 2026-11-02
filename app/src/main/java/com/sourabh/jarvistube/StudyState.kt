@@ -107,25 +107,13 @@ class StudyState(context: Context) {
     }
 
     // ---- Research-backed focus helpers ----
-    // Daily goal + streak (goal-setting and streaks raise follow-through), Pomodoro-style
-    // breaks (short scheduled breaks sustain attention), and a 7-day history.
+    // Daily goal + streak (goal-setting and streaks raise follow-through), and a 7-day history.
     var dailyGoal by mutableIntStateOf(p.getInt("goal", 60)); private set
-    // Pomodoro breaks were removed from the app; kept off so old saved settings never pause videos.
-    var breaksEnabled by mutableStateOf(false); private set
-    var focusBlockMin by mutableIntStateOf(p.getInt("focusBlock", 25)); private set
-    var breakMin by mutableIntStateOf(p.getInt("breakMin", 5)); private set
-    var breakEndAt by mutableLongStateOf(0L); private set
-    val onBreak: Boolean get() = breakEndAt > com.sourabh.jarvistube.data.TrustedClock.now()
-    private var sinceBreakSec = 0
     var focusTodaySec by mutableIntStateOf(0); private set
     private var day = LocalDate.now().toString()
     /** date -> focused seconds, last 14 days. */
     val history = androidx.compose.runtime.mutableStateMapOf<String, Int>()
 
-    fun updateBreaks(on: Boolean, block: Int = focusBlockMin, brk: Int = breakMin) {
-        breaksEnabled = on; focusBlockMin = block; breakMin = brk
-        p.edit().putBoolean("breaks", on).putInt("focusBlock", block).putInt("breakMin", brk).apply()
-    }
     // Music/film/entertainment filter. The switch is the user's choice in free time, but it is
     // always enforced while a study session or a video lock is running.
     var blockEntertainment by mutableStateOf(p.getBoolean("blockEnt", true)); private set
@@ -150,7 +138,6 @@ class StudyState(context: Context) {
         return true
     }
 
-    fun skipBreak() { if (!strict || !active) breakEndAt = 0L }
 
     private fun loadHistory() {
         history.clear()
@@ -191,33 +178,21 @@ class StudyState(context: Context) {
 
     /**
      * Called once a second by the app-wide player loop (so background play counts too).
-     * Returns BREAK / LIMIT / a message, or null.
+     * Returns true when the daily free-time limit has just been reached.
      */
-    fun onSecond(playing: Boolean): String? {
+    fun onSecond(playing: Boolean): Boolean {
         tick()
         rollDay()
-        val now = com.sourabh.jarvistube.data.TrustedClock.now()
-        if (breakEndAt in 1..now) {
-            breakEndAt = 0L
-            return "Break over. Back to focus!"
-        }
         val studying = active || lockActive
-        if (studying && playing && !onBreak) {
+        if (studying && playing) {
             focusTodaySec++
-            sinceBreakSec++
             if (focusTodaySec % 30 == 0) saveHistory()
-            if (breaksEnabled && active && !lockActive && sinceBreakSec >= focusBlockMin * 60) {
-                sinceBreakSec = 0
-                breakEndAt = now + breakMin * 60_000L
-                saveHistory()
-                return "BREAK"
-            }
         }
         if (!studying && playing) {
             addUsage(1)
-            if (limitReached) return "LIMIT"
+            return limitReached
         }
-        return null
+        return false
     }
 
     // Stats
@@ -254,7 +229,6 @@ class StudyState(context: Context) {
     /** Returns null if playable, otherwise the reason it is blocked. */
     fun blockReason(video: VideoItem): String? = when {
         lockActive && video.url == lockUrl -> null
-        onBreak -> "Break time: rest your eyes for a few minutes."
         lockActive -> "Study lock: only the locked video can play until the timer ends."
         active && !isAllowed(video.channel, video.channelUrl) -> "Study mode: only your allowed channels can be played."
         shortsBlocked && video.looksShort -> "Shorts are blocked for " +
@@ -288,7 +262,6 @@ class StudyState(context: Context) {
         strict = strictNext
         sessionMinutes = minutes
         active = true
-        sinceBreakSec = 0
         p.edit().putLong("endAt", endAt).putLong("startAt", sessionStartAt).putBoolean("longLock", false)
             .putBoolean("strict", strict).putInt("sessionMinutes", sessionMinutes)
             .putInt("minutes", minutes).putBoolean("strictNext", strictNext).apply()
@@ -311,7 +284,6 @@ class StudyState(context: Context) {
         longLock = true
         sessionMinutes = ((untilMs - now) / 60_000L).toInt()
         active = true
-        sinceBreakSec = 0
         p.edit().putLong("endAt", endAt).putLong("startAt", now).putBoolean("strict", true)
             .putBoolean("longLock", true).putInt("sessionMinutes", sessionMinutes).commit()
         loadFeed(null)
@@ -370,7 +342,6 @@ class StudyState(context: Context) {
         longLock = false
         sessionMinutes = ((window.last - window.first) / 60_000L).toInt()
         active = true
-        sinceBreakSec = 0
         p.edit().putLong("endAt", endAt).putLong("startAt", now).putBoolean("strict", true).putBoolean("longLock", false)
             .putInt("sessionMinutes", sessionMinutes).putLong("schedStarted", window.first).commit()
         loadFeed(null)

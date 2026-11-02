@@ -193,24 +193,16 @@ class PlayerController(val app: Context, http: OkHttpClient) {
                 }
             }
         })
-        // Study clock, focus time, Pomodoro breaks and the free-time limit, once a second for the
+        // Study clock, focus time and the free-time limit, once a second for the
         // whole app (not tied to the screen), so background playback is counted and stopped too.
         scope.launch {
             while (true) {
                 delay(1000)
                 val study = Graph.study
-                when (val r = study.onSecond(player.isPlaying)) {
-                    null -> Unit
-                    "BREAK" -> {
-                        player.pause()
-                        showNotice("Break time: ${study.breakMin} min. Look away from the screen.")
-                    }
-                    "LIMIT" -> {
-                        stop()
-                        study.saveUsage()
-                        android.widget.Toast.makeText(app, "Daily free-time limit reached.", android.widget.Toast.LENGTH_LONG).show()
-                    }
-                    else -> showNotice(r)
+                if (study.onSecond(player.isPlaying)) {
+                    stop()
+                    study.saveUsage()
+                    android.widget.Toast.makeText(app, "Daily free-time limit reached.", android.widget.Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -520,10 +512,6 @@ class PlayerController(val app: Context, http: OkHttpClient) {
     }
 
     fun togglePlay() {
-        if (!player.isPlaying && Graph.study.onBreak) {
-            showNotice("Still on break: ${formatLeftMs(Graph.study.breakEndAt - com.sourabh.jarvistube.data.TrustedClock.now())} left")
-            return
-        }
         // playWhenReady is what you asked for; isPlaying is also false while buffering, which made
         // Pause do nothing mid-buffer.
         if (player.playWhenReady && player.playbackState != Player.STATE_ENDED) {
@@ -753,9 +741,4 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         val cm = app.getSystemService(android.net.ConnectivityManager::class.java)
         return if (cm?.isActiveNetworkMetered == true) 480 else 1080
     }
-}
-
-private fun formatLeftMs(ms: Long): String {
-    val s = (ms / 1000).coerceAtLeast(0)
-    return "%d:%02d".format(s / 60, s % 60)
 }
