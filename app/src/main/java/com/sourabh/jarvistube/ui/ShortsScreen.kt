@@ -209,7 +209,7 @@ fun ShortsBlockCard() {
 fun ShortsScreen(vm: TubeViewModel, state: LazyGridState, bottomPadding: Dp, onProfile: () -> Unit) {
     val study = com.sourabh.jarvistube.Graph.study
     val left = rememberShortsBlockLeft()
-    LaunchedEffect(left > 0) { if (left <= 0) vm.ensureShorts() }
+    LaunchedEffect(left > 0, com.sourabh.jarvistube.data.Session.dataKey) { if (left <= 0) vm.ensureShorts() }
     val feed = vm.shorts
     TrackSeen(state, com.sourabh.jarvistube.data.Feed.Shorts)
     androidx.compose.material3.pulltorefresh.PullToRefreshBox(

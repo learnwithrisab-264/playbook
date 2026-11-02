@@ -38,6 +38,7 @@ class JarvisTubeApp : Application() {
         com.sourabh.jarvistube.data.WatchProgress.init(this)
         com.sourabh.jarvistube.data.WatchHistory.init(this)
         com.sourabh.jarvistube.data.SeenVideos.init(this)
+        com.sourabh.jarvistube.data.FeedStore.init(this)
         com.sourabh.jarvistube.data.UploadAlerts.init(this)
     }
 }

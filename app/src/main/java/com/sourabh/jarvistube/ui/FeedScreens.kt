@@ -112,11 +112,11 @@ fun HomeScreen(
 ) {
     val channels = StudyChannels.list
     val feed = vm.studyFeed
-    // Rebuild the feed whenever the set of study channels changes.
+    // The saved list comes back; only a change to the study channels rebuilds it.
     val channelKey = channels.joinToString("|") { it.url }
     LaunchedEffect(channelKey) {
         if (vm.channelFilter != null && channels.none { it.url == vm.channelFilter }) vm.channelFilter = null
-        vm.loadStudyFeed()
+        vm.ensureStudyFeed()
     }
     val filter = vm.channelFilter
     val shown = if (filter == null) feed else {
@@ -181,7 +181,7 @@ fun RecommendedScreen(
     onProfile: () -> Unit
 ) {
     // First open, and again after switching account or region.
-    LaunchedEffect(com.sourabh.jarvistube.data.Session.activeId, com.sourabh.jarvistube.AppSettings.region) {
+    LaunchedEffect(com.sourabh.jarvistube.data.Session.dataKey, com.sourabh.jarvistube.AppSettings.region) {
         vm.ensureRecommended()
     }
     val feed = vm.recommended

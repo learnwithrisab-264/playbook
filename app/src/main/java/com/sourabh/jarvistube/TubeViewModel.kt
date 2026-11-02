@@ -11,6 +11,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.sourabh.jarvistube.data.ContentFilter
 import com.sourabh.jarvistube.data.Feed
+import com.sourabh.jarvistube.data.FeedStore
 import com.sourabh.jarvistube.data.SearchSession
 import com.sourabh.jarvistube.data.SeenVideos
 import com.sourabh.jarvistube.data.VideoItem
@@ -105,11 +106,10 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         shortsJob?.cancel()
         shortsSessions = emptyList()
         shorts = FeedState()
-        loadedAt.clear()
         studyFeed = FeedState()
         channelFilter = null
         clearSearch()
-        loadStudyFeed()
+        ensureStudyFeed()
     }
 
     init {
@@ -153,9 +153,30 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
 
     private var studySessions: List<com.sourabh.jarvistube.data.ChannelVideos> = emptyList()
 
+    /** Account + channels the shown list belongs to. */
+    private var studyKey: String? = null
+    private fun studyChannelsKey() = com.sourabh.jarvistube.data.StudyChannels.list.joinToString("|") { it.url }
+
+    /** Finds the saved list again. New videos load only without one, or when your channels change. */
+    fun ensureStudyFeed() {
+        val channels = studyChannelsKey()
+        val key = com.sourabh.jarvistube.data.Session.dataKey + "|" + channels
+        if (key == studyKey) return
+        studyKey = key
+        val saved = FeedStore.load(Feed.MyFeed)?.takeIf { it.note == channels }
+        if (saved == null) return loadStudyFeed()
+        studyJob?.cancel()
+        studySessions = emptyList()
+        studyFeed = FeedState(items = ContentFilter.filter(saved.items))
+    }
+
+    private fun saveStudyFeed() {
+        if (studyFeed.error == null) FeedStore.save(Feed.MyFeed, studyFeed.items, note = studyChannelsKey())
+    }
+
+    /** What Pull to refresh runs. */
     fun loadStudyFeed() {
         studyJob?.cancel()
-        stamp(Feed.MyFeed)
         // A different set of channels leads each time; the others wait for Load more.
         val sessions = com.sourabh.jarvistube.data.StudyChannels.list.toList().shuffled()
             .map { com.sourabh.jarvistube.data.ChannelVideos(it.url) }
@@ -166,17 +187,23 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         }
         studyJob = viewModelScope.launch {
             studyFeed = studyFeed.copy(loading = true, error = null) // keep what is shown while refreshing
-            studyFeed = runCatchingFeed {
+            studyFeed = runCatchingFeed(fallback = studyFeed) {
                 val all = channelPages(sessions.take(15))
                 if (all.isEmpty()) throw java.io.IOException("Couldn't load videos from your channels")
                 FeedState(items = arrangeMyFeed(all))
             }
+            saveStudyFeed()
             studyFeed.items.take(3).forEach { com.sourabh.jarvistube.data.Repo.prefetch(it.url) }
         }
     }
 
     fun loadMoreStudy() {
         val cur = studyFeed
+        // After a saved list comes back there are no pages open yet: start them now.
+        if (studySessions.isEmpty()) {
+            studySessions = com.sourabh.jarvistube.data.StudyChannels.list.toList().shuffled()
+                .map { com.sourabh.jarvistube.data.ChannelVideos(it.url) }
+        }
         val sessions = studySessions.filter { it.hasMore }.shuffled().take(8)
         if (cur.loading || cur.loadingMore || sessions.isEmpty() || cur.items.isEmpty()) return
         studyJob = viewModelScope.launch {
@@ -185,6 +212,7 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
                 val more = SeenVideos.unseen(Feed.MyFeed, channelPages(sessions)).shuffled()
                 cur.copy(items = (cur.items + more).distinctBy { it.url }, loadingMore = false)
             }
+            saveStudyFeed()
         }
     }
 
@@ -216,33 +244,6 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         return if (fresh.size >= 12) shown else shown + (all - fresh.toSet())
     }
 
-    // ---- When feeds refresh: on every app open, on opening a tab, and on pull-to-refresh ----
-    private val loadedAt = HashMap<Feed, Long>()
-
-    private fun stamp(feed: Feed) { loadedAt[feed] = android.os.SystemClock.elapsedRealtime() }
-
-    /** The app came back after a while away: every feed is out of date. */
-    fun expireFeeds() = loadedAt.clear()
-
-    /** Refreshes [feed] unless it loaded moments ago. Returns true when it did. */
-    fun freshen(feed: Feed): Boolean {
-        val last = loadedAt[feed]
-        if (last != null && android.os.SystemClock.elapsedRealtime() - last < 60_000L) return false
-        when (feed) {
-            Feed.MyFeed -> loadStudyFeed()
-            Feed.Recommended -> {
-                if (!recommendedAllowed) return false
-                loadRecommended()
-            }
-            Feed.Shorts -> {
-                val blocked = Graph.study.shortsBlockUntil > com.sourabh.jarvistube.data.TrustedClock.now()
-                if (!shortsAllowed || blocked || shortsViewer != null) return false
-                if (shorts.items.isEmpty()) ensureShorts() else fetchShorts(keepShown = true)
-            }
-        }
-        return true
-    }
-
     /** Subjects plus your own channels, each with a changing angle, so searches differ every time. */
     private fun rotatedTerms(count: Int): List<String> {
         val pool = topics + com.sourabh.jarvistube.data.StudyChannels.list.map { it.name }
@@ -268,23 +269,41 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     val recommendedAllowed: Boolean
         get() = AppSettings.showRecommended && !Graph.study.active && !Graph.study.lockActive
 
-    private fun recommendedKeyNow() = "${com.sourabh.jarvistube.data.Session.activeId}|${AppSettings.region}"
+    private fun recommendedKeyNow() = "${com.sourabh.jarvistube.data.Session.dataKey}|${AppSettings.region}"
+    /** A saved list came back: the next Load more starts from the top of YouTube's home feed. */
+    private var resumeHome = false
 
-    /** Loads the tab the first time it opens, and again after an account or region change. */
+    private fun saveRecommended() {
+        if (recommended.error == null) {
+            FeedStore.save(Feed.Recommended, recommended.items, AppSettings.region, recommendedSource.orEmpty())
+        }
+    }
+
+    /** Finds the saved list again. New videos load only without one: never just by opening the tab. */
     fun ensureRecommended() {
-        if (recommendedKey != recommendedKeyNow()) loadRecommended()
+        val key = recommendedKeyNow()
+        if (recommendedKey == key || !recommendedAllowed) return
+        val saved = FeedStore.load(Feed.Recommended, AppSettings.region) ?: return loadRecommended()
+        recommendedJob?.cancel()
+        recommendedKey = key
+        recommended = FeedState(items = saved.items)
+        recommendedSource = saved.note.ifEmpty { null }
+        homeToken = null
+        trending = null
+        resumeHome = com.sourabh.jarvistube.data.Session.isSignedIn
     }
 
     fun loadRecommended() {
         if (!recommendedAllowed) return
-        stamp(Feed.Recommended)
         recommendedJob?.cancel()
         val key = recommendedKeyNow()
         // Same source: keep what is shown while refreshing. New account/region: start clean.
         recommended = if (key == recommendedKey) recommended.copy(loading = true, error = null) else FeedState(loading = true)
+        resumeHome = false
         recommendedKey = key
         recommendedJob = viewModelScope.launch {
-            recommended = runCatchingFeed { FeedState(items = firstRecommendedPage()) }
+            recommended = runCatchingFeed(fallback = recommended) { FeedState(items = firstRecommendedPage()) }
+            saveRecommended()
             recommended.items.take(3).forEach { com.sourabh.jarvistube.data.Repo.prefetch(it.url) }
         }
     }
@@ -301,12 +320,14 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
                 val next = when {
                     session?.hasMore == true -> session.loadMore()
                     token != null -> homeFeed(token)
+                    resumeHome -> homeFeed(null).also { resumeHome = false }
                     else -> emptyList()
                 }
                 // At the end of YouTube's list, or with nothing new on the page, new searches carry on.
                 val more = SeenVideos.unseen(Feed.Recommended, next).ifEmpty { subjectMix() }
                 cur.copy(items = (cur.items + more).distinctBy { it.url }, loadingMore = false)
             }
+            saveRecommended()
         }
     }
 
@@ -422,36 +443,8 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     /** Like Recommended: never during a study session, multi-day lock, schedule or video lock. */
     val shortsAllowed: Boolean get() = !Graph.study.active && !Graph.study.lockActive
 
-    private val shortsPrefs = app.getSharedPreferences("shorts", Context.MODE_PRIVATE)
-    private fun shortsCacheKey() = "list:" + com.sourabh.jarvistube.data.Session.dataKey + ":" + AppSettings.region
-    private fun shortsSavedAtKey() = "at:" + com.sourabh.jarvistube.data.Session.dataKey + ":" + AppSettings.region
-
-    /** The saved list, only a placeholder for an hour while new Shorts load. It still passes today's content filter. */
-    private fun cachedShorts(): List<VideoItem> = runCatching {
-        val age = System.currentTimeMillis() - shortsPrefs.getLong(shortsSavedAtKey(), 0L)
-        if (age !in 0L..3_600_000L) return emptyList()
-        val arr = org.json.JSONArray(shortsPrefs.getString(shortsCacheKey(), "[]"))
-        val list = (0 until arr.length()).map { i ->
-            val o = arr.getJSONObject(i)
-            VideoItem(
-                url = o.getString("url"), title = o.getString("title"), channel = "",
-                thumb = o.optString("thumb").ifEmpty { null }, durationSec = 0, views = -1,
-                uploaded = o.optString("views").ifEmpty { null }, isLive = false, isShort = true
-            )
-        }
-        SeenVideos.unseen(Feed.Shorts, ContentFilter.filter(list))
-    }.getOrDefault(emptyList())
-
-    private fun saveShorts(list: List<VideoItem>) {
-        val arr = org.json.JSONArray()
-        list.take(40).forEach {
-            arr.put(
-                org.json.JSONObject().put("url", it.url).put("title", it.title)
-                    .put("thumb", it.thumb.orEmpty()).put("views", it.uploaded.orEmpty())
-            )
-        }
-        shortsPrefs.edit().putString(shortsCacheKey(), arr.toString())
-            .putLong(shortsSavedAtKey(), System.currentTimeMillis()).apply()
+    private fun saveShorts() {
+        if (shorts.error == null) FeedStore.save(Feed.Shorts, shorts.items, AppSettings.region)
     }
 
     /** Readies the first Shorts, so tapping one starts at once instead of after 2-3 seconds. */
@@ -461,15 +454,12 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
 
     fun ensureShorts() {
         if (shortsSessions.isNotEmpty() || shorts.items.isNotEmpty() || shorts.loading) return
-        val saved = cachedShorts()
+        // New Shorts load only without a saved list: never just by opening the tab.
+        val saved = FeedStore.load(Feed.Shorts, AppSettings.region)?.items?.let(ContentFilter::filter).orEmpty()
         if (saved.isEmpty()) return loadShorts()
-        // Show the saved list now; the new Shorts replace it when they arrive.
         shorts = FeedState(items = saved)
         prepareFirstShorts()
-        fetchShorts(keepShown = true)
     }
-
-    fun loadShorts() = fetchShorts(keepShown = false)
 
     private fun newShortsSessions() = rotatedTerms(5).map {
         com.sourabh.jarvistube.data.ShortsSearch(it, com.sourabh.jarvistube.data.ShortsSearch.SORTS.random())
@@ -482,16 +472,15 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         return got.shuffled()
     }
 
-    private fun fetchShorts(keepShown: Boolean) {
+    /** What Pull to refresh runs. */
+    fun loadShorts() {
         if (!shortsAllowed) return
         shortsJob?.cancel()
-        stamp(Feed.Shorts)
         val sessions = newShortsSessions()
         shortsSessions = sessions
         val t0 = android.os.SystemClock.elapsedRealtime()
-        val shown = shorts.items
         shortsJob = viewModelScope.launch {
-            if (!keepShown) shorts = shorts.copy(loading = true, error = null)
+            shorts = shorts.copy(loading = true, error = null)
             val arrived = ArrayList<List<VideoItem>>()
             // Every search shows as soon as it answers, instead of waiting for the slowest.
             sessions.map { s ->
@@ -505,7 +494,7 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
                     }
                     arrived += page
                     val fresh = SeenVideos.unseen(Feed.Shorts, interleave(arrived))
-                    if (!keepShown && fresh.isNotEmpty()) {
+                    if (fresh.isNotEmpty()) {
                         val first = shorts.items.isEmpty() || arrived.size == 1
                         shorts = FeedState(items = fresh, loading = arrived.size < sessions.size)
                         if (first) {
@@ -516,13 +505,8 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }.awaitAll()
             val fresh = SeenVideos.pick(Feed.Shorts, interleave(arrived), 8)
-            if (fresh.isNotEmpty()) saveShorts(fresh)
-            shorts = when {
-                fresh.isEmpty() -> shorts.copy(loading = false)
-                // Inside the viewer new Shorts join the end, so nothing jumps under your finger.
-                shortsViewer != null -> shorts.copy(items = (shown + fresh).distinctBy { it.url }, loading = false)
-                else -> FeedState(items = fresh)
-            }
+            shorts = if (fresh.isEmpty()) shorts.copy(loading = false) else FeedState(items = fresh)
+            if (fresh.isNotEmpty()) saveShorts()
             prepareFirstShorts()
         }
     }
@@ -544,6 +528,7 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 cur.copy(items = (cur.items + more).distinctBy { it.url }, loadingMore = false)
             }
+            saveShorts()
         }
     }
 
