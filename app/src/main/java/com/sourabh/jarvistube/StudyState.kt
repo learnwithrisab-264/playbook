@@ -348,7 +348,7 @@ class StudyState(context: Context) {
     }
 
     companion object {
-        /** The scheduled window (start..end, epoch ms) containing [now], or null. Also used by the provider. */
+        /** The scheduled window (start..end, epoch ms) containing [now], or null. */
         fun scheduleWindow(p: android.content.SharedPreferences, now: Long): LongRange? {
             if (!p.getBoolean("schedOn", false)) return null
             val start = p.getInt("schedStart", 18 * 60)

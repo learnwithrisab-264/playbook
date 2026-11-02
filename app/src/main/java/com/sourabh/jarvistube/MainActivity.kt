@@ -184,7 +184,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         handlePlayExtra(intent)
         // App pinning is no longer used for the study lock: it also blocked alarms, calls, the
-        // dialer and quick settings. JarvisGuard enforces the lock instead and leaves those alone.
+        // dialer and quick settings. StudyGuardService enforces the lock instead and leaves those alone.
         // Unpin in case an older build left the app pinned.
         unpinIfPinned()
         val filter = android.content.IntentFilter(PIP_ACTION)
@@ -209,7 +209,7 @@ class MainActivity : ComponentActivity() {
         handlePlayExtra(intent)
     }
 
-    /** Dev shortcut: `am start ... --es play_url <watch url>` plays that video directly. */
+    /** Opens a video from a new-upload notification, which carries its link as play_url. */
     private fun handlePlayExtra(intent: android.content.Intent?) {
         val url = intent?.getStringExtra("play_url") ?: return
         vm.play(com.sourabh.jarvistube.data.VideoItem(url, "Video", "", null, 0, -1, null, false))
