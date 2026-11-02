@@ -86,7 +86,7 @@ internal fun TopicChip(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun HomeTopBar(onSearch: () -> Unit, onProfile: () -> Unit) {
+internal fun HomeTopBar(onSearch: () -> Unit, onProfile: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically

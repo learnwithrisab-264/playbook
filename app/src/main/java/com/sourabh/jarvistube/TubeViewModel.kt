@@ -282,6 +282,53 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         return emptyList()
     }
 
+    // ---- Shorts tab: Shorts about the study subjects, loaded the first time the tab opens ----
+    var shorts by mutableStateOf(FeedState()); private set
+    private var shortsSessions: List<com.sourabh.jarvistube.data.ShortsSearch> = emptyList()
+    private var shortsJob: Job? = null
+
+    /** Like Recommended: never during a study session, multi-day lock, schedule or video lock. */
+    val shortsAllowed: Boolean get() = !Graph.study.active && !Graph.study.lockActive
+
+    fun ensureShorts() {
+        if (shortsSessions.isEmpty() && shorts.items.isEmpty() && !shorts.loading) loadShorts()
+    }
+
+    fun loadShorts() {
+        if (!shortsAllowed) return
+        shortsJob?.cancel()
+        val sessions = topics.take(5).map { com.sourabh.jarvistube.data.ShortsSearch("$it explained") }
+        shortsSessions = sessions
+        shortsJob = viewModelScope.launch {
+            shorts = shorts.copy(loading = true, error = null)
+            shorts = runCatchingFeed {
+                val pages = sessions.map { s -> async { runCatching { s.load() }.getOrDefault(emptyList()) } }.awaitAll()
+                val mixed = interleave(pages)
+                if (mixed.isEmpty() && pages.all { it.isEmpty() }) FeedState() else FeedState(items = mixed)
+            }
+        }
+    }
+
+    fun loadMoreShorts() {
+        val cur = shorts
+        val sessions = shortsSessions.filter { it.hasMore }
+        if (!shortsAllowed || cur.loading || cur.loadingMore || sessions.isEmpty() || cur.items.isEmpty()) return
+        shortsJob = viewModelScope.launch {
+            shorts = cur.copy(loadingMore = true)
+            shorts = runCatchingFeed(fallback = cur) {
+                val pages = sessions.map { s -> async { runCatching { s.load() }.getOrDefault(emptyList()) } }.awaitAll()
+                cur.copy(items = (cur.items + interleave(pages)).distinctBy { it.url }, loadingMore = false)
+            }
+        }
+    }
+
+    /** One from each list in turn, so no subject dominates. */
+    private fun interleave(pages: List<List<VideoItem>>): List<VideoItem> {
+        val mixed = ArrayList<VideoItem>()
+        for (i in 0 until (pages.maxOfOrNull { it.size } ?: 0)) pages.forEach { p -> p.getOrNull(i)?.let(mixed::add) }
+        return mixed.distinctBy { it.url }
+    }
+
     // ---- Explore ----
     fun selectTopic(t: String?) {
         if (t == topic) return

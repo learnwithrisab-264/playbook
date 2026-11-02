@@ -35,7 +35,9 @@ data class VideoItem(
     /** Link to the uploader's channel page, when known. */
     val channelUrl: String? = null,
     /** Upload time (epoch ms) when YouTube gives a real date; used to sort the study feed. */
-    val uploadedAt: Long? = null
+    val uploadedAt: Long? = null,
+    /** A YouTube Short (vertical, short-form). */
+    val isShort: Boolean = false
 )
 
 object Repo {
@@ -115,7 +117,7 @@ object Repo {
 }
 
 /** Paged video search. Shorts are filtered out (distraction-free by default). */
-class SearchSession(private val query: String) {
+class SearchSession(private val query: String, private val shorts: Boolean = false) {
     private var extractor: SearchExtractor? = null
     private var next: Page? = null
 
@@ -127,7 +129,7 @@ class SearchSession(private val query: String) {
         extractor = ex
         val page = ex.initialPage
         next = page.nextPage
-        page.items.toVideos()
+        page.items.toVideos(shorts)
     }
 
     suspend fun loadMore(): List<VideoItem> = withContext(Dispatchers.IO) {
@@ -135,7 +137,7 @@ class SearchSession(private val query: String) {
         val n = next ?: return@withContext emptyList()
         val page = ex.getPage(n)
         next = page.nextPage
-        page.items.toVideos()
+        page.items.toVideos(shorts)
     }
 }
 
@@ -172,9 +174,30 @@ class TrendingSession {
     }
 }
 
-private fun List<InfoItem>.toVideos(): List<VideoItem> =
+/**
+ * Paged Shorts for a search, from YouTube's own Shorts filter (NewPipe's video search leaves most
+ * Shorts out). Results pass the same content filter as every other list.
+ */
+class ShortsSearch(private val query: String) {
+    private var next: String? = null
+    private var started = false
+
+    val hasMore: Boolean get() = !started || next != null
+
+    suspend fun load(): List<VideoItem> {
+        val (items, token) = withContext(Dispatchers.Default) {
+            LibraryParser.parseShorts(InnerTube.shortsSearch(if (started) null else query, next))
+        }
+        started = true
+        next = token
+        return ContentFilter.filter(items)
+    }
+}
+
+/** Keeps normal videos, or with [shorts] only Shorts, so the two never mix. */
+private fun List<InfoItem>.toVideos(shorts: Boolean = false): List<VideoItem> =
     filterIsInstance<StreamInfoItem>()
-        .filter { it.duration !in 1L..60L }
+        .filter { it.isShortItem() == shorts }
         .map { it.toVideoItem() }
         .let(ContentFilter::filter)
 
@@ -182,6 +205,9 @@ private fun List<InfoItem>.toVideos(): List<VideoItem> =
  * Converts a NewPipe stream item. [fallbackChannel]/[fallbackChannelUrl]/[fallbackAvatar] fill in
  * the uploader for lists (like a channel's own Videos tab) whose items omit it.
  */
+/** YouTube's own Shorts mark, or a video of a minute or less (older Shorts have no mark). */
+private fun StreamInfoItem.isShortItem() = isShortFormContent || url.contains("/shorts/") || duration in 1L..60L
+
 fun StreamInfoItem.toVideoItem(
     fallbackChannel: String? = null,
     fallbackChannelUrl: String? = null,
@@ -197,7 +223,8 @@ fun StreamInfoItem.toVideoItem(
     isLive = streamType == StreamType.LIVE_STREAM || streamType == StreamType.AUDIO_LIVE_STREAM,
     avatar = runCatching { uploaderAvatars.bestUrl() }.getOrNull() ?: fallbackAvatar,
     channelUrl = uploaderUrl?.takeIf { it.isNotBlank() } ?: fallbackChannelUrl,
-    uploadedAt = runCatching { uploadDate?.offsetDateTime()?.toInstant()?.toEpochMilli() }.getOrNull()
+    uploadedAt = runCatching { uploadDate?.offsetDateTime()?.toInstant()?.toEpochMilli() }.getOrNull(),
+    isShort = isShortItem()
 )
 
 fun List<Image>.bestUrl(): String? = maxByOrNull { it.height }?.url

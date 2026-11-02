@@ -41,7 +41,7 @@ object ContentFilter {
         "\\bepisode \\d+\\b", "\\bbollywood\\b", "\\btollywood\\b", "\\bitem number\\b", "\\bbigg boss\\b",
         // entertainment & distraction
         "\\bprank\\b", "\\broast\\b", "\\bmeme(s)?\\b", "\\bfunny\\b", "\\bcomedy\\b", "\\bgameplay\\b",
-        "\\bgaming\\b", "\\bmukbang\\b", "\\breaction\\b", "\\bshorts?\\b", "\\breels?\\b", "\\bvlog\\b",
+        "\\bgaming\\b", "\\bmukbang\\b", "\\breaction\\b", "\\breels?\\b", "\\bvlog\\b",
         // music artists / labels showing in titles
         "\\barijit\\b", "\\bshreya ghoshal\\b", "\\bneha kakkar\\b", "\\bbadshah\\b", "\\bhoney singh\\b",
         "\\bdiljit\\b", "\\bt-series\\b"

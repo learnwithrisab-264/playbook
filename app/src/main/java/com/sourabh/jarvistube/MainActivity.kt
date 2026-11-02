@@ -52,6 +52,9 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.zIndex
 import com.sourabh.jarvistube.ui.RecommendedScreen
+import com.sourabh.jarvistube.ui.ShortsScreen
+import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.rounded.Explore
 import com.sourabh.jarvistube.ui.YouScreen
@@ -124,6 +127,7 @@ private enum class Tab(
     Home("Home", Icons.Rounded.Home, Icons.Outlined.Home),
     Study("Study", Icons.Rounded.School, Icons.Outlined.School),
     Recommended("Recommended", Icons.Rounded.Explore, Icons.Outlined.Explore),
+    Shorts("Shorts", Icons.Rounded.PlayCircle, Icons.Outlined.PlayCircle),
     You("You", Icons.Rounded.AccountCircle, Icons.Outlined.AccountCircle)
 }
 
@@ -179,7 +183,7 @@ private fun BottomBar(tabs: List<Tab>, current: Tab, onSelect: (Tab) -> Unit) {
                     )
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        t.label, fontSize = 10.sp, color = tint, maxLines = 1,
+                        t.label, fontSize = 10.sp, color = tint, maxLines = 1, softWrap = false,
                         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
                     )
                 }
@@ -267,13 +271,14 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
     val study = Graph.study
     // Recommended is gone while the setting is off and during any session, multi-day lock,
     // scheduled window or timed video lock (the bar stays visible during a video lock).
-    val tabs = if (vm.recommendedAllowed) Tab.entries else Tab.entries - Tab.Recommended
+    val tabs = Tab.entries.filter { (it != Tab.Recommended || vm.recommendedAllowed) && (it != Tab.Shorts || vm.shortsAllowed) }
     val shownTab = when {
         study.active -> Tab.Study
         tab !in tabs -> Tab.Home
         else -> tab
     }
     val recommendedState = rememberLazyListState()
+    val shortsState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     // Don't jump back to Recommended when a lock ends: the user lands on Home instead.
     LaunchedEffect(tabs) { if (tab !in tabs) tab = Tab.Home }
 
@@ -347,6 +352,7 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
                                         Tab.Home -> HomeScreen(vm, homeState, bottom, onProfile = { tab = Tab.You })
                                         Tab.Study -> StudyScreen(vm, lib, bottom)
                                         Tab.Recommended -> RecommendedScreen(vm, recommendedState, bottom, onProfile = { tab = Tab.You })
+                                        Tab.Shorts -> ShortsScreen(vm, shortsState, bottom, onProfile = { tab = Tab.You })
                                         Tab.You -> YouScreen(vm, lib, bottom, onSignIn = { showLogin = true })
                                     }
                                 }

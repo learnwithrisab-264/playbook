@@ -36,6 +36,33 @@ object InnerTube {
         return post("browse", body)
     }
 
+    /**
+     * One page of YouTube's search with its Shorts filter on. Needs no sign-in and sends no cookies,
+     * so it works signed out and doesn't touch any account's history. [params] is YouTube's own
+     * code for "Type: Shorts".
+     */
+    suspend fun shortsSearch(query: String?, continuation: String?): JSONObject = withContext(Dispatchers.IO) {
+        val body = JSONObject().put(
+            "context",
+            JSONObject().put(
+                "client",
+                JSONObject().put("clientName", "WEB").put("clientVersion", CLIENT_VERSION).put("hl", "en")
+                    .put("gl", com.sourabh.jarvistube.AppSettings.region)
+            )
+        )
+        if (continuation != null) body.put("continuation", continuation)
+        else body.put("query", query).put("params", "EgIQCQ==")
+        val request = Request.Builder()
+            .url("$ORIGIN/youtubei/v1/search?prettyPrint=false")
+            .post(body.toString().toRequestBody("application/json".toMediaType()))
+            .header("User-Agent", WEB_UA)
+            .build()
+        Graph.http.newCall(request).execute().use { r ->
+            if (!r.isSuccessful) throw IOException("HTTP ${r.code}")
+            JSONObject(r.body?.string() ?: throw IOException("Empty response"))
+        }
+    }
+
     // ---- account ----
 
     /** Name, email, @handle and photo of saved account [account] (the active one by default). */

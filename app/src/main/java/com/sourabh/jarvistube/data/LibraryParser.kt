@@ -60,6 +60,51 @@ object LibraryParser {
         return ParsedPage(items, token)
     }
 
+    /** Shorts out of a Shorts search response, plus the token for the next page. */
+    fun parseShorts(root: JSONObject): Pair<List<VideoItem>, String?> {
+        val out = ArrayList<VideoItem>()
+        var token: String? = null
+        fun walk(node: Any?) {
+            when (node) {
+                is JSONObject -> {
+                    val keys = node.keys()
+                    while (keys.hasNext()) {
+                        val k = keys.next()
+                        val v = node.opt(k)
+                        when (k) {
+                            "shortsLockupViewModel" -> (v as? JSONObject)?.let(::short)?.let(out::add)
+                            "continuationCommand" -> (v as? JSONObject)?.optString("token")
+                                ?.takeIf { it.isNotEmpty() }?.let { token = it }
+                            else -> walk(v)
+                        }
+                    }
+                }
+                is JSONArray -> for (i in 0 until node.length()) walk(node.opt(i))
+            }
+        }
+        walk(root)
+        return out to token
+    }
+
+    private fun short(o: JSONObject): VideoItem? {
+        val id = o.optString("entityId").removePrefix("shorts-shelf-item-").ifEmpty { return null }
+        val title = o.optJSONObject("overlayMetadata")?.optJSONObject("primaryText")?.optString("content").orEmpty()
+            .ifEmpty { o.optString("accessibilityText").substringBeforeLast(", ").substringBeforeLast(", ") }
+            .ifEmpty { return null }
+        return VideoItem(
+            url = "https://www.youtube.com/watch?v=$id",
+            title = title,
+            channel = "",
+            thumb = findFirstArray(o.optJSONObject("thumbnail"), "sources")?.let { lastThumb(it) }
+                ?: "https://i.ytimg.com/vi/$id/hqdefault.jpg",
+            durationSec = 0,
+            views = -1,
+            uploaded = o.optJSONObject("overlayMetadata")?.optJSONObject("secondaryText")?.optString("content")?.ifEmpty { null },
+            isLive = false,
+            isShort = true
+        )
+    }
+
     // ---- classic renderers ----
 
     private fun video(o: JSONObject): LibItem? {
