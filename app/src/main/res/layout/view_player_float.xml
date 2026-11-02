@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Floating in-app player. A SurfaceView (like the full player): the system shows each video
+     frame at the exact time ExoPlayer schedules it. A TextureView ignores those times and only
+     shows the latest frame when the app redraws, which made the window repeat and skip frames
+     while the audio stayed smooth. -->
+<androidx.media3.ui.PlayerView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:resize_mode="fit"
+    app:shutter_background_color="#000000"
+    app:surface_type="surface_view"
+    app:use_controller="false" />

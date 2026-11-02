@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="1024" height="1024">
+  <!-- PlayBook master logo. The Android icon in app/src/main/res/drawable uses these same shapes. -->
+  <rect width="108" height="108" rx="24" fill="#E64A19"/>
+  <path d="M54 34C43 26 29 25 18 28V82C29 79 43 80 54 88C65 80 79 79 90 82V28C79 25 65 26 54 34Z" fill="#FFFFFF"/>
+  <path d="M45 44L66 57L45 70Z" fill="#FF8C00"/>
+</svg>

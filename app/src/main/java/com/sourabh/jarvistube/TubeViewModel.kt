@@ -1,0 +1,391 @@
+package com.sourabh.jarvistube
+
+import android.app.Application
+import android.content.Context
+import android.widget.Toast
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.sourabh.jarvistube.data.ContentFilter
+import com.sourabh.jarvistube.data.SearchSession
+import com.sourabh.jarvistube.data.VideoItem
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+
+data class FeedState(
+    val items: List<VideoItem> = emptyList(),
+    val loading: Boolean = false,
+    val loadingMore: Boolean = false,
+    val error: String? = null
+)
+
+class TubeViewModel(app: Application) : AndroidViewModel(app) {
+
+    val topics = listOf(
+        "Mathematics", "Physics", "Chemistry", "Biology", "Programming",
+        "Computer Science", "History", "Economics", "Languages", "Exam prep"
+    )
+
+    /** null = the "All" chip: a mix of every subject. */
+    var topic by mutableStateOf<String?>(null); private set
+    var explore by mutableStateOf(FeedState(loading = true)); private set
+
+    var searchOpen by mutableStateOf(false)
+    val suggestions = mutableStateListOf<String>()
+    private var suggestJob: Job? = null
+    private var exploreSession: SearchSession? = null
+    private var exploreJob: Job? = null
+
+    var query by mutableStateOf("")
+    var submittedQuery by mutableStateOf<String?>(null); private set
+    var results by mutableStateOf(FeedState()); private set
+    private var searchSession: SearchSession? = null
+    private var searchJob: Job? = null
+    val recents = mutableStateListOf<String>()
+
+    /** Pages stacked above the tabs (Back pops them): channel, playlist, study-channel picker. */
+    val pages = mutableStateListOf<Page>()
+
+    fun openChannel(url: String, name: String) {
+        val page = Page.Channel(url, name)
+        if (pages.lastOrNull() != page) pages.add(page)
+        playerExpanded = false
+    }
+
+    fun openPlaylist(url: String, title: String) {
+        val page = Page.Playlist(url, title)
+        if (pages.lastOrNull() != page) pages.add(page)
+        playerExpanded = false
+    }
+
+    fun openStudyChannels() {
+        if (pages.lastOrNull() != Page.StudyChannels) pages.add(Page.StudyChannels)
+    }
+
+    fun popPage() {
+        if (pages.isNotEmpty()) pages.removeAt(pages.lastIndex)
+    }
+
+    var playerExpanded by mutableStateOf(false)
+    var showRelated by mutableStateOf(false)
+
+    private val prefs = app.getSharedPreferences("tube", Context.MODE_PRIVATE)
+
+    init {
+        recents.addAll(prefs.getString("recents", "").orEmpty().split("\n").filter { it.isNotBlank() })
+    }
+
+    fun play(video: VideoItem) {
+        (com.sourabh.jarvistube.data.ContentFilter.blockReason(null, video.channel, video.title)
+            ?: Graph.study.blockReason(video))?.let {
+            Toast.makeText(getApplication(), it, Toast.LENGTH_LONG).show()
+            return
+        }
+        Graph.player.play(video)
+        playerExpanded = true
+    }
+
+    fun playLocal(item: com.sourabh.jarvistube.data.SavedItem) {
+        val probe = VideoItem(item.url, item.title, item.channel, item.thumb, item.durationSec, -1, null, false)
+        Graph.study.blockReason(probe)?.let {
+            Toast.makeText(getApplication(), it, Toast.LENGTH_LONG).show()
+            return
+        }
+        Graph.player.playLocal(item)
+        playerExpanded = true
+    }
+
+    // ---- Home: new videos from "My Study Channels" (no recommendations) ----
+    var studyFeed by mutableStateOf(FeedState()); private set
+    /** Channel URL the Home chips are filtered to; null = All. */
+    var channelFilter by mutableStateOf<String?>(null)
+    private var studyJob: Job? = null
+
+    fun loadStudyFeed() {
+        studyJob?.cancel()
+        val channels = com.sourabh.jarvistube.data.StudyChannels.list.toList().take(15)
+        if (channels.isEmpty()) {
+            studyFeed = FeedState()
+            return
+        }
+        studyJob = viewModelScope.launch {
+            studyFeed = studyFeed.copy(loading = true, error = null) // keep what is shown while refreshing
+            studyFeed = runCatchingFeed {
+                val lists = channels.map { c ->
+                    async { runCatching { com.sourabh.jarvistube.data.ChannelRepo.latestVideos(c.url) }.getOrDefault(emptyList()) }
+                }.awaitAll()
+                val all = lists.flatten().distinctBy { it.url }
+                if (all.isEmpty()) throw java.io.IOException("Couldn't load videos from your channels")
+                // Newest first; anything without a usable date goes after the dated ones.
+                val dated = all.filter { it.uploadedAt != null }.sortedByDescending { it.uploadedAt }
+                FeedState(items = dated + all.filter { it.uploadedAt == null })
+            }
+            studyFeed.items.take(3).forEach { com.sourabh.jarvistube.data.Repo.prefetch(it.url) }
+        }
+    }
+
+    // ---- Recommended tab: the account's YouTube home feed, or Trending when signed out ----
+    var recommended by mutableStateOf(FeedState()); private set
+    /** Small line above the list naming where the videos come from. */
+    var recommendedSource by mutableStateOf<String?>(null); private set
+    private var recommendedJob: Job? = null
+    /** Account + region the shown list was loaded for; a change reloads it. */
+    private var recommendedKey: String? = null
+    private var homeToken: String? = null
+    private var trending: com.sourabh.jarvistube.data.TrendingSession? = null
+
+    /** Never during a study session, multi-day lock, scheduled window or timed video lock. */
+    val recommendedAllowed: Boolean
+        get() = AppSettings.showRecommended && !Graph.study.active && !Graph.study.lockActive
+
+    private fun recommendedKeyNow() = "${com.sourabh.jarvistube.data.Session.activeId}|${AppSettings.region}"
+
+    /** Loads the tab the first time it opens, and again after an account or region change. */
+    fun ensureRecommended() {
+        if (recommendedKey != recommendedKeyNow()) loadRecommended()
+    }
+
+    fun loadRecommended() {
+        if (!recommendedAllowed) return
+        recommendedJob?.cancel()
+        val key = recommendedKeyNow()
+        // Same source: keep what is shown while refreshing. New account/region: start clean.
+        recommended = if (key == recommendedKey) recommended.copy(loading = true, error = null) else FeedState(loading = true)
+        recommendedKey = key
+        recommendedJob = viewModelScope.launch {
+            recommended = runCatchingFeed { FeedState(items = firstRecommendedPage()) }
+            recommended.items.take(3).forEach { com.sourabh.jarvistube.data.Repo.prefetch(it.url) }
+        }
+    }
+
+    fun loadMoreRecommended() {
+        if (!recommendedAllowed) return
+        val cur = recommended
+        val token = homeToken
+        val session = trending
+        val hasMore = if (session != null) session.hasMore else token != null
+        if (cur.loading || cur.loadingMore || !hasMore || cur.items.isEmpty()) return
+        recommendedJob = viewModelScope.launch {
+            recommended = cur.copy(loadingMore = true)
+            recommended = runCatchingFeed(fallback = cur) {
+                val more = if (session != null) session.loadMore() else homeFeed(token)
+                cur.copy(items = (cur.items + more).distinctBy { it.url }, loadingMore = false)
+            }
+        }
+    }
+
+    /** Signed in: the account's home feed. Signed out, or if that fails: Trending for the region. */
+    private suspend fun firstRecommendedPage(): List<VideoItem> {
+        if (com.sourabh.jarvistube.data.Session.isSignedIn) {
+            try {
+                val items = homeFeed(null)
+                trending = null
+                recommendedSource = "From your YouTube account"
+                return items
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Expired login, watch history off (empty home feed), network hiccup: fall back to
+                // Trending. Never sign out here.
+                com.sourabh.jarvistube.data.Dbg.log("home feed failed, using Trending: ${e.message}")
+            }
+        }
+        homeToken = null
+        val session = com.sourabh.jarvistube.data.TrendingSession().also { trending = it }
+        try {
+            val items = session.loadFirst()
+            recommendedSource = (if (session.isTrending) "Trending in " else "Popular in ") + AppSettings.regionName
+            return items
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // YouTube removed its Trending page (NewPipe v0.26.5 can't load it): show popular
+            // study videos for the region instead of an error.
+            com.sourabh.jarvistube.data.Dbg.log("trending failed, using study mix: ${e.message}")
+        }
+        trending = null
+        val mixed = subjectMix()
+        recommendedSource = "Popular study videos in ${AppSettings.regionName}"
+        return mixed
+    }
+
+    /** One page of "<subject> explained" for five subjects, interleaved so no subject dominates. */
+    private suspend fun subjectMix(): List<VideoItem> = coroutineScope {
+        val pages = topics.take(5).map { subject ->
+            async { runCatching { SearchSession("$subject explained").loadFirst() }.getOrDefault(emptyList()) }
+        }.awaitAll()
+        val mixed = ArrayList<VideoItem>()
+        for (i in 0 until (pages.maxOfOrNull { it.size } ?: 0)) pages.forEach { p -> p.getOrNull(i)?.let(mixed::add) }
+        if (mixed.isEmpty()) throw java.io.IOException("No videos could be loaded")
+        mixed.distinctBy { it.url }
+    }
+
+    /**
+     * One page of the signed-in home feed (FEwhat_to_watch), filtered. Follows a few continuations
+     * when the filter empties a page, so the list doesn't stall with nothing to scroll.
+     */
+    private suspend fun homeFeed(start: String?): List<VideoItem> {
+        var token = start
+        var sawVideos = false
+        repeat(3) {
+            val json = if (token == null) com.sourabh.jarvistube.data.InnerTube.browse("FEwhat_to_watch")
+            else com.sourabh.jarvistube.data.InnerTube.browse(continuation = token)
+            val page = com.sourabh.jarvistube.data.LibraryParser.parse(json)
+            val videos = page.items.filterIsInstance<com.sourabh.jarvistube.data.LibVideo>().map { it.video }
+            if (videos.isNotEmpty()) sawVideos = true
+            token = page.next
+            val shown = ContentFilter.filter(videos)
+            if (shown.isNotEmpty() || token == null) {
+                if (start == null && !sawVideos) throw java.io.IOException("Your YouTube home feed is empty")
+                homeToken = token
+                return shown
+            }
+        }
+        homeToken = token
+        return emptyList()
+    }
+
+    // ---- Explore ----
+    fun selectTopic(t: String?) {
+        if (t == topic) return
+        topic = t
+        loadExplore()
+    }
+
+    fun loadExplore() {
+        exploreJob?.cancel()
+        val t = topic
+        if (t == null) {
+            // "All": one page from several subjects, interleaved so no subject dominates.
+            exploreSession = null
+            exploreJob = viewModelScope.launch {
+                explore = FeedState(loading = true)
+                explore = runCatchingFeed { FeedState(items = subjectMix()) }
+                explore.items.take(4).forEach { com.sourabh.jarvistube.data.Repo.prefetch(it.url) }
+            }
+            return
+        }
+        val session = SearchSession("$t full lecture explained").also { exploreSession = it }
+        exploreJob = viewModelScope.launch {
+            explore = FeedState(loading = true)
+            explore = runCatchingFeed { FeedState(items = session.loadFirst().distinctBy { it.url }) }
+            explore.items.take(4).forEach { com.sourabh.jarvistube.data.Repo.prefetch(it.url) }
+        }
+    }
+
+    // ---- Search suggestions (the autocomplete list under the search box) ----
+    fun updateSuggestions(text: String) {
+        suggestJob?.cancel()
+        if (text.isBlank() || ContentFilter.isSuggestiveOrBlocked(text)) {
+            suggestions.clear()
+            return
+        }
+        suggestJob = viewModelScope.launch {
+            delay(180)
+            val list = withContext(Dispatchers.IO) {
+                runCatching {
+                    org.schabi.newpipe.extractor.ServiceList.YouTube.suggestionExtractor.suggestionList(text)
+                }.getOrDefault(emptyList())
+            }
+            suggestions.clear()
+            suggestions.addAll(list.filterNot { ContentFilter.isSuggestiveOrBlocked(it) }.take(8))
+        }
+    }
+
+    fun openSearch() {
+        clearSearch()
+        searchOpen = true
+    }
+
+    fun closeSearch() {
+        searchOpen = false
+        suggestions.clear()
+    }
+
+    fun loadMoreExplore() {
+        val session = exploreSession ?: return
+        val cur = explore
+        if (cur.loading || cur.loadingMore || !session.hasMore || cur.items.isEmpty()) return
+        exploreJob = viewModelScope.launch {
+            explore = cur.copy(loadingMore = true)
+            explore = runCatchingFeed(fallback = cur) {
+                cur.copy(items = (cur.items + session.loadMore()).distinctBy { it.url }, loadingMore = false)
+            }
+        }
+    }
+
+    // ---- Search ----
+    fun submitSearch(q: String = query) {
+        val rawText = q.trim()
+        if (rawText.isEmpty()) return
+        val text = ContentFilter.sanitizeQuery(rawText)
+        query = rawText
+        submittedQuery = rawText
+        recents.remove(rawText)
+        recents.add(0, rawText)
+        while (recents.size > 10) recents.removeAt(recents.lastIndex)
+        prefs.edit().putString("recents", recents.joinToString("\n")).apply()
+
+        searchJob?.cancel()
+        val session = SearchSession(text).also { searchSession = it }
+        searchJob = viewModelScope.launch {
+            results = FeedState(loading = true)
+            results = runCatchingFeed { FeedState(items = session.loadFirst().distinctBy { it.url }) }
+            results.items.take(4).forEach { com.sourabh.jarvistube.data.Repo.prefetch(it.url) }
+        }
+    }
+
+    fun loadMoreSearch() {
+        val session = searchSession ?: return
+        val cur = results
+        if (cur.loading || cur.loadingMore || !session.hasMore || cur.items.isEmpty()) return
+        searchJob = viewModelScope.launch {
+            results = cur.copy(loadingMore = true)
+            results = runCatchingFeed(fallback = cur) {
+                cur.copy(items = (cur.items + session.loadMore()).distinctBy { it.url }, loadingMore = false)
+            }
+        }
+    }
+
+    fun clearSearch() {
+        searchJob?.cancel()
+        query = ""
+        submittedQuery = null
+        results = FeedState()
+    }
+
+    fun clearRecents() {
+        recents.clear()
+        prefs.edit().remove("recents").apply()
+    }
+
+    fun removeRecent(text: String) {
+        recents.remove(text)
+        prefs.edit().putString("recents", recents.joinToString("\n")).apply()
+    }
+
+    private suspend fun runCatchingFeed(fallback: FeedState = FeedState(), block: suspend () -> FeedState): FeedState =
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            fallback.copy(loading = false, loadingMore = false, error = e.message ?: e.javaClass.simpleName)
+        }
+}
+
+sealed interface Page {
+    data class Channel(val url: String, val name: String) : Page
+    data class Playlist(val url: String, val title: String) : Page
+    data object StudyChannels : Page
+}
