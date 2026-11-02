@@ -157,7 +157,6 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         applyAudioOnly() // a saved Listen mode applies from the first song
         player.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
-                com.sourabh.jarvistube.data.Dbg.log("error ${error.errorCodeName} at ${player.currentPosition}")
                 val networkish = error.errorCode in 2000..2999
                 if (networkish && autoRecoveries < 2 && _now.value?.info != null) {
                     autoRecoveries++
@@ -174,7 +173,6 @@ class PlayerController(val app: Context, http: OkHttpClient) {
             }
 
             override fun onRenderedFirstFrame() {
-                com.sourabh.jarvistube.data.Dbg.log("first frame +${android.os.SystemClock.elapsedRealtime() - tPlay}ms")
                 _firstFrameUrl.value = _now.value?.video?.url
             }
 
@@ -428,11 +426,9 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         }
     }
 
-    private var tPlay = 0L
 
     /** [record] = remember the outgoing item for Previous (false when Previous itself plays). */
     fun play(video: VideoItem, record: Boolean = true) {
-        tPlay = android.os.SystemClock.elapsedRealtime()
         if (_now.value?.video?.url == video.url && _now.value?.error == null) {
             player.playWhenReady = true
             return
@@ -538,7 +534,6 @@ class PlayerController(val app: Context, http: OkHttpClient) {
     private suspend fun resolve(video: VideoItem, startMs: Long) {
         try {
             val info = Repo.streamInfo(video.url)
-            com.sourabh.jarvistube.data.Dbg.log("streamInfo done +${android.os.SystemClock.elapsedRealtime() - tPlay}ms")
             // Second filter layer: YouTube's own category, known only now.
             com.sourabh.jarvistube.data.ContentFilter.blockReason(
                 info.category, info.uploaderName.orEmpty(), info.name.orEmpty()
@@ -568,7 +563,6 @@ class PlayerController(val app: Context, http: OkHttpClient) {
                 )
             }
             prepare(info, video, preferredQuality, startMs)
-            com.sourabh.jarvistube.data.Dbg.log("prepared +${android.os.SystemClock.elapsedRealtime() - tPlay}ms")
             SponsorBlock.videoId(video.url)?.let { id ->
                 scope.launch {
                     segments = runCatching { SponsorBlock.segments(id) }.getOrDefault(emptyList())

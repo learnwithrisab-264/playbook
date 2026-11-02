@@ -54,13 +54,9 @@ object Repo {
     private const val TTL_MS = 30 * 60 * 1000L
 
     private fun load(url: String): StreamInfo {
-        val t0 = SystemClock.elapsedRealtime()
         val ex = ServiceList.YouTube.getStreamExtractor(url)
         ex.fetchPage()
-        val t1 = SystemClock.elapsedRealtime()
-        val info = StreamInfo.getInfo(ex)
-        Dbg.log("streamInfo fetchPage=${t1 - t0}ms parse=${SystemClock.elapsedRealtime() - t1}ms")
-        return info
+        return StreamInfo.getInfo(ex)
     }
 
     /**
@@ -75,11 +71,9 @@ object Repo {
         ).distinctBy { Uri.parse(it).host }
         for (u in urls) {
             try {
-                val t = SystemClock.elapsedRealtime()
                 Graph.http.newCall(
                     okhttp3.Request.Builder().url("$u&range=0-0").header("User-Agent", BROWSER_UA).build()
                 ).execute().use { r -> r.body?.bytes() }
-                Dbg.log("warm ${Uri.parse(u).host} ${SystemClock.elapsedRealtime() - t}ms")
             } catch (_: Exception) {
             }
         }

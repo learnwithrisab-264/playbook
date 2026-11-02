@@ -27,7 +27,6 @@ class JarvisTubeApp : Application() {
             .build()
         Graph.http = client
         com.sourabh.jarvistube.data.TrustedClock.init(this)
-        com.sourabh.jarvistube.data.Dbg.init(this)
         com.sourabh.jarvistube.data.Session.init(this)
         AppSettings.init(this)
         NewPipe.init(AppDownloader(client), AppSettings.localization(), AppSettings.contentCountry())

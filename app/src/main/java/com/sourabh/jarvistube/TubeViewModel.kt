@@ -342,7 +342,6 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: Exception) {
                 // Expired login, watch history off (empty home feed), network hiccup: fall back to
                 // Trending. Never sign out here.
-                com.sourabh.jarvistube.data.Dbg.log("home feed failed, using Trending: ${e.message}")
             }
         }
         homeToken = null
@@ -356,7 +355,6 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         } catch (e: Exception) {
             // YouTube removed its Trending page (NewPipe v0.26.5 can't load it): show popular
             // study videos for the region instead of an error.
-            com.sourabh.jarvistube.data.Dbg.log("trending failed, using study mix: ${e.message}")
         }
         trending = null
         val mixed = subjectMix()
@@ -474,7 +472,6 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         shortsJob?.cancel()
         val sessions = newShortsSessions()
         shortsSessions = sessions
-        val t0 = android.os.SystemClock.elapsedRealtime()
         shortsJob = viewModelScope.launch {
             shorts = shorts.copy(loading = true, error = null)
             val arrived = ArrayList<List<VideoItem>>()
@@ -494,7 +491,6 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
                         val first = shorts.items.isEmpty() || arrived.size == 1
                         shorts = FeedState(items = fresh, loading = arrived.size < sessions.size)
                         if (first) {
-                            com.sourabh.jarvistube.data.Dbg.log("shorts: first shown ${android.os.SystemClock.elapsedRealtime() - t0}ms")
                             prepareFirstShorts()
                         }
                     }
