@@ -96,8 +96,8 @@ fun ShortsViewerScreen(vm: TubeViewModel, viewer: ShortsViewer, ui: PlayerUi) {
         val page = pager.settledPage
         items.getOrNull(page)?.let(vm::playShort)
         // Ready the next ones so a swipe starts quickly, and fetch more near the end.
-        items.getOrNull(page + 1)?.let { Repo.prefetch(it.url) }
-        items.getOrNull(page + 2)?.let { Repo.prefetch(it.url) }
+        items.getOrNull(page + 1)?.let { Repo.prefetchShort(it.url) }
+        items.getOrNull(page + 2)?.let { Repo.prefetchShort(it.url) }
         if (page >= items.size - 4) viewer.onMore()
     }
 

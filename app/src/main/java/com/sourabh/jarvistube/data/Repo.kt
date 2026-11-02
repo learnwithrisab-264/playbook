@@ -49,6 +49,8 @@ object Repo {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val cache = ConcurrentHashMap<String, Entry>()
     private val prefetchGate = Semaphore(2)
+    /** Shorts prepare in their own line, so Home's background work can't hold them up. */
+    private val shortsGate = Semaphore(3)
     private const val TTL_MS = 30 * 60 * 1000L
 
     private fun load(url: String): StreamInfo {
@@ -86,10 +88,10 @@ object Repo {
     private fun valid(e: Entry?): Boolean =
         e != null && SystemClock.elapsedRealtime() - e.at < TTL_MS && !e.deferred.isCancelled
 
-    private fun start(url: String, gated: Boolean): Deferred<StreamInfo> {
+    private fun start(url: String, gate: Semaphore?): Deferred<StreamInfo> {
         val d = scope.async {
             try {
-                if (gated) prefetchGate.withPermit { load(url).also(::warmConnections) } else load(url)
+                if (gate != null) gate.withPermit { load(url).also(::warmConnections) } else load(url)
             } catch (e: Exception) {
                 cache.remove(url)
                 throw e
@@ -109,12 +111,17 @@ object Repo {
 
     /** Resolves in the background so a later tap starts instantly. */
     fun prefetch(url: String) {
-        if (!valid(cache[url])) start(url, gated = true)
+        if (!valid(cache[url])) start(url, prefetchGate)
+    }
+
+    /** Prepares a Short ahead of time, so tapping or swiping to it starts at once. */
+    fun prefetchShort(url: String) {
+        if (!valid(cache[url])) start(url, shortsGate)
     }
 
     suspend fun streamInfo(url: String): StreamInfo {
         val e = cache[url]
-        val d = if (valid(e)) e!!.deferred else start(url, gated = false)
+        val d = if (valid(e)) e!!.deferred else start(url, null)
         return d.await()
     }
 }

@@ -320,22 +320,86 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     /** Like Recommended: never during a study session, multi-day lock, schedule or video lock. */
     val shortsAllowed: Boolean get() = !Graph.study.active && !Graph.study.lockActive
 
-    fun ensureShorts() {
-        if (shortsSessions.isEmpty() && shorts.items.isEmpty() && !shorts.loading) loadShorts()
+    private val shortsPrefs = app.getSharedPreferences("shorts", Context.MODE_PRIVATE)
+    private fun shortsCacheKey() = "list:" + AppSettings.region
+
+    /** The saved list, so the tab opens at once. It still passes today's content filter. */
+    private fun cachedShorts(): List<VideoItem> = runCatching {
+        val arr = org.json.JSONArray(shortsPrefs.getString(shortsCacheKey(), "[]"))
+        val list = (0 until arr.length()).map { i ->
+            val o = arr.getJSONObject(i)
+            VideoItem(
+                url = o.getString("url"), title = o.getString("title"), channel = "",
+                thumb = o.optString("thumb").ifEmpty { null }, durationSec = 0, views = -1,
+                uploaded = o.optString("views").ifEmpty { null }, isLive = false, isShort = true
+            )
+        }
+        ContentFilter.filter(list)
+    }.getOrDefault(emptyList())
+
+    private fun saveShorts(list: List<VideoItem>) {
+        val arr = org.json.JSONArray()
+        list.take(40).forEach {
+            arr.put(
+                org.json.JSONObject().put("url", it.url).put("title", it.title)
+                    .put("thumb", it.thumb.orEmpty()).put("views", it.uploaded.orEmpty())
+            )
+        }
+        shortsPrefs.edit().putString(shortsCacheKey(), arr.toString()).apply()
     }
 
-    fun loadShorts() {
+    /** Readies the first Shorts, so tapping one starts at once instead of after 2-3 seconds. */
+    private fun prepareFirstShorts() {
+        shorts.items.take(3).forEach { com.sourabh.jarvistube.data.Repo.prefetchShort(it.url) }
+    }
+
+    fun ensureShorts() {
+        if (shortsSessions.isNotEmpty() || shorts.items.isNotEmpty() || shorts.loading) return
+        val saved = cachedShorts()
+        if (saved.isEmpty()) return loadShorts()
+        // Show the saved list now; new Shorts join the end, so nothing jumps under your finger.
+        shorts = FeedState(items = saved)
+        prepareFirstShorts()
+        fetchShorts(keepShown = true)
+    }
+
+    fun loadShorts() = fetchShorts(keepShown = false)
+
+    private fun fetchShorts(keepShown: Boolean) {
         if (!shortsAllowed) return
         shortsJob?.cancel()
         val sessions = topics.take(5).map { com.sourabh.jarvistube.data.ShortsSearch("$it explained") }
         shortsSessions = sessions
+        val t0 = android.os.SystemClock.elapsedRealtime()
+        val shown = shorts.items
         shortsJob = viewModelScope.launch {
-            shorts = shorts.copy(loading = true, error = null)
-            shorts = runCatchingFeed {
-                val pages = sessions.map { s -> async { runCatching { s.load() }.getOrDefault(emptyList()) } }.awaitAll()
-                val mixed = interleave(pages)
-                if (mixed.isEmpty() && pages.all { it.isEmpty() }) FeedState() else FeedState(items = mixed)
-            }
+            if (!keepShown) shorts = shorts.copy(loading = true, error = null)
+            val arrived = ArrayList<List<VideoItem>>()
+            // Every search shows as soon as it answers, instead of waiting for the slowest.
+            sessions.map { s ->
+                async {
+                    val page = try {
+                        s.load()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
+                    arrived += page
+                    if (!keepShown) {
+                        val first = shorts.items.isEmpty() || arrived.size == 1
+                        shorts = FeedState(items = interleave(arrived), loading = arrived.size < sessions.size)
+                        if (first && shorts.items.isNotEmpty()) {
+                            com.sourabh.jarvistube.data.Dbg.log("shorts: first shown ${android.os.SystemClock.elapsedRealtime() - t0}ms")
+                            prepareFirstShorts()
+                        }
+                    }
+                }
+            }.awaitAll()
+            val fresh = interleave(arrived)
+            if (fresh.isNotEmpty()) saveShorts(fresh)
+            shorts = if (keepShown) shorts.copy(items = (shown + fresh).distinctBy { it.url })
+            else FeedState(items = fresh)
         }
     }
 

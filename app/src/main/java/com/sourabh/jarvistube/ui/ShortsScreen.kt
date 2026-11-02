@@ -56,7 +56,7 @@ import com.sourabh.jarvistube.data.VideoItem
 /** A tall Shorts card: vertical thumbnail with the title and channel under it. */
 @Composable
 fun ShortCard(video: VideoItem, onClick: () -> Unit) {
-    Column(Modifier.fillMaxWidth().pressScale(onClick)) {
+    Column(Modifier.fillMaxWidth().pressScale(onClick, onPress = { com.sourabh.jarvistube.data.Repo.prefetchShort(video.url) })) {
         Thumb(video.thumb, Modifier.fillMaxWidth().aspectRatio(9f / 16f).clip(RoundedCornerShape(12.dp)))
         Spacer(Modifier.height(6.dp))
         Text(video.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
