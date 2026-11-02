@@ -1,7 +1,6 @@
 package com.sourabh.jarvistube.ui
 
 import android.content.Intent
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,7 +48,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.sourabh.jarvistube.AppSettings
 import com.sourabh.jarvistube.Graph
-import com.sourabh.jarvistube.data.Downloads
 import com.sourabh.jarvistube.player.NowPlaying
 
 private fun speedLabel(s: Float) = AppSettings.speedLabel(s)

@@ -25,7 +25,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Settings
@@ -57,7 +56,6 @@ import com.sourabh.jarvistube.LibFeed
 import com.sourabh.jarvistube.LibTab
 import com.sourabh.jarvistube.LibraryViewModel
 import com.sourabh.jarvistube.TubeViewModel
-import com.sourabh.jarvistube.data.InnerTube
 import com.sourabh.jarvistube.data.LibChannel
 import com.sourabh.jarvistube.data.LibPlaylist
 import com.sourabh.jarvistube.data.LibVideo
