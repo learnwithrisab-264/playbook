@@ -22,6 +22,7 @@ private const val NOTIFICATION = 2001
 /** Keeps a session alive when you leave the app, shows the time left, and ends it on time. */
 class StudyLockService : Service() {
     private val handler = Handler(Looper.getMainLooper())
+    private var seconds = 0
     private val tick = object : Runnable {
         override fun run() {
             Graph.study.tick()
@@ -31,6 +32,10 @@ class StudyLockService : Service() {
                 return
             }
             StudyGuardService.instance?.check()
+            // Keeps "X min left" current, and brings the notification back if it was swiped away.
+            if (++seconds % 15 == 0) {
+                getSystemService(NotificationManager::class.java).notify(NOTIFICATION, notification())
+            }
             handler.postDelayed(this, 1000)
         }
     }
@@ -38,6 +43,7 @@ class StudyLockService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        running = true
         getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(CHANNEL, "Lock Study Session", NotificationManager.IMPORTANCE_LOW)
         )
@@ -57,7 +63,7 @@ class StudyLockService : Service() {
         )
         return Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
-            .setContentTitle("Study session locked")
+            .setContentTitle("Study session locked, ${minutesLeftText(Graph.study.lockRemainingMs)}")
             .setContentText("Only PlayBook and Phone work until the timer ends")
             .setWhen(System.currentTimeMillis() + Graph.study.lockRemainingMs)
             .setShowWhen(true)
@@ -69,11 +75,16 @@ class StudyLockService : Service() {
     }
 
     override fun onDestroy() {
+        running = false
         handler.removeCallbacks(tick)
         super.onDestroy()
     }
 
     companion object {
+        /** Whether the service is alive; the guard restarts it if the system stopped it. */
+        var running = false
+            private set
+
         fun start(context: Context) {
             // Refused only when the app is in the background; the guard or next launch starts it then.
             runCatching { context.startForegroundService(Intent(context, StudyLockService::class.java)) }
@@ -88,7 +99,7 @@ class LockBootReceiver : BroadcastReceiver() {
     }
 }
 
-/** The way out if a session ever gets stuck. Protected by DUMP, so only adb on your computer can send it. */
+/** For development only. Protected by DUMP, so only adb on a computer can send it: nothing on the phone can. */
 class LockEndReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) = Graph.study.endLockEarly()
 }

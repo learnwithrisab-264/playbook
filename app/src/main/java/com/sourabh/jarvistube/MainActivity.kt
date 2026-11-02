@@ -341,7 +341,12 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
     LaunchedEffect(now == null) { if (now == null) vm.playerExpanded = false }
 
     // Lock Study Session: (re)open the locked video full-screen, including after a crash or reboot.
-    LaunchedEffect(study.lockActive) {
+    // Runs again if the player ever closes, or anything else hides it, while the session runs.
+    LaunchedEffect(study.lockActive, now == null, vm.playerExpanded, vm.pages.size, vm.searchOpen) {
+        if (study.lockActive) {
+            vm.pages.clear()
+            vm.closeSearch()
+        }
         if (study.lockActive) study.lockedVideo()?.let { v ->
             if (controller.now.value?.video?.url != v.url) vm.play(v)
             vm.playerExpanded = true
@@ -355,7 +360,7 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
     // Declared before the player's handler so Back collapses the player first, then closes search.
     BackHandler(enabled = vm.searchOpen) { vm.closeSearch() }
     BackHandler(enabled = vm.pages.isNotEmpty()) { vm.popPage() }
-    BackHandler(enabled = expanded) { vm.playerExpanded = false }
+    BackHandler(enabled = expanded && !study.lockActive) { vm.playerExpanded = false }
 
     // The mini-player lives at the top level (not inside the tab Scaffold) so it stays visible
     // above search and channel pages too. Leaving the full player therefore always leaves a

@@ -109,12 +109,6 @@ fun PlayerMoreSheetHost(now: NowPlaying, ui: PlayerUi) {
                     HorizontalDivider(Modifier.padding(vertical = 6.dp))
                     SwitchRow(Icons.Rounded.Headphones, "Listen (audio only)", player.audioOnly) { player.updateAudioOnly(it) }
                     SwitchRow(Icons.Rounded.SkipNext, "SponsorBlock (skip sponsors)", player.sponsorBlock) { player.updateSponsorBlock(it) }
-                    if (locked) {
-                        SheetRow(Icons.Rounded.Lock, "Emergency exit", null) {
-                            close()
-                            context.startActivity(com.sourabh.jarvistube.lock.StudyBlockActivity.emergencyIntent(context))
-                        }
-                    }
                     if (!locked) {
                         SheetRow(Icons.Rounded.QueueMusic, "Queue", "${player.queue.size}") { showQueue = true }
                         if (now.info != null) SheetRow(Icons.Rounded.Download, "Download", null) { close(); DownloadSheet.open(now.video, now.info) }

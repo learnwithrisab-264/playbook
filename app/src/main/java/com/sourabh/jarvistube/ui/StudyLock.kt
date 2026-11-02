@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import com.sourabh.jarvistube.Graph
+import com.sourabh.jarvistube.lock.MAX_LOCK_MINUTES
 import com.sourabh.jarvistube.lock.StudyGuardService
 import com.sourabh.jarvistube.lock.StudyLockService
 import com.sourabh.jarvistube.player.NowPlaying
@@ -128,6 +129,11 @@ private fun LockDurationDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) 
     var hours by remember { mutableIntStateOf(0) }
     var minutes by remember { mutableIntStateOf(2) }
     val total = hours * 60 + minutes
+    var confirming by remember { mutableStateOf(false) }
+    if (confirming) {
+        ConfirmLockDialog(total, onConfirm = { onConfirm(total) }, onBack = { confirming = false })
+        return
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Lock study session") },
@@ -135,7 +141,7 @@ private fun LockDurationDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) 
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
                     "Until the timer ends, only this video and the Phone app work. Other apps, Home, Recents " +
-                        "and Shorts are blocked. Calls and alarms still work, and there is an emergency exit.",
+                        "Settings and Shorts are blocked. Calls and alarms still work. It can't be ended early.",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 if (!guardOn) {
@@ -152,23 +158,51 @@ private fun LockDurationDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) 
                     TopicChip("2 min", hours == 0 && minutes == 2) { hours = 0; minutes = 2 }
                     TopicChip("25 min", hours == 0 && minutes == 25) { hours = 0; minutes = 25 }
                     TopicChip("1 hour", hours == 1 && minutes == 0) { hours = 1; minutes = 0 }
+                    TopicChip("3 hours", hours == 3 && minutes == 0) { hours = 3; minutes = 0 }
                 }
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Stepper("Hours", hours, onMinus = { if (hours > 0) hours-- }, onPlus = { if (hours < 8) hours++ })
+                    Stepper("Hours", hours, onMinus = { if (hours > 0) hours-- }, onPlus = { if (total + 60 <= MAX_LOCK_MINUTES) hours++ })
                     Stepper(
                         "Minutes", minutes,
-                        onMinus = { minutes = (minutes - 5).coerceAtLeast(0) },
-                        onPlus = { minutes = (minutes + 5).coerceAtMost(55) }
+                        onMinus = { minutes = (minutes - 1).coerceAtLeast(0) },
+                        onPlus = { if (minutes < 59 && total < MAX_LOCK_MINUTES) minutes++ }
                     )
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(total) }, enabled = total > 0 && ready) {
-                Text(if (!ready) "Finish the steps first" else if (total > 0) "Lock for ${hours}h ${minutes}m" else "Pick a duration")
+            TextButton(onClick = { confirming = true }, enabled = total > 0 && ready) {
+                Text(if (!ready) "Finish the steps first" else if (total > 0) "Continue" else "Pick a duration")
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+/** The last check before locking: shows the exact end time, because nothing can end it early. */
+@Composable
+private fun ConfirmLockDialog(minutes: Int, onConfirm: () -> Unit, onBack: () -> Unit) {
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            now = System.currentTimeMillis()
+        }
+    }
+    val end = java.time.Instant.ofEpochMilli(now + minutes * 60_000L).atZone(java.time.ZoneId.systemDefault())
+    val endText = end.format(java.time.format.DateTimeFormatter.ofPattern("h:mm:ss a, d MMM", Locale.getDefault()))
+    AlertDialog(
+        onDismissRequest = onBack,
+        title = { Text("Lock until $endText?") },
+        text = {
+            Text(
+                "Your phone stays locked for ${minutes / 60}h ${minutes % 60}m. Nothing in the app can end it early, " +
+                    "and restarting the phone won't either. Phone calls and emergency calls keep working.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = { TextButton(onClick = onConfirm) { Text("Lock now") } },
+        dismissButton = { TextButton(onClick = onBack) { Text("Go back") } }
     )
 }
 

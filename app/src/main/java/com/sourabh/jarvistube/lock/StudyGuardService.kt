@@ -44,6 +44,7 @@ class StudyGuardService : AccessibilityService() {
         val study = Graph.study
         study.tick()
         if (!study.lockActive) return
+        if (!StudyLockService.running) StudyLockService.start(this)
         val pkg = event.packageName?.toString() ?: return
         if (pkg == "com.android.systemui") return closeShade()
         // Small floating windows also send this event: only act on what really fills the screen.

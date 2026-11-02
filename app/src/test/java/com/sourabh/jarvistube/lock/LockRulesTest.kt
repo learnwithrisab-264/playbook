@@ -16,6 +16,7 @@ class LockRulesTest {
         assertTrue(allows(own))
         assertTrue(allows(dialer))
         assertTrue(allows("com.android.server.telecom"))
+        assertTrue(allows("com.android.phone"))
         assertTrue(allows("com.google.android.inputmethod.latin"))
     }
 
@@ -27,10 +28,18 @@ class LockRulesTest {
     }
 
     @Test
-    fun exitNeedsBothThePhraseAndTheWait() {
-        assertFalse(exitReady(EXIT_PHRASE, EXIT_WAIT_SECONDS - 1))
-        assertFalse(exitReady("end it", EXIT_WAIT_SECONDS))
-        assertTrue(exitReady(" end my study session ", EXIT_WAIT_SECONDS))
+    fun movingTheClockForwardCantShortenASession() {
+        val hour = 3_600_000L
+        // After a restart with no internet, a clock pushed forward says the session is over.
+        assertEquals(hour, lockLeftMs(byClock = -hour, floor = hour, clockTrusted = false))
+    }
+
+    @Test
+    fun aTrustedClockDecides() {
+        val hour = 3_600_000L
+        // Time passed while the phone was off still counts once the real time is known.
+        assertEquals(0L, lockLeftMs(byClock = -hour, floor = hour, clockTrusted = true))
+        assertEquals(hour, lockLeftMs(byClock = hour, floor = 0L, clockTrusted = true))
     }
 
     @Test

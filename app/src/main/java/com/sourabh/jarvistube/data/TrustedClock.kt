@@ -21,6 +21,9 @@ object TrustedClock {
     private var lastSyncAt = SystemClock.elapsedRealtime()
     private var appContext: Context? = null
 
+    /** False after a restart until real time is known: the phone's clock may have been moved. */
+    @Volatile var reliable = false
+        private set
     fun init(context: Context) {
         if (prefs != null) return
         appContext = context.applicationContext
@@ -34,7 +37,7 @@ object TrustedClock {
             // Same boot: keep counting from the saved trusted point; the wall clock is ignored.
             baseWall = p.getLong("wall", System.currentTimeMillis())
             baseElapsed = savedElapsed
-        } else {
+            reliable = p.getBoolean("reliable", false)        } else {
             // New boot: the uptime clock restarted. Never earlier than the last trusted time.
             baseWall = maxOf(System.currentTimeMillis(), p.getLong("last", 0L))
             baseElapsed = elapsed
@@ -73,13 +76,14 @@ object TrustedClock {
                 val rtt = SystemClock.elapsedRealtime() - start
                 baseWall = date.time + rtt / 2
                 baseElapsed = SystemClock.elapsedRealtime()
+                reliable = true
                 save(bootCount(context))
             }
         }
     }
 
     private fun save(boot: Int) {
-        prefs?.edit()?.putLong("wall", baseWall)?.putLong("elapsed", baseElapsed)?.putInt("boot", boot)
+        prefs?.edit()?.putLong("wall", baseWall)?.putLong("elapsed", baseElapsed)?.putInt("boot", boot)?.putBoolean("reliable", reliable)
             ?.putLong("last", baseWall + (SystemClock.elapsedRealtime() - baseElapsed))?.apply()
     }
 

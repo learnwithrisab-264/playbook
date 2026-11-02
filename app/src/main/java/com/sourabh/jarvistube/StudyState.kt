@@ -339,7 +339,9 @@ class StudyState(context: Context) {
 
     fun tick() {
         if (active && com.sourabh.jarvistube.data.TrustedClock.now() >= endAt) complete()
-        if (lockActive && com.sourabh.jarvistube.data.TrustedClock.now() >= lockEndAt) releaseLock()
+        if (lockActive) {
+            if (lockRemainingMs <= 0L) releaseLock() else saveLockFloor()
+        }
         checkSchedule()
     }
 
@@ -406,24 +408,42 @@ class StudyState(context: Context) {
     private var lockTitle: String? = p.getString("lockTitle", null)
     private var lockChannel: String? = p.getString("lockChannel", null)
     private var lockThumb: String? = p.getString("lockThumb", null)
-    var lockActive by mutableStateOf(lockEndAt > com.sourabh.jarvistube.data.TrustedClock.now()); private set
+    /** Time left when last saved, and when that was: see [com.sourabh.jarvistube.lock.lockLeftMs]. */
+    private var lockFloor = p.getLong("lockFloor", 0L)
+    private var lockFloorAt = android.os.SystemClock.elapsedRealtime()
 
-    val lockRemainingMs: Long get() = (lockEndAt - com.sourabh.jarvistube.data.TrustedClock.now()).coerceAtLeast(0L)
+    val lockRemainingMs: Long
+        get() = if (lockEndAt == 0L) 0L else com.sourabh.jarvistube.lock.lockLeftMs(
+            lockEndAt - com.sourabh.jarvistube.data.TrustedClock.now(),
+            lockFloor - (android.os.SystemClock.elapsedRealtime() - lockFloorAt),
+            com.sourabh.jarvistube.data.TrustedClock.reliable
+        )
 
+    var lockActive by mutableStateOf(lockRemainingMs > 0L); private set
+
+    private fun saveLockFloor() {
+        val time = android.os.SystemClock.elapsedRealtime()
+        if (time - lockFloorAt < 5000L) return
+        lockFloor = lockRemainingMs
+        lockFloorAt = time
+        p.edit().putLong("lockFloor", lockFloor).apply()
+    }
     fun startLock(video: VideoItem, minutes: Int) {
-        if (minutes <= 0 || lockActive) return
+        if (minutes !in 1..com.sourabh.jarvistube.lock.MAX_LOCK_MINUTES || lockActive) return
         lockEndAt = com.sourabh.jarvistube.data.TrustedClock.now() + minutes * 60_000L
+        lockFloor = minutes * 60_000L
+        lockFloorAt = android.os.SystemClock.elapsedRealtime()
         lockUrl = video.url
         lockTitle = video.title
         lockChannel = video.channel
         lockThumb = video.thumb
         lockActive = true
-        p.edit().putLong("lockEndAt", lockEndAt).putString("lockUrl", video.url)
+        p.edit().putLong("lockEndAt", lockEndAt).putLong("lockFloor", lockFloor).putString("lockUrl", video.url)
             .putString("lockTitle", video.title).putString("lockChannel", video.channel)
             .putString("lockThumb", video.thumb).commit()
     }
 
-    /** The emergency exit. Only its deliberate steps, or adb on your computer, may call this. */
+    /** Only for adb on a computer (LockEndReceiver). Nothing in the app may call this. */
     fun endLockEarly() {
         if (lockActive) releaseLock()
     }
@@ -431,7 +451,7 @@ class StudyState(context: Context) {
     private fun releaseLock() {
         lockActive = false
         lockEndAt = 0L
-        p.edit().putLong("lockEndAt", 0L).remove("lockUrl").apply()
+        p.edit().putLong("lockEndAt", 0L).putLong("lockFloor", 0L).remove("lockUrl").apply()
     }
 
     /** The video to reopen while a lock is running. */
