@@ -9,6 +9,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.sourabh.jarvistube.Graph
 import com.sourabh.jarvistube.MainActivity
+import java.lang.reflect.Proxy
 
 /**
  * Publishes the app-wide player as a media session: the media notification (artwork, title,
@@ -78,10 +79,20 @@ private class SessionPlayer(private val controller: PlayerController) : Forwardi
     private val wrapped = HashMap<Player.Listener, Player.Listener>()
 
     override fun addListener(listener: Player.Listener) {
-        val w = object : Player.Listener by listener {
-            override fun onAvailableCommandsChanged(availableCommands: Player.Commands) =
-                listener.onAvailableCommandsChanged(withExtra(availableCommands))
-        }
+        // A proxy, because every Player.Listener method must reach the session. Most of them are
+        // Java default methods, which Kotlin's `by` delegation silently skips: the session then
+        // never heard about playback and froze, breaking PiP, notification and lock-screen buttons.
+        val w = Proxy.newProxyInstance(
+            Player.Listener::class.java.classLoader, arrayOf(Player.Listener::class.java)
+        ) { proxy, method, args ->
+            val a = args ?: emptyArray()
+            when (method.name) {
+                "equals" -> proxy === a[0]
+                "hashCode" -> System.identityHashCode(proxy)
+                "onAvailableCommandsChanged" -> method.invoke(listener, withExtra(a[0] as Player.Commands))
+                else -> method.invoke(listener, *a)
+            }
+        } as Player.Listener
         wrapped[listener] = w
         super.addListener(w)
     }

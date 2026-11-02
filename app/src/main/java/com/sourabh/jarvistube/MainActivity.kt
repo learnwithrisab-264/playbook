@@ -192,6 +192,8 @@ private fun BottomBar(tabs: List<Tab>, current: Tab, onSelect: (Tab) -> Unit) {
     }
 }
 
+private const val PIP_ACTION = "com.sourabh.jarvistube.PIP_BUTTON"
+
 class MainActivity : ComponentActivity() {
     private val vm: TubeViewModel by viewModels()
     private var inPip by mutableStateOf(false)
@@ -204,6 +206,10 @@ class MainActivity : ComponentActivity() {
         // dialer and quick settings. JarvisGuard enforces the lock instead and leaves those alone.
         // Unpin in case an older build left the app pinned.
         unpinIfPinned()
+        val filter = android.content.IntentFilter(PIP_ACTION)
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(pipButtons, filter, RECEIVER_NOT_EXPORTED)
+        else @Suppress("UnspecifiedRegisterReceiverFlag") registerReceiver(pipButtons, filter)
+        Graph.player.player.addListener(pipState)
         setContent {
             JarvisTubeTheme {
                 val askNotifications = rememberLauncherForActivityResult(
@@ -233,6 +239,49 @@ class MainActivity : ComponentActivity() {
         if (am.lockTaskModeState != android.app.ActivityManager.LOCK_TASK_MODE_NONE) runCatching { stopLockTask() }
     }
 
+    override fun onDestroy() {
+        unregisterReceiver(pipButtons)
+        Graph.player.player.removeListener(pipState)
+        super.onDestroy()
+    }
+
+    /** The buttons on the PiP window. */
+    private val pipButtons = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
+            when (intent.getStringExtra("button")) {
+                "previous" -> Graph.player.skipPrevious()
+                "toggle" -> Graph.player.togglePlay()
+                "next" -> Graph.player.skipNext()
+            }
+        }
+    }
+
+    /** Keeps the PiP Play/Pause icon matching the player, whatever changed it. */
+    private val pipState = object : androidx.media3.common.Player.Listener {
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            if (isInPictureInPictureMode) setPictureInPictureParams(pipParams())
+        }
+    }
+
+    private fun pipAction(button: String, icon: Int, label: String, code: Int): android.app.RemoteAction {
+        val intent = android.content.Intent(PIP_ACTION).setPackage(packageName).putExtra("button", button)
+        val pending = android.app.PendingIntent.getBroadcast(
+            this, code, intent, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        return android.app.RemoteAction(android.graphics.drawable.Icon.createWithResource(this, icon), label, label, pending)
+    }
+
+    private fun pipParams(): PictureInPictureParams {
+        val playing = Graph.player.player.playWhenReady
+        val actions = listOf(
+            pipAction("previous", R.drawable.ic_media_previous, "Previous", 1),
+            if (playing) pipAction("toggle", R.drawable.ic_media_pause, "Pause", 2)
+            else pipAction("toggle", R.drawable.ic_media_play, "Play", 2),
+            pipAction("next", R.drawable.ic_media_next, "Next", 3)
+        )
+        return PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).setActions(actions).build()
+    }
+
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         // No picture-in-picture during a study lock: the locked video stays full-screen. A video
@@ -240,7 +289,7 @@ class MainActivity : ComponentActivity() {
         val showingVideo = (vm.playerExpanded || !Graph.player.audioOnly) && vm.shortsViewer == null
         if (showingVideo && Graph.player.player.isPlaying && !Graph.study.lockActive) {
             enterPictureInPictureMode(
-                PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build()
+                pipParams()
             )
         }
     }
@@ -248,6 +297,12 @@ class MainActivity : ComponentActivity() {
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         inPip = isInPictureInPictureMode
+        if (!isInPictureInPictureMode) {
+            // Expanding returns to the same video and position in the full player. Dismissing
+            // the window stops the Activity: that means stop watching, so playback pauses.
+            if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) vm.playerExpanded = Graph.player.now.value != null
+            else Graph.player.player.pause()
+        }
     }
 }
 

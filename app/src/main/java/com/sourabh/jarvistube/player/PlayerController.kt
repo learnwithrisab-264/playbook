@@ -535,7 +535,15 @@ class PlayerController(val app: Context, http: OkHttpClient) {
             showNotice("Still on break: ${formatLeftMs(Graph.study.breakEndAt - com.sourabh.jarvistube.data.TrustedClock.now())} left")
             return
         }
-        if (player.isPlaying) player.pause() else player.play()
+        // playWhenReady is what you asked for; isPlaying is also false while buffering, which made
+        // Pause do nothing mid-buffer.
+        if (player.playWhenReady && player.playbackState != Player.STATE_ENDED) {
+            player.pause()
+            return
+        }
+        if (player.playbackState == Player.STATE_IDLE) player.prepare()
+        if (player.playbackState == Player.STATE_ENDED) player.seekTo(0)
+        player.play()
     }
 
     fun stop() {
