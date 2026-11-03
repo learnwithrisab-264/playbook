@@ -94,12 +94,12 @@ private fun BlockScreen(onStudy: () -> Unit, onPhone: () -> Unit) {
     }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
-            Modifier.fillMaxSize().imePadding().padding(28.dp),
+            Modifier.fillMaxSize().imePadding().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Icon(Icons.Rounded.Lock, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
             Text(
                 "Study session locked, ${minutesLeftText(left)}",
                 style = MaterialTheme.typography.headlineSmall,
@@ -113,7 +113,7 @@ private fun BlockScreen(onStudy: () -> Unit, onPhone: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(24.dp))
             if (exiting) {
                 EmergencyExit(onEnd = { if (study.useEmergencyExit()) onStudy() }, onCancel = { exiting = false })
             } else {
