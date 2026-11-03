@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.study
 
+import com.sourabh.jarvistube.ui.theme.Brand
+import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.Avatar
 import com.sourabh.jarvistube.ui.common.ErrorBox
 import com.sourabh.jarvistube.ui.common.VideoCard
@@ -130,7 +132,7 @@ internal fun ActiveSession(vm: TubeViewModel, bottomPadding: Dp) {
     ) {
         // Header: title + countdown pill, a thin progress line, and the lock line.
         item {
-            Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 10.dp)) {
+            Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Lock, null, Modifier.size(20.dp))
                     Spacer(Modifier.size(8.dp))
@@ -140,15 +142,15 @@ internal fun ActiveSession(vm: TubeViewModel, bottomPadding: Dp) {
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
                     )
                 }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 val total = (study.sessionMinutes * 60_000f).coerceAtLeast(1f)
                 val done = (1f - remaining / total).coerceIn(0f, 1f)
                 // Plain YouTube-style progress line: grey track, red fill, no gaps or end dots.
                 Box(Modifier.fillMaxWidth().height(3.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)) {
-                    Box(Modifier.fillMaxWidth(done).fillMaxHeight().background(Color(0xFFFF6D00)))
+                    Box(Modifier.fillMaxWidth(done).fillMaxHeight().background(Brand.orange))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(40.dp)) {
                     Text(
@@ -249,7 +251,7 @@ internal fun ActiveSession(vm: TubeViewModel, bottomPadding: Dp) {
 internal fun ChannelBubble(name: String, avatar: String?, selected: Boolean, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     Column(
-        Modifier.width(68.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 4.dp)
+        Modifier.width(68.dp).clip(Corners.medium).clickable(onClick = onClick).padding(vertical = 4.dp)
             .alpha(if (selected) 1f else 0.6f),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -267,7 +269,7 @@ internal fun ChannelBubble(name: String, avatar: String?, selected: Boolean, onC
                 Avatar(name, 52, avatar)
             }
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         Text(
             name, style = MaterialTheme.typography.labelMedium,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,

@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.study
 
+import com.sourabh.jarvistube.ui.theme.OnVideo
 import com.sourabh.jarvistube.ui.common.TopicChip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -69,13 +70,13 @@ fun StudyLockButton(now: NowPlaying) {
             }
         }
         Row(
-            Modifier.padding(end = 8.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f))
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+            Modifier.padding(end = 8.dp).clip(CircleShape).background(OnVideo.scrim)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(Icons.Rounded.Lock, null, tint = Color.White, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.size(6.dp))
-            Text(formatLeft(left), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+            Spacer(Modifier.size(8.dp))
+            Text(formatLeft(left), color = Color.White, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
         }
     }
     // ⋮ opens the YouTube-style settings sheet (PlayerMoreSheetHost), also during a lock.

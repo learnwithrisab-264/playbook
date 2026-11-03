@@ -88,7 +88,7 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp)) {
+            Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 4.dp)) {
                 Text("Study", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 Text(
                     "Lock yourself in. Only your channels play until the timer ends.",
@@ -166,7 +166,7 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp) {
                             }
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("M", "T", "W", "T", "F", "S", "S").forEachIndexed { i, d ->
                             val on = study.scheduleDays and (1 shl i) != 0
                             Box(
@@ -345,7 +345,7 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp) {
             Text(
                 "Your subscriptions",
                 style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
             )
             if (names.isEmpty()) {
                 Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
