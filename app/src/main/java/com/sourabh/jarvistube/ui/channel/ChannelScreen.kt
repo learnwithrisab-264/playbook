@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.channel
 
+import com.sourabh.jarvistube.ui.common.EmptyLine
 import com.sourabh.jarvistube.ui.common.Avatar
 import com.sourabh.jarvistube.ui.common.compact
 import com.sourabh.jarvistube.ui.common.ErrorBox
@@ -143,7 +144,7 @@ internal fun ChannelScreen(vm: TubeViewModel, page: Page.Channel, bottomPadding:
             }
         }
         if (c != null && activeTab == null) {
-            item { EmptyHint("This channel has nothing here.") }
+            item { EmptyLine("This channel has nothing here.") }
         } else {
             entryItems(vm, state, onRetry = { if (c != null && activeTab != null) loadTab(c, activeTab, more = false) })
         }

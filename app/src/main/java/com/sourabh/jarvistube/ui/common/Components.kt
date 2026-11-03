@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.common
 
+import com.sourabh.jarvistube.ui.theme.Brand
+import com.sourabh.jarvistube.ui.theme.Corners
 import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
@@ -176,6 +178,40 @@ fun ErrorBox(
     }
 }
 
+/** The one loading look for lists and pages: a spinner centred in the free space. */
+@Composable
+fun LoadingView(modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxWidth().padding(vertical = com.sourabh.jarvistube.ui.theme.Space.xl), contentAlignment = Alignment.Center) {
+        androidx.compose.material3.CircularProgressIndicator(Modifier.size(32.dp), strokeWidth = 3.dp)
+    }
+}
+
+/** A small "nothing here" line for short lists inside a page. Big empty screens use [EmptyState]. */
+@Composable
+fun EmptyLine(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(com.sourabh.jarvistube.ui.theme.Space.xxl)
+    )
+}
+
+/** The one section heading style, used in Settings, Study and channel pages. */
+@Composable
+fun SectionHeader(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier.padding(
+            start = com.sourabh.jarvistube.ui.theme.Space.l, end = com.sourabh.jarvistube.ui.theme.Space.l,
+            top = com.sourabh.jarvistube.ui.theme.Space.l, bottom = com.sourabh.jarvistube.ui.theme.Space.xs
+        )
+    )
+}
+
 @Composable
 fun EmptyState(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, body: String) {
     Column(
@@ -188,7 +224,7 @@ fun EmptyState(icon: androidx.compose.ui.graphics.vector.ImageVector, title: Str
         ) {
             Icon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(34.dp))
         }
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
         Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
         Text(
@@ -256,7 +292,7 @@ fun PillChip(
         label = label,
         modifier = modifier,
         leadingIcon = leadingIcon,
-        shape = RoundedCornerShape(18.dp),
+        shape = Corners.large,
         border = null,
         colors = FilterChipDefaults.filterChipColors(
             containerColor = cs.surfaceVariant,
@@ -275,12 +311,12 @@ fun LogoMark() {
     Row(verticalAlignment = Alignment.CenterVertically) {
         androidx.compose.foundation.Image(
             androidx.compose.ui.res.painterResource(com.sourabh.jarvistube.R.drawable.osmium_badge), null,
-            Modifier.size(30.dp).clip(RoundedCornerShape(7.dp))
+            Modifier.size(30.dp).clip(Corners.small)
         )
         Spacer(Modifier.size(7.dp))
         Text(
             "PlayBook", fontWeight = FontWeight.Bold, fontSize = 20.sp, letterSpacing = (-0.6).sp,
-            color = Color(0xFFFF6D00)
+            color = Brand.orange
         )
     }
 }

@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.you
 
+import com.sourabh.jarvistube.ui.common.SectionHeader
 import com.sourabh.jarvistube.ui.common.Avatar
 import com.sourabh.jarvistube.ui.common.SubPageHeader
 import com.sourabh.jarvistube.ui.player.CaptionText
@@ -82,7 +83,7 @@ fun SettingsScreen(
     ) {
         item { SubPageHeader("Settings", onBack) }
 
-        item { SectionLabel("Content") }
+        item { SectionHeader("Content") }
         item {
             SettingRow(
                 Icons.Rounded.Public, "Region", AppSettings.regionName,
@@ -102,7 +103,7 @@ fun SettingsScreen(
             }
         }
 
-        item { SectionLabel("Playback") }
+        item { SectionHeader("Playback") }
         item {
             SettingRow(
                 Icons.Rounded.HighQuality, "Default quality", AppSettings.qualityLabel(AppSettings.defaultQuality),
@@ -129,7 +130,7 @@ fun SettingsScreen(
             )
         }
 
-        item { SectionLabel("Playback speed") }
+        item { SectionHeader("Playback speed") }
         item {
             SettingRow(
                 Icons.Rounded.Speed, "Speeds in the speed menu",
@@ -138,7 +139,7 @@ fun SettingsScreen(
             )
         }
 
-        item { SectionLabel("Captions") }
+        item { SectionHeader("Captions") }
         item {
             // Live preview on a video-like background; changes below show here and on the video at once.
             androidx.compose.foundation.layout.Box(
@@ -177,7 +178,7 @@ fun SettingsScreen(
             )
         }
 
-        item { SectionLabel("Privacy") }
+        item { SectionHeader("Privacy") }
         item {
             SettingRow(
                 Icons.Rounded.History, "Clear search history", "${vm.recents.size} saved searches",
@@ -188,7 +189,7 @@ fun SettingsScreen(
             )
         }
 
-        item { SectionLabel("Account") }
+        item { SectionHeader("Account") }
         // Every Google account added to PlayBook (photo, name, email). Tap one to switch to it;
         // ✕ signs out of / removes just that account.
         items(lib.accounts, key = { it.id }) { a ->
@@ -237,7 +238,7 @@ fun SettingsScreen(
             }
         }
 
-        item { SectionLabel("About") }
+        item { SectionHeader("About") }
         item {
             SettingRow(
                 Icons.Rounded.Info, "PlayBook 0.1",
@@ -341,16 +342,6 @@ fun SettingsScreen(
             dismissButton = { TextButton(onClick = { removeTarget = null }) { Text("Cancel") } }
         )
     }
-}
-
-@Composable
-internal fun SectionLabel(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 4.dp)
-    )
 }
 
 @Composable

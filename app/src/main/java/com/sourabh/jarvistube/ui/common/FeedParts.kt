@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.common
 
+import com.sourabh.jarvistube.ui.theme.Corners
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,10 +47,10 @@ internal fun TopicChip(label: String, selected: Boolean, onClick: () -> Unit) {
         style = MaterialTheme.typography.labelLarge,
         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
         modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(Corners.medium)
             .background(bg)
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 7.dp)
+            .padding(horizontal = 16.dp, vertical = 7.dp)
     )
 }
 

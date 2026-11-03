@@ -12,6 +12,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 
 private val Night = darkColorScheme(
     primary = Color(0xFFFF8C00),
@@ -66,8 +69,57 @@ private val AppTypography = Typography(
     ),
     bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
     bodySmall = TextStyle(fontSize = 12.sp, lineHeight = 16.sp),
-    labelLarge = TextStyle(fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp)
+    labelLarge = TextStyle(fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp),
+    // Small labels on top of video and in badges (time, speed, duration, notices).
+    labelMedium = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 18.sp),
+    labelSmall = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 12.sp, lineHeight = 16.sp)
 )
+
+/** The only spacing sizes screens use. */
+object Space {
+    val xs = 4.dp
+    val s = 8.dp
+    val m = 12.dp
+    val l = 16.dp
+    val xl = 24.dp
+    val xxl = 32.dp
+}
+
+/** The only corner shapes screens use. */
+object Corners {
+    val tiny = RoundedCornerShape(4.dp) // duration and LIVE badges
+    val small = RoundedCornerShape(8.dp)
+    val medium = RoundedCornerShape(12.dp) // thumbnails, cards
+    val large = RoundedCornerShape(16.dp) // sheets, big cards, mini player
+    val pill = CircleShape // chips, round buttons, avatars
+}
+
+object IconSize {
+    val small = 18.dp // inside chips and rows of text
+    val medium = 24.dp // normal buttons
+    val large = 34.dp // big player buttons, empty-screen icons
+}
+
+/** Animation lengths in milliseconds. */
+object Motion {
+    const val FAST = 150
+    const val NORMAL = 220
+}
+
+/** PlayBook's own colours that don't change between light and dark mode. */
+object Brand {
+    val orange = Color(0xFFFF6D00)
+    val live = Color(0xFFD63B3B)
+}
+
+/** Colours drawn on top of video, the same in light and dark mode. */
+object OnVideo {
+    val content = Color.White
+    val scrimLight = Color.Black.copy(alpha = 0.4f)
+    val scrim = Color.Black.copy(alpha = 0.6f)
+    val scrimStrong = Color.Black.copy(alpha = 0.8f)
+    val track = Color.White.copy(alpha = 0.3f)
+}
 
 @Composable
 fun JarvisTubeTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {

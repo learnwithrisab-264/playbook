@@ -1,5 +1,8 @@
 package com.sourabh.jarvistube.ui.common
 
+import com.sourabh.jarvistube.ui.theme.Brand
+import com.sourabh.jarvistube.ui.theme.Corners
+import com.sourabh.jarvistube.ui.theme.OnVideo
 import com.sourabh.jarvistube.ui.downloads.DownloadSheet
 import com.sourabh.jarvistube.ui.you.SaveToPlaylist
 import androidx.compose.foundation.background
@@ -72,7 +75,7 @@ fun VideoCard(
                 Graph.player.enqueue(video)
                 toast("Added to queue")
             })
-            .padding(bottom = 18.dp)
+            .padding(bottom = 16.dp)
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
             Thumb(video.thumb, Modifier.matchParentSize())
@@ -81,13 +84,13 @@ fun VideoCard(
                 Text(
                     badge,
                     color = Color.White,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(8.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(if (video.isLive) Color(0xFFD63B3B) else Color.Black.copy(alpha = 0.8f))
+                        .clip(Corners.tiny)
+                        .background(if (video.isLive) Brand.live else OnVideo.scrimStrong)
                         .padding(horizontal = 4.dp, vertical = 1.dp)
                 )
             }
@@ -184,15 +187,15 @@ fun VideoCard(
 @Composable
 fun VideoCardSkeleton() {
     val brush = shimmerBrush()
-    Column(Modifier.fillMaxWidth().padding(bottom = 18.dp)) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(brush))
         Spacer(Modifier.height(12.dp))
         Row(Modifier.padding(horizontal = 12.dp)) {
             Box(Modifier.size(36.dp).clip(CircleShape).background(brush))
             Spacer(Modifier.size(12.dp))
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.fillMaxWidth(0.9f).height(14.dp).clip(RoundedCornerShape(7.dp)).background(brush))
-                Box(Modifier.fillMaxWidth(0.55f).height(12.dp).clip(RoundedCornerShape(6.dp)).background(brush))
+                Box(Modifier.fillMaxWidth(0.9f).height(14.dp).clip(Corners.small).background(brush))
+                Box(Modifier.fillMaxWidth(0.55f).height(12.dp).clip(Corners.small).background(brush))
             }
         }
     }

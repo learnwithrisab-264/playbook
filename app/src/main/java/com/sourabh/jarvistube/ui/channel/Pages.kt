@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.channel
 
+import com.sourabh.jarvistube.ui.common.EmptyLine
+import com.sourabh.jarvistube.ui.common.LoadingView
 import com.sourabh.jarvistube.ui.common.ErrorBox
 import com.sourabh.jarvistube.ui.common.Thumb
 import com.sourabh.jarvistube.ui.common.VideoCard
@@ -78,33 +80,6 @@ internal fun PageTopBar(title: String, onBack: () -> Unit) {
     }
 }
 
-@Composable
-internal fun SectionTitle(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp)
-    )
-}
-
-@Composable
-internal fun Spinner() {
-    Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
-    }
-}
-
-@Composable
-internal fun EmptyHint(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.fillMaxWidth().padding(32.dp)
-    )
-}
-
 internal data class TabState(
     val items: List<Entry> = emptyList(),
     val next: NpPage? = null,
@@ -118,7 +93,7 @@ internal fun LazyListScope.entryItems(vm: TubeViewModel, state: TabState, onRetr
     when {
         state.loading && state.items.isEmpty() -> items(3) { VideoCardSkeleton() }
         state.error != null && state.items.isEmpty() -> item { ErrorBox(state.error, onRetry = onRetry) }
-        state.items.isEmpty() -> item { EmptyHint("Nothing here yet.") }
+        state.items.isEmpty() -> item { EmptyLine("Nothing here yet.") }
         else -> {
             items(state.items, key = { it.key }) { e ->
                 when (e) {
@@ -150,7 +125,7 @@ internal fun LazyListScope.entryItems(vm: TubeViewModel, state: TabState, onRetr
                     is Entry.Channel -> ChannelPickRow(vm, e.ref)
                 }
             }
-            if (state.loading) item { Spinner() }
+            if (state.loading) item { LoadingView() }
         }
     }
 }

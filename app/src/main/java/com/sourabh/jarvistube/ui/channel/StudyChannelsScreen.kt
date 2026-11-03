@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.channel
 
+import com.sourabh.jarvistube.ui.common.LoadingView
+import com.sourabh.jarvistube.ui.common.SectionHeader
 import com.sourabh.jarvistube.ui.common.Avatar
 import com.sourabh.jarvistube.ui.common.ErrorBox
 import androidx.compose.foundation.background
@@ -120,18 +122,18 @@ internal fun StudyChannelsScreen(vm: TubeViewModel, lib: LibraryViewModel, botto
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
             )
         }
-        if (searching) item { Spinner() }
+        if (searching) item { LoadingView() }
         searchError?.let { e -> item { ErrorBox(e, onRetry = { search() }) } }
         if (results.isNotEmpty()) {
-            item { SectionTitle("Search results") }
+            item { SectionHeader("Search results") }
             items(results, key = { "r:" + it.url }) { c -> ChannelPickRow(vm, c) }
         }
         if (StudyChannels.list.isNotEmpty()) {
-            item { SectionTitle("Your channels") }
+            item { SectionHeader("Your channels") }
             items(StudyChannels.list.toList(), key = { "s:" + it.url }) { c -> ChannelPickRow(vm, c) }
         }
         if (subs.isNotEmpty()) {
-            item { SectionTitle("From your subscriptions") }
+            item { SectionHeader("From your subscriptions") }
             items(subs, key = { "y:" + it.url }) { c -> ChannelPickRow(vm, c) }
         }
     }
