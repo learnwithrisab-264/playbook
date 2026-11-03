@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.Headphones
@@ -92,6 +94,20 @@ internal fun VideoBox(
             flash = 0
         }
     }
+    // Brightness and sound swipes: what is being changed and its level, shown in a small box.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val brightness = remember(context) { WindowBrightness(context) }
+    val volume = remember(context) { MediaVolume(context) }
+    var adjusting by remember { mutableStateOf<Pair<SwipeZone, Float>?>(null) }
+    var adjustDone by remember { mutableIntStateOf(0) }
+    LaunchedEffect(adjustDone) {
+        delay(700)
+        adjusting = null
+    }
+    // PlayBook's own brightness lasts only for fullscreen; the phone's setting comes back after.
+    androidx.compose.runtime.DisposableEffect(fullscreen) {
+        onDispose { brightness.reset() }
+    }
 
     Box(
         modifier
@@ -139,6 +155,7 @@ internal fun VideoBox(
             .pointerInput(fullscreen) {
                 var total = 0f
                 var ignore = false
+                var zone = SwipeZone.Exit
                 // Fullscreen needs a long, deliberate pull (a quarter of the screen) to exit, and a
                 // drag that starts at the very top edge is the notification shade, not an exit.
                 val upThreshold = 56.dp.toPx()
@@ -147,17 +164,27 @@ internal fun VideoBox(
                     onDragStart = { start ->
                         total = 0f
                         ignore = fullscreen && start.y < size.height * 0.15f
+                        // In fullscreen the sides change brightness and sound; the middle still exits.
+                        zone = if (fullscreen && !ignore) swipeZoneAt(start.x, size.width.toFloat()) else SwipeZone.Exit
+                        if (zone == SwipeZone.Brightness) adjusting = SwipeZone.Brightness to brightness.current()
+                        if (zone == SwipeZone.Volume) adjusting = SwipeZone.Volume to volume.current()
                     },
                     onDragEnd = {
-                        if (!ignore) {
+                        if (!ignore && zone == SwipeZone.Exit) {
                             if (total < -upThreshold) currentOnSwipe(-1) else if (total > downThreshold) currentOnSwipe(1)
                         }
                         total = 0f
+                        adjustDone++
                     },
-                    onDragCancel = { total = 0f },
+                    onDragCancel = { total = 0f; adjustDone++ },
                     onVerticalDrag = { change, dy ->
                         change.consume()
                         total += dy
+                        val (kind, level) = adjusting ?: return@detectVerticalDragGestures
+                        if (zone == SwipeZone.Exit) return@detectVerticalDragGestures
+                        val next = adjustLevel(level, dy, size.height.toFloat())
+                        if (kind == SwipeZone.Brightness) brightness.set(next) else volume.set(next)
+                        adjusting = kind to next
                     }
                 )
             }
@@ -180,6 +207,29 @@ internal fun VideoBox(
         val firstFrame by Graph.player.firstFrameUrl.collectAsStateWithLifecycle()
         if (firstFrame != now.video.url && !Graph.player.audioOnly && now.video.thumb != null) {
             Thumb(now.video.thumb, Modifier.matchParentSize())
+        }
+
+        adjusting?.let { (kind, level) ->
+            Row(
+                Modifier.align(Alignment.TopCenter).padding(top = 28.dp).clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    if (kind == SwipeZone.Brightness) Icons.Rounded.BrightnessMedium else Icons.AutoMirrored.Rounded.VolumeUp,
+                    if (kind == SwipeZone.Brightness) "Brightness" else "Volume",
+                    tint = Color.White, modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.size(10.dp))
+                androidx.compose.material3.LinearProgressIndicator(
+                    progress = { level },
+                    modifier = Modifier.size(width = 110.dp, height = 4.dp),
+                    color = Color.White,
+                    trackColor = Color.White.copy(alpha = 0.3f)
+                )
+                Spacer(Modifier.size(10.dp))
+                Text("${(level * 100).toInt()}%", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            }
         }
 
         if (ui.isBuffering || now.loading) {
