@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube
 
+import com.sourabh.jarvistube.ui.theme.Motion
 import android.Manifest
 import android.app.PictureInPictureParams
 import android.content.res.Configuration
@@ -145,7 +146,7 @@ private fun BottomBar(tabs: List<Tab>, current: Tab, onSelect: (Tab) -> Unit) {
             tabs.forEach { t ->
                 val selected = t == current
                 val tint by animateColorAsState(
-                    if (selected) cs.onSurface else cs.onSurfaceVariant, tween(150), label = "tab"
+                    if (selected) cs.onSurface else cs.onSurfaceVariant, tween(Motion.FAST), label = "tab"
                 )
                 Column(
                     Modifier
@@ -407,8 +408,8 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
 
         AnimatedVisibility(
             visible = vm.searchOpen && !inPip,
-            enter = fadeIn(tween(160)) + slideInVertically(tween(220)) { it / 12 },
-            exit = fadeOut(tween(140))
+            enter = fadeIn(tween(Motion.FAST)) + slideInVertically(tween(Motion.NORMAL)) { it / 12 },
+            exit = fadeOut(tween(Motion.FAST))
         ) {
             SearchOverlay(vm, bottomPadding = navInset + miniPad)
         }
@@ -418,8 +419,8 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
 
         AnimatedVisibility(
             visible = showMini,
-            enter = slideInVertically(tween(220)) { it } + fadeIn(tween(160)),
-            exit = slideOutVertically(tween(180)) { it } + fadeOut(tween(140)),
+            enter = slideInVertically(tween(Motion.NORMAL)) { it } + fadeIn(tween(Motion.FAST)),
+            exit = slideOutVertically(tween(Motion.NORMAL)) { it } + fadeOut(tween(Motion.FAST)),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = if (overlayOpen) navInset else navInset + barHeight)
@@ -430,8 +431,8 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
         // In-app picture-in-picture: above the tabs, search and pages; below the full player.
         AnimatedVisibility(
             visible = showFloating,
-            enter = fadeIn(tween(180)),
-            exit = fadeOut(tween(140))
+            enter = fadeIn(tween(Motion.NORMAL)),
+            exit = fadeOut(tween(Motion.FAST))
         ) {
             now?.let {
                 FloatingPlayer(
@@ -446,16 +447,16 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
         AnimatedVisibility(
             visible = expanded || (inPip && now != null),
             // Short and front-loaded so the player feels instant, like YouTube's.
-            enter = slideInVertically(tween(200, easing = LinearOutSlowInEasing)) { it / 4 } + fadeIn(tween(120)),
-            exit = slideOutVertically(tween(180, easing = FastOutLinearInEasing)) { it / 3 } + fadeOut(tween(160))
+            enter = slideInVertically(tween(Motion.NORMAL, easing = LinearOutSlowInEasing)) { it / 4 } + fadeIn(tween(Motion.FAST)),
+            exit = slideOutVertically(tween(Motion.NORMAL, easing = FastOutLinearInEasing)) { it / 3 } + fadeOut(tween(Motion.FAST))
         ) {
             PlayerScreen(vm, ui, inPip)
         }
 
         AnimatedVisibility(
             visible = showLogin,
-            enter = slideInVertically(tween(300)) { it } + fadeIn(),
-            exit = slideOutVertically(tween(250)) { it } + fadeOut()
+            enter = slideInVertically(tween(Motion.NORMAL)) { it } + fadeIn(),
+            exit = slideOutVertically(tween(Motion.NORMAL)) { it } + fadeOut()
         ) {
             LoginScreen(
                 onCookie = { lib.onSignedIn(it); showLogin = false },
