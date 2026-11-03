@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.you
 
+import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.SectionHeader
 import com.sourabh.jarvistube.ui.common.Avatar
 import com.sourabh.jarvistube.ui.common.SubPageHeader
@@ -143,8 +144,8 @@ fun SettingsScreen(
         item {
             // Live preview on a video-like background; changes below show here and on the video at once.
             androidx.compose.foundation.layout.Box(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)
-                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)
+                    .clip(Corners.medium)
                     .background(androidx.compose.ui.graphics.Color(0xFF2A2F3A))
                     .heightIn(min = 96.dp),
                 contentAlignment = Alignment.BottomCenter
@@ -200,7 +201,7 @@ fun SettingsScreen(
                         lib.switchAccount(a.id)
                         Toast.makeText(context, "Switched to ${a.name ?: a.email ?: "account"}", Toast.LENGTH_SHORT).show()
                     }
-                    .padding(start = 20.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+                    .padding(start = 24.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Avatar(a.name ?: a.email ?: "?", 40, a.photo)
@@ -249,12 +250,12 @@ fun SettingsScreen(
         // Maker's mark: quiet, centred, at the very end of Settings.
         item {
             androidx.compose.foundation.layout.Column(
-                Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 36.dp),
+                Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 36.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 androidx.compose.foundation.Image(
                     androidx.compose.ui.res.painterResource(com.sourabh.jarvistube.R.drawable.osmium_badge), null,
-                    Modifier.size(44.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(11.dp))
+                    Modifier.size(44.dp).clip(Corners.medium)
                 )
                 Spacer(Modifier.size(12.dp))
                 Text(
@@ -353,11 +354,11 @@ internal fun SettingRow(
     trailing: (@Composable () -> Unit)? = null
 ) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 24.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.size(20.dp))
+        Spacer(Modifier.size(24.dp))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

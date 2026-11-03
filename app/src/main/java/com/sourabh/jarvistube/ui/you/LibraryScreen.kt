@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.you
 
+import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.Avatar
 import com.sourabh.jarvistube.ui.common.EmptyState
 import com.sourabh.jarvistube.ui.common.ErrorBox
@@ -157,15 +158,15 @@ fun LibraryScreen(
         if (detail == null && lib.tab == LibTab.Playlists) {
             item {
                 Row(
-                    Modifier.fillMaxWidth().clickable { newPlaylist = true }.padding(horizontal = 16.dp, vertical = 10.dp),
+                    Modifier.fillMaxWidth().clickable { newPlaylist = true }.padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        Modifier.width(120.dp).height(68.dp).clip(RoundedCornerShape(12.dp))
+                        Modifier.width(120.dp).height(68.dp).clip(Corners.medium)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) { Icon(Icons.Rounded.Add, null) }
-                    Spacer(Modifier.size(14.dp))
+                    Spacer(Modifier.size(16.dp))
                     Text("New playlist", style = MaterialTheme.typography.titleMedium)
                 }
             }
@@ -176,7 +177,7 @@ fun LibraryScreen(
                 Text(
                     "From your YouTube account",
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 8.dp)
+                    modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
                 )
             }
         }
@@ -277,9 +278,9 @@ private fun RowCard(
             thumb,
             Modifier
                 .then(if (circle) Modifier.size(56.dp) else Modifier.width(120.dp).height(68.dp))
-                .clip(if (circle) CircleShape else RoundedCornerShape(12.dp))
+                .clip(if (circle) CircleShape else Corners.medium)
         )
-        Spacer(Modifier.size(14.dp))
+        Spacer(Modifier.size(16.dp))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (sub.isNotBlank()) {
@@ -395,7 +396,7 @@ private fun SignedOut(
         item {
             Text(
                 "History", style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 4.dp)
+                modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 4.dp)
             )
         }
         historySection(vm, query, { query = it }, onClearAll = { clearHistory = true })

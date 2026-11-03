@@ -90,7 +90,7 @@ fun SubscribeButton(channelUrl: String?, channelName: String, modifier: Modifier
         null -> Unit
         true -> FilledTonalButton(onClick = { confirm = true }, enabled = !busy, modifier = modifier) {
             Icon(Icons.Rounded.NotificationsNone, null, Modifier.size(18.dp))
-            Spacer(Modifier.size(6.dp))
+            Spacer(Modifier.size(8.dp))
             Text("Subscribed")
         }
         false -> Button(
@@ -166,7 +166,7 @@ fun SaveToPlaylistHost() {
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 12.dp)) {
-            Text("Save video to…", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+            Text("Save video to…", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
             if (loading) {
                 CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally).padding(24.dp))
             }
@@ -194,7 +194,7 @@ fun SaveToPlaylistHost() {
                 }
             }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = newTitle, onValueChange = { newTitle = it }, singleLine = true,
                     placeholder = { Text("New playlist name") }, modifier = Modifier.weight(1f)
@@ -227,15 +227,15 @@ fun AccountSheet(lib: LibraryViewModel, onAddAccount: () -> Unit, onDismiss: () 
     var confirmSignOut by remember { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 12.dp)) {
-            Text("Accounts", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+            Text("Accounts", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
             lib.accounts.forEach { a ->
                 Row(
                     Modifier.fillMaxWidth().clickable { lib.switchAccount(a.id); onDismiss() }
-                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Avatar(a.name ?: a.email ?: "?", 40, a.photo)
-                    Spacer(Modifier.size(14.dp))
+                    Spacer(Modifier.size(16.dp))
                     Column(Modifier.weight(1f)) {
                         Text(a.name ?: "Google account", style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
@@ -268,11 +268,11 @@ fun AccountSheet(lib: LibraryViewModel, onAddAccount: () -> Unit, onDismiss: () 
 @Composable
 private fun SheetAction(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 24.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, null)
-        Spacer(Modifier.size(20.dp))
+        Spacer(Modifier.size(24.dp))
         Text(label, style = MaterialTheme.typography.bodyLarge)
     }
 }

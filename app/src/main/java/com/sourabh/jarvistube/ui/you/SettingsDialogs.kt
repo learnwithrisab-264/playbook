@@ -138,7 +138,7 @@ internal fun SponsorCategoriesDialog(onDismiss: () -> Unit) {
                     val on = c.key in chosen
                     Row(
                         Modifier.fillMaxWidth().clickable { chosen = if (on) chosen - c.key else chosen + c.key }
-                            .padding(vertical = 6.dp),
+                            .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         androidx.compose.foundation.layout.Box(

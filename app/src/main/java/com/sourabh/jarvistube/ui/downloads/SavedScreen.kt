@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.downloads
 
+import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.EmptyState
 import com.sourabh.jarvistube.ui.common.pressScale
 import com.sourabh.jarvistube.ui.common.SubPageHeader
@@ -73,7 +74,7 @@ fun SavedScreen(vm: TubeViewModel, bottomPadding: Dp, onBack: () -> Unit) {
                         maxLines = 2, overflow = TextOverflow.Ellipsis
                     )
                     if (!p.failed) {
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(8.dp))
                         if (p.fraction >= 0) LinearProgressIndicator(progress = { p.fraction }, Modifier.fillMaxWidth())
                         else LinearProgressIndicator(Modifier.fillMaxWidth())
                     }
@@ -100,8 +101,8 @@ private fun SavedRow(item: SavedItem, onPlay: () -> Unit) {
         Modifier.fillMaxWidth().pressScale(onPlay).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Thumb(item.thumb, Modifier.width(120.dp).height(68.dp).clip(RoundedCornerShape(12.dp)))
-        Spacer(Modifier.size(14.dp))
+        Thumb(item.thumb, Modifier.width(120.dp).height(68.dp).clip(Corners.medium))
+        Spacer(Modifier.size(16.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(item.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             val mb = String.format(Locale.US, "%.0f MB", item.sizeBytes / 1_048_576.0)

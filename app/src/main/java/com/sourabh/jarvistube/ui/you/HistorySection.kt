@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.you
 
+import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.pressScale
 import com.sourabh.jarvistube.ui.common.Thumb
 import androidx.compose.foundation.layout.Column
@@ -81,7 +82,7 @@ fun LazyListScope.historySection(
                 if (all.isEmpty()) "Videos you watch will appear here." else "Nothing in your history matches that.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
             )
         }
     }
@@ -93,16 +94,16 @@ fun LazyListScope.historySection(
                 day.label,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 6.dp)
+                modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 8.dp)
             )
         }
         items(list, key = { "h:" + it.video.url }) { item ->
             Row(
                 Modifier.fillMaxWidth().pressScale({ vm.play(item.video) })
-                    .padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                    .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Thumb(item.video.thumb, Modifier.width(120.dp).height(68.dp).clip(RoundedCornerShape(10.dp)))
+                Thumb(item.video.thumb, Modifier.width(120.dp).height(68.dp).clip(Corners.medium))
                 Spacer(Modifier.size(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(item.video.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)

@@ -72,17 +72,17 @@ fun DownloadSheetHost() {
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 12.dp)) {
-            Text("Download", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp))
+            Text("Download", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 24.dp))
             Text(
                 video.title, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
             )
             when {
                 info == null && !failed -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally).padding(24.dp))
                 options.isEmpty() -> Text(
                     "Nothing downloadable for this video.",
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(24.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 else -> options.forEach { o -> OptionRow(o) { start(context, video, info!!, o) } }
@@ -92,7 +92,7 @@ fun DownloadSheetHost() {
                 "Saved to Gallery › Movies/PlayBook · ${formatBytes(Downloads.freeBytes())} free",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 20.dp)
+                modifier = Modifier.padding(horizontal = 24.dp)
             )
         }
     }
@@ -111,11 +111,11 @@ private fun start(context: android.content.Context, video: VideoItem, info: Stre
 @Composable
 private fun OptionRow(o: DlOption, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 24.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(if (o.audioOnly) Icons.Rounded.Headphones else Icons.Rounded.HighQuality, null)
-        Spacer(Modifier.size(20.dp))
+        Spacer(Modifier.size(24.dp))
         Text(o.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         Text(formatBytes(o.bytes), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
