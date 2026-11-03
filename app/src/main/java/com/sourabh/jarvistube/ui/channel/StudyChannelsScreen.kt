@@ -147,7 +147,7 @@ internal fun ChannelPickRow(vm: TubeViewModel, c: ChannelRef) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Avatar(c.name, 44, c.avatar)
-        Spacer(Modifier.size(14.dp))
+        Spacer(Modifier.size(16.dp))
         Text(c.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (added) {
             FilledTonalButton(onClick = { StudyChannels.toggle(c) }) { Text("Added") }

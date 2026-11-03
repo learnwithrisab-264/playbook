@@ -1,5 +1,8 @@
 package com.sourabh.jarvistube.ui.channel
 
+import com.sourabh.jarvistube.ui.theme.Corners
+import com.sourabh.jarvistube.ui.theme.Motion
+import com.sourabh.jarvistube.ui.theme.OnVideo
 import com.sourabh.jarvistube.ui.common.EmptyLine
 import com.sourabh.jarvistube.ui.common.LoadingView
 import com.sourabh.jarvistube.ui.common.ErrorBox
@@ -57,7 +60,7 @@ fun PageHost(vm: TubeViewModel, lib: LibraryViewModel, bottomPadding: Dp, visibl
     val top = if (visible) vm.pages.lastOrNull() else null
     AnimatedContent(
         targetState = top,
-        transitionSpec = { (slideInHorizontally(tween(200)) { it / 8 } + fadeIn(tween(160))) togetherWith fadeOut(tween(120)) },
+        transitionSpec = { (slideInHorizontally(tween(Motion.NORMAL)) { it / 8 } + fadeIn(tween(Motion.FAST))) togetherWith fadeOut(tween(Motion.FAST)) },
         label = "pages"
     ) { page ->
         when (page) {
@@ -104,19 +107,19 @@ internal fun LazyListScope.entryItems(vm: TubeViewModel, state: TabState, onRetr
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box {
-                            Thumb(e.thumb, Modifier.width(150.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp)))
+                            Thumb(e.thumb, Modifier.width(150.dp).aspectRatio(16f / 9f).clip(Corners.medium))
                             if (e.count >= 0) {
                                 Text(
                                     "${e.count} videos",
                                     color = Color.White,
                                     style = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp)
-                                        .clip(RoundedCornerShape(4.dp)).background(Color.Black.copy(alpha = 0.8f))
+                                    modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp)
+                                        .clip(Corners.tiny).background(OnVideo.scrimStrong)
                                         .padding(horizontal = 4.dp, vertical = 1.dp)
                                 )
                             }
                         }
-                        Spacer(Modifier.size(14.dp))
+                        Spacer(Modifier.size(16.dp))
                         Column(Modifier.weight(1f)) {
                             Text(e.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             Text(e.owner, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

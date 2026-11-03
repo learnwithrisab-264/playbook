@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.channel
 
+import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.EmptyLine
 import com.sourabh.jarvistube.ui.common.Avatar
 import com.sourabh.jarvistube.ui.common.compact
@@ -159,7 +160,7 @@ internal fun ChannelHeader(c: ChannelPage) {
     val inStudy = StudyChannels.contains(c.ref.url)
     Column {
         if (c.banner != null) {
-            Thumb(c.banner, Modifier.fillMaxWidth().aspectRatio(6.2f).padding(horizontal = 12.dp).clip(RoundedCornerShape(12.dp)))
+            Thumb(c.banner, Modifier.fillMaxWidth().aspectRatio(6.2f).padding(horizontal = 12.dp).clip(Corners.medium))
         }
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Avatar(c.ref.name, 72, c.ref.avatar)
