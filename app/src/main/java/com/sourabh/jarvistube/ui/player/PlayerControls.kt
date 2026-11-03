@@ -165,7 +165,7 @@ internal fun Controls(
                 val shown = scrubMs ?: if (synced) ui.position else 0L
                 Text(
                     "${formatClock(shown)} / ${formatClock(if (synced) ui.duration else 0L)}",
-                    color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium
+                    color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium
                 )
                 Spacer(Modifier.weight(1f))
                 if (!Graph.study.lockActive) IconButton(onClick = onToggleFullscreen) {

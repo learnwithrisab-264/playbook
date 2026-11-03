@@ -1,5 +1,8 @@
 package com.sourabh.jarvistube.ui.player
 
+import androidx.compose.material3.MaterialTheme
+import com.sourabh.jarvistube.ui.theme.Corners
+import com.sourabh.jarvistube.ui.theme.OnVideo
 import com.sourabh.jarvistube.ui.common.formatClock
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -77,8 +80,8 @@ fun SeekPreview(info: StreamInfo?, positionMs: Long, durationMs: Long, small: Bo
         ) {
             if (page != null && bounds != null) {
                 Canvas(
-                    Modifier.size(previewW, previewH).clip(RoundedCornerShape(8.dp))
-                        .border(1.5.dp, Color.White, RoundedCornerShape(8.dp))
+                    Modifier.size(previewW, previewH).clip(Corners.small)
+                        .border(1.5.dp, Color.White, Corners.small)
                 ) {
                     drawImage(
                         page,
@@ -89,10 +92,10 @@ fun SeekPreview(info: StreamInfo?, positionMs: Long, durationMs: Long, small: Bo
                 }
             }
             Box(
-                Modifier.padding(top = 4.dp).clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = 0.6f))
+                Modifier.padding(top = 4.dp).clip(Corners.small).background(OnVideo.scrim)
                     .padding(horizontal = 8.dp, vertical = 2.dp)
             ) {
-                Text(formatClock(positionMs), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text(formatClock(positionMs), color = Color.White, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             }
         }
     }

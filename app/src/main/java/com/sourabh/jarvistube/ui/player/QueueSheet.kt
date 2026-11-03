@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.player
 
+import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.Thumb
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,7 +41,7 @@ fun QueueSheet(onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.navigationBarsPadding()) {
             Row(
-                Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, bottom = 8.dp),
+                Modifier.fillMaxWidth().padding(start = 24.dp, end = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Up next", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
@@ -51,16 +52,16 @@ fun QueueSheet(onDismiss: () -> Unit) {
                     "Nothing queued. Use ⋮ › Play next or Add to queue on any video (or long-press it), or Play all on a playlist. With an empty queue, Next picks a related video or the channel's next upload.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 32.dp)
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 32.dp)
                 )
             } else {
                 LazyColumn(Modifier.height(420.dp)) {
                     itemsIndexed(queue.toList(), key = { _, v -> v.url }) { i, v ->
                         Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Thumb(v.thumb, Modifier.width(96.dp).height(54.dp).clip(RoundedCornerShape(10.dp)))
+                            Thumb(v.thumb, Modifier.width(96.dp).height(54.dp).clip(Corners.medium))
                             Spacer(Modifier.size(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(v.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)

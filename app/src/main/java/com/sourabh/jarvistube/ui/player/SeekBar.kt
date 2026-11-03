@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.player
 
+import com.sourabh.jarvistube.ui.theme.Brand
+import com.sourabh.jarvistube.ui.theme.Motion
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -49,7 +51,7 @@ fun YtSeekBar(
     onSeek: (Long) -> Unit = {},
     onScrub: (Long?) -> Unit = {}
 ) {
-    val accent = Color(0xFFFF6D00) // PlayBook orange
+    val accent = Brand.orange // PlayBook orange
     var dragFraction by remember { mutableFloatStateOf(-1f) } // -1 = not dragging
     val dragging = dragFraction >= 0f
     // Until the player knows the duration it reports 0; treat that as "no progress yet" instead of
@@ -65,10 +67,10 @@ fun YtSeekBar(
             dragging -> 5.dp
             else -> 3.dp
         },
-        animationSpec = tween(120), label = "trackH"
+        animationSpec = tween(Motion.FAST), label = "trackH"
     )
     val thumbRadius by animateDpAsState(
-        targetValue = if (dragging) 9.dp else 6.dp, animationSpec = tween(120), label = "thumb"
+        targetValue = if (dragging) 9.dp else 6.dp, animationSpec = tween(Motion.FAST), label = "thumb"
     )
 
     var gestures: Modifier = Modifier

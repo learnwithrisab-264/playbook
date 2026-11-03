@@ -1,5 +1,8 @@
 package com.sourabh.jarvistube.ui.player
 
+import com.sourabh.jarvistube.ui.theme.Brand
+import com.sourabh.jarvistube.ui.theme.Corners
+import com.sourabh.jarvistube.ui.theme.OnVideo
 import com.sourabh.jarvistube.ui.common.Thumb
 import android.view.LayoutInflater
 import androidx.compose.animation.core.Animatable
@@ -144,7 +147,7 @@ fun FloatingPlayer(now: NowPlaying, ui: PlayerUi, topInset: Dp, bottomInset: Dp,
         }
 
         // Small radius: the video SurfaceView itself can't be clipped to rounded corners.
-        val shape = RoundedCornerShape(6.dp)
+        val shape = Corners.small
         Box(
             Modifier
                 .offset { IntOffset(pos.value.x.roundToInt(), pos.value.y.roundToInt()) }
@@ -207,7 +210,7 @@ fun FloatingPlayer(now: NowPlaying, ui: PlayerUi, topInset: Dp, bottomInset: Dp,
             Box(
                 Modifier.fillMaxSize().background(
                     Brush.verticalGradient(
-                        listOf(Color.Black.copy(alpha = 0.45f), Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.5f))
+                        listOf(OnVideo.scrimLight, Color.Transparent, Color.Transparent, OnVideo.scrim)
                     )
                 )
             )
@@ -290,6 +293,6 @@ private fun FloatProgress(ui: PlayerUi, modifier: Modifier) {
     val progress = if (ui.duration > 0) (ui.position.toFloat() / ui.duration).coerceIn(0f, 1f) else 0f
     Box(
         modifier.fillMaxWidth(progress).height(2.dp)
-            .background(Color(0xFFFF6D00)) // PlayBook orange, like the seek bar
+            .background(Brand.orange) // PlayBook orange, like the seek bar
     )
 }

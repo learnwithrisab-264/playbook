@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.player
 
+import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.Avatar
 import com.sourabh.jarvistube.ui.common.compact
 import com.sourabh.jarvistube.ui.common.PillChip
@@ -95,7 +96,7 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.clickable { expanded = !expanded }
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 // YouTube's grey description card: views + date, a preview, "…more".
                 val meta = listOfNotNull(
                     (info?.viewCount ?: now.video.views).takeIf { it >= 0 }?.let { "${String.format(java.util.Locale.US, "%,d", it)} views" },
@@ -103,7 +104,7 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                 ).joinToString("  ")
                 Column(
                     Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(Corners.medium)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                         .clickable { expanded = !expanded }
                         .padding(12.dp)
@@ -125,11 +126,11 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                         )
                     }
                 }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 val channelUrl = info?.uploaderUrl?.takeIf { it.isNotBlank() } ?: now.video.channelUrl
                 Row(
                     // Tap the channel to open its page (the player drops to the mini-player).
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                    Modifier.fillMaxWidth().clip(Corners.medium)
                         .clickable(enabled = channelUrl != null && !Graph.study.lockActive) {
                             channelUrl?.let { vm.openChannel(it, info?.uploaderName ?: now.video.channel) }
                         },
@@ -317,10 +318,10 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
             } else if (!vm.showRelated) {
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(Corners.large)
                         .background(MaterialTheme.colorScheme.surfaceContainer)
                         .clickable { vm.showRelated = true }
-                        .padding(14.dp),
+                        .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
@@ -338,10 +339,10 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                     // Same control, now a real ON/OFF: tap to hide the feed again.
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(Corners.large)
                             .background(MaterialTheme.colorScheme.surfaceContainer)
                             .clickable { vm.showRelated = false }
-                            .padding(14.dp),
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {

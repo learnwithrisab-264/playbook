@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.player
 
+import com.sourabh.jarvistube.ui.theme.Brand
+import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.pressScale
 import com.sourabh.jarvistube.ui.common.Thumb
 import androidx.compose.foundation.layout.Box
@@ -36,8 +38,8 @@ import com.sourabh.jarvistube.player.NowPlaying
 @Composable
 fun MiniPlayer(now: NowPlaying, ui: PlayerUi, onExpand: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
-        shape = RoundedCornerShape(18.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+        shape = Corners.large,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 3.dp,
         shadowElevation = 6.dp
@@ -49,7 +51,7 @@ fun MiniPlayer(now: NowPlaying, ui: PlayerUi, onExpand: () -> Unit, modifier: Mo
             ) {
                 Thumb(
                     now.video.thumb,
-                    Modifier.width(56.dp).size(width = 56.dp, height = 40.dp).clip(RoundedCornerShape(10.dp))
+                    Modifier.width(56.dp).size(width = 56.dp, height = 40.dp).clip(Corners.medium)
                 )
                 Spacer(Modifier.size(8.dp))
                 Column(Modifier.weight(1f)) {
@@ -90,7 +92,7 @@ fun MiniPlayer(now: NowPlaying, ui: PlayerUi, onExpand: () -> Unit, modifier: Mo
                 LinearProgressIndicator(
                     progress = { progress },
                     modifier = Modifier.fillMaxWidth(),
-                    color = androidx.compose.ui.graphics.Color(0xFFFF6D00), // PlayBook orange, like the seek bar
+                    color = Brand.orange, // PlayBook orange, like the seek bar
                     trackColor = MaterialTheme.colorScheme.outlineVariant
                 )
             }

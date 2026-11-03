@@ -107,7 +107,7 @@ fun PlayerMoreSheetHost(now: NowPlaying, ui: PlayerUi) {
                         if (player.sleepEndAt > 0) "On" else "Off"
                     ) { page = "sleep" }
                     SwitchRow(Icons.Rounded.Repeat, "Loop video", ui.loop) { ui.toggleLoop() }
-                    HorizontalDivider(Modifier.padding(vertical = 6.dp))
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
                     SwitchRow(Icons.Rounded.Headphones, "Listen (audio only)", player.audioOnly) { player.updateAudioOnly(it) }
                     SwitchRow(Icons.Rounded.SkipNext, "SponsorBlock (skip sponsors)", player.sponsorBlock) { player.updateSponsorBlock(it) }
                     if (!locked) {
@@ -167,11 +167,11 @@ fun PlayerMoreSheetHost(now: NowPlaying, ui: PlayerUi) {
 @Composable
 private fun SheetRow(icon: ImageVector, title: String, value: String?, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 24.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, null, Modifier.size(24.dp))
-        Spacer(Modifier.size(20.dp))
+        Spacer(Modifier.size(24.dp))
         Text(title, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
         if (value != null) {
             Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -184,11 +184,11 @@ private fun SheetRow(icon: ImageVector, title: String, value: String?, onClick: 
 @Composable
 private fun SwitchRow(icon: ImageVector, title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(horizontal = 20.dp, vertical = 6.dp),
+        Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(horizontal = 24.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, null, Modifier.size(24.dp))
-        Spacer(Modifier.size(20.dp))
+        Spacer(Modifier.size(24.dp))
         Text(title, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
         Switch(checked = checked, onCheckedChange = onChange)
     }
@@ -197,7 +197,7 @@ private fun SwitchRow(icon: ImageVector, title: String, checked: Boolean, onChan
 @Composable
 private fun SubPage(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onBack).padding(horizontal = 12.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onBack).padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(Icons.Rounded.KeyboardArrowLeft, "Back", Modifier.size(28.dp))
@@ -211,7 +211,7 @@ private fun SubPage(title: String, onBack: () -> Unit, content: @Composable () -
 @Composable
 private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 24.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Spacer(Modifier.size(if (selected) 0.dp else 32.dp))

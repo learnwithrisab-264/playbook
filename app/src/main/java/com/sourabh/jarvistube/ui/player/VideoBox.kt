@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.player
 
+import com.sourabh.jarvistube.ui.theme.Motion
+import com.sourabh.jarvistube.ui.theme.OnVideo
 import com.sourabh.jarvistube.ui.common.Thumb
 import com.sourabh.jarvistube.ui.study.PlayerPopups
 import android.view.LayoutInflater
@@ -211,8 +213,8 @@ internal fun VideoBox(
 
         adjusting?.let { (kind, level) ->
             Row(
-                Modifier.align(Alignment.TopCenter).padding(top = 28.dp).clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 16.dp, vertical = 8.dp),
+                Modifier.align(Alignment.TopCenter).padding(top = 24.dp).clip(CircleShape)
+                    .background(OnVideo.scrim).padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -220,15 +222,15 @@ internal fun VideoBox(
                     if (kind == SwipeZone.Brightness) "Brightness" else "Volume",
                     tint = Color.White, modifier = Modifier.size(20.dp)
                 )
-                Spacer(Modifier.size(10.dp))
+                Spacer(Modifier.size(12.dp))
                 androidx.compose.material3.LinearProgressIndicator(
                     progress = { level },
                     modifier = Modifier.size(width = 110.dp, height = 4.dp),
                     color = Color.White,
-                    trackColor = Color.White.copy(alpha = 0.3f)
+                    trackColor = OnVideo.track
                 )
-                Spacer(Modifier.size(10.dp))
-                Text("${(level * 100).toInt()}%", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.size(12.dp))
+                Text("${(level * 100).toInt()}%", color = Color.White, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             }
         }
 
@@ -250,8 +252,8 @@ internal fun VideoBox(
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 36.dp)
-                    .clip(CircleShape).background(Color.Black.copy(alpha = 0.5f))
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                    .clip(CircleShape).background(OnVideo.scrim)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             )
         }
 
@@ -259,14 +261,14 @@ internal fun VideoBox(
             Box(Modifier.matchParentSize().background(Color.Black), contentAlignment = Alignment.Center) {
                 // The Listen player: thumbnail instead of video, with the way back to the picture.
                 Thumb(now.video.thumb, Modifier.matchParentSize())
-                Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.55f)))
+                Box(Modifier.matchParentSize().background(OnVideo.scrim))
                 // Low in the frame, between the time and the full-screen button: the centre is for Play.
                 TextButton(
                     onClick = { Graph.player.updateAudioOnly(false) },
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 30.dp)
                 ) {
                     Icon(Icons.Rounded.Headphones, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.size(6.dp))
+                    Spacer(Modifier.size(8.dp))
                     Text("Watch video", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
@@ -279,7 +281,7 @@ internal fun VideoBox(
             // Rise at once; drop only after the controls' fade-out (~300 ms) so they never overlap.
             val lift by animateDpAsState(
                 if (controlsUp) with(LocalDensity.current) { controlsBottomPx.toDp() } + 4.dp else 10.dp,
-                animationSpec = tween(180, delayMillis = if (controlsUp) 0 else 320),
+                animationSpec = tween(Motion.NORMAL, delayMillis = if (controlsUp) 0 else 320),
                 label = "captionLift"
             )
             CaptionOverlay(ui.cues, bottomInset = lift, modifier = Modifier.matchParentSize())
@@ -287,15 +289,15 @@ internal fun VideoBox(
         AnimatedVisibility(
             visible = boosting,
             enter = fadeIn(), exit = fadeOut(),
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 14.dp)
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp)
         ) {
             Text(
                 "2x  ▶▶",
                 color = Color.White,
-                fontSize = 13.sp,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.6f))
-                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                modifier = Modifier.clip(CircleShape).background(OnVideo.scrim)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             )
         }
         val notice by Graph.player.notice.collectAsStateWithLifecycle()
@@ -307,10 +309,10 @@ internal fun VideoBox(
             Text(
                 notice.orEmpty(),
                 color = Color.White,
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f))
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
             )
         }
 
@@ -322,7 +324,7 @@ internal fun VideoBox(
                 Text(
                     now.error,
                     color = Color.White,
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.labelMedium,
                     maxLines = 4,
                     overflow = TextOverflow.Ellipsis
                 )

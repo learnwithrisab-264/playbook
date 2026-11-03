@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.player
 
+import com.sourabh.jarvistube.ui.theme.Corners
+import com.sourabh.jarvistube.ui.theme.OnVideo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -65,7 +67,7 @@ fun CaptionText(text: String, fontSizeSp: Float, modifier: Modifier = Modifier) 
         fontFamily = captionFontFamily(AppSettings.captionFont),
         textAlign = TextAlign.Center,
         modifier = modifier
-            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
-            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .background(OnVideo.scrim, Corners.tiny)
+            .padding(horizontal = 8.dp, vertical = 2.dp)
     )
 }
