@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.shorts
 
+import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.EmptyState
 import com.sourabh.jarvistube.ui.common.ErrorBox
 import com.sourabh.jarvistube.ui.common.HomeTopBar
@@ -64,8 +65,8 @@ import com.sourabh.jarvistube.data.VideoItem
 @Composable
 fun ShortCard(video: VideoItem, onClick: () -> Unit) {
     Column(Modifier.fillMaxWidth().pressScale(onClick, onPress = { com.sourabh.jarvistube.data.Repo.prefetchShort(video.url) })) {
-        Thumb(video.thumb, Modifier.fillMaxWidth().aspectRatio(9f / 16f).clip(RoundedCornerShape(12.dp)))
-        Spacer(Modifier.height(6.dp))
+        Thumb(video.thumb, Modifier.fillMaxWidth().aspectRatio(9f / 16f).clip(Corners.medium))
+        Spacer(Modifier.height(8.dp))
         Text(video.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(
             video.channel,
@@ -94,8 +95,8 @@ fun ShortsGrid(
         state = state,
         modifier = modifier,
         contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = bottomPadding + 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (header != null) item(span = { GridItemSpan(maxLineSpan) }) { header() }
         when {
@@ -164,7 +165,7 @@ fun ShortsBlockCard() {
     fun untilIn(min: Long) = TrustedClock.now() + min * 60_000L
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(14.dp)
+            .clip(Corners.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Lock, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
@@ -176,7 +177,7 @@ fun ShortsBlockCard() {
             else "Lock the Shorts tab for a while. It stays locked even if you close the app or restart the phone.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 2.dp, bottom = 10.dp)
+            modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             item { TopicChip("15 min", false) { asking = "15 minutes" to untilIn(15) } }

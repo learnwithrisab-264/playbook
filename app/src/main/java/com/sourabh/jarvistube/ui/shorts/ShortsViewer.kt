@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.shorts
 
+import com.sourabh.jarvistube.ui.theme.Brand
+import com.sourabh.jarvistube.ui.theme.OnVideo
 import com.sourabh.jarvistube.ui.common.Thumb
 import com.sourabh.jarvistube.ui.player.PlayerUi
 import android.app.Activity
@@ -163,7 +165,7 @@ private fun ShortPage(video: VideoItem, ui: PlayerUi, playing: Boolean) {
             Icon(
                 Icons.Rounded.PlayArrow, "Paused", tint = Color.White,
                 modifier = Modifier.align(Alignment.Center).size(72.dp).clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.4f)).padding(10.dp)
+                    .background(OnVideo.scrimLight).padding(12.dp)
             )
         }
         current?.error?.let {
@@ -172,8 +174,8 @@ private fun ShortPage(video: VideoItem, ui: PlayerUi, playing: Boolean) {
 
         Column(
             Modifier.align(Alignment.BottomStart).fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))))
-                .navigationBarsPadding().padding(start = 16.dp, end = 16.dp, top = 40.dp, bottom = 18.dp)
+                .background(Brush.verticalGradient(listOf(Color.Transparent, OnVideo.scrim)))
+                .navigationBarsPadding().padding(start = 16.dp, end = 16.dp, top = 40.dp, bottom = 16.dp)
         ) {
             val channel = current?.info?.uploaderName ?: video.channel
             if (channel.isNotBlank()) {
@@ -194,5 +196,5 @@ private fun ShortPage(video: VideoItem, ui: PlayerUi, playing: Boolean) {
 @Composable
 private fun ShortProgress(ui: PlayerUi, modifier: Modifier) {
     val progress = if (ui.duration > 0) (ui.position.toFloat() / ui.duration).coerceIn(0f, 1f) else 0f
-    Box(modifier.fillMaxWidth(progress).height(2.dp).background(Color(0xFFFF6D00)))
+    Box(modifier.fillMaxWidth(progress).height(2.dp).background(Brand.orange))
 }

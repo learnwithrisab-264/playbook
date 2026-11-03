@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.home
 
+import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.Avatar
 import com.sourabh.jarvistube.ui.common.feedItems
 import com.sourabh.jarvistube.ui.common.HomeTopBar
@@ -117,8 +118,8 @@ internal fun StudyChannelsEmpty(onPick: () -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 36.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .padding(horizontal = 24.dp, vertical = 36.dp)
+            .clip(Corners.large)
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -129,7 +130,7 @@ internal fun StudyChannelsEmpty(onPick: () -> Unit) {
         ) {
             Icon(Icons.Rounded.School, null, Modifier.size(34.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
         }
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(16.dp))
         Text("Build your feed", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         Text(
@@ -138,7 +139,7 @@ internal fun StudyChannelsEmpty(onPick: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
         androidx.compose.material3.Button(
             onClick = onPick,
             shape = CircleShape
@@ -174,7 +175,7 @@ internal fun StudyChannelsRow(
         }
         LazyRow(
             contentPadding = PaddingValues(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(channels.toList(), key = { it.url }) { c ->
                 Column(
@@ -182,7 +183,7 @@ internal fun StudyChannelsRow(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Avatar(c.name, 56, c.avatar)
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         c.name, style = MaterialTheme.typography.bodySmall, maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -198,7 +199,7 @@ internal fun StudyChannelsRow(
                         Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
                         contentAlignment = Alignment.Center
                     ) { Icon(Icons.Rounded.Add, "Add channels", tint = MaterialTheme.colorScheme.primary) }
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text("Add", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
                 }
             }
