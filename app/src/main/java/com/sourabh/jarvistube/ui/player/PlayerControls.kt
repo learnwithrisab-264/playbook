@@ -180,6 +180,7 @@ internal fun Controls(
                 duration = if (synced) ui.duration else 0L,
                 buffered = if (synced) ui.buffered else 0L,
                 interactive = true,
+                marks = if (synced && Graph.player.sponsorBlock) sponsorMarks(Graph.player.segments) else emptyList(),
                 onSeek = { player.seekTo(it) },
                 onScrub = { scrubMs = it; onDragging(it != null) }
             )

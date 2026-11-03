@@ -21,6 +21,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 
+/** A coloured stretch on the seek bar, in milliseconds. */
+data class SeekMark(val startMs: Long, val endMs: Long, val color: Color)
+
+/** SponsorBlock segments of the loaded video as seek-bar marks, in each category's colour. */
+fun sponsorMarks(segments: List<com.sourabh.jarvistube.data.SkipSegment>): List<SeekMark> = segments.mapNotNull { s ->
+    val c = com.sourabh.jarvistube.data.SPONSOR_CATEGORIES.firstOrNull { it.key == s.category } ?: return@mapNotNull null
+    SeekMark((s.start * 1000).toLong(), (s.end * 1000).toLong(), Color(c.color))
+}
+
 /**
  * YouTube-style progress bar: a thin track with the buffered part in lighter grey, the played
  * part in the accent colour and a round thumb. [interactive] = false draws the slim, thumbless
@@ -36,6 +45,7 @@ fun YtSeekBar(
     buffered: Long,
     interactive: Boolean,
     modifier: Modifier = Modifier,
+    marks: List<SeekMark> = emptyList(),
     onSeek: (Long) -> Unit = {},
     onScrub: (Long?) -> Unit = {}
 ) {
@@ -115,6 +125,12 @@ fun YtSeekBar(
             else -> 0f
         }
         bar(playedFraction, accent)
+        // SponsorBlock segments, drawn over the track like SponsorBlock does.
+        if (known) for (m in marks) {
+            val x = left + width * (m.startMs / dur).coerceIn(0f, 1f)
+            val w = width * ((m.endMs - m.startMs) / dur).coerceIn(0f, 1f)
+            if (w > 0f) drawRect(m.color, Offset(x, top), Size(w.coerceAtMost(left + width - x), h))
+        }
 
         if (interactive) {
             drawCircle(accent, thumbRadius.toPx(), Offset(left + width * playedFraction.coerceIn(0f, 1f), size.height / 2f))

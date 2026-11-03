@@ -144,7 +144,12 @@ class PlayerController(val app: Context, http: OkHttpClient) {
     var audioOnly by mutableStateOf(prefs.getBoolean("audioOnly", false)); private set
     var sleepEndAt by mutableLongStateOf(0L); private set
     private var sleepJob: Job? = null
-    private var segments: List<SkipSegment> = emptyList()
+    /** SponsorBlock segments of the loaded video, for skipping and the seek-bar marks. */
+    var segments by mutableStateOf<List<SkipSegment>>(emptyList()); private set
+    /** Which SponsorBlock categories are skipped. The others are only marked on the seek bar. */
+    var skipCategories by mutableStateOf(
+        prefs.getStringSet("sbCategories", null)?.toSet() ?: com.sourabh.jarvistube.data.DEFAULT_SKIP_CATEGORIES
+    ); private set
 
     /** URL of the video whose first frame has been drawn; until then the UI shows its thumbnail. */
     private val _firstFrameUrl = MutableStateFlow<String?>(null)
@@ -349,11 +354,9 @@ class PlayerController(val app: Context, http: OkHttpClient) {
     }
 
     private fun checkSkip(pos: Long) {
-        val s = segments.firstOrNull {
-            pos >= (it.start * 1000).toLong() && pos < (it.end * 1000).toLong() - 500
-        } ?: return
+        val s = com.sourabh.jarvistube.data.segmentToSkip(segments, pos, skipCategories) ?: return
         player.seekTo((s.end * 1000).toLong())
-        showNotice("Skipped ${s.label}")
+        showNotice("Skipped ${s.label} (${((s.end - s.start) + 0.5).toInt()} s)")
     }
 
     private fun showNotice(msg: String, ms: Long = 3000) {
@@ -397,6 +400,11 @@ class PlayerController(val app: Context, http: OkHttpClient) {
     fun updateSponsorBlock(on: Boolean) {
         sponsorBlock = on
         prefs.edit().putBoolean("sponsorBlock", on).apply()
+    }
+
+    fun updateSkipCategories(keys: Set<String>) {
+        skipCategories = keys
+        prefs.edit().putStringSet("sbCategories", keys).apply()
     }
 
     fun updateAudioOnly(on: Boolean) {

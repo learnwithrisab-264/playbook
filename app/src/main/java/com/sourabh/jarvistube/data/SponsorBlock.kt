@@ -9,21 +9,38 @@ import org.json.JSONArray
 import java.net.URLEncoder
 import java.security.MessageDigest
 
+/** A kind of segment SponsorBlock users mark, with the colour SponsorBlock shows it in. */
+data class SponsorCategory(val key: String, val label: String, val description: String, val color: Long)
+
+val SPONSOR_CATEGORIES = listOf(
+    SponsorCategory("sponsor", "Sponsor", "Paid promotion and sponsor reads", 0xFF00D400),
+    SponsorCategory("selfpromo", "Self-promotion", "Merch, donations, the creator's other channels", 0xFFFFFF00),
+    SponsorCategory("interaction", "Interaction reminder", "Asking you to like, subscribe or follow", 0xFFCC00FF),
+    SponsorCategory("intro", "Intro", "Intro animation or a pause before the content", 0xFF00FFFF),
+    SponsorCategory("outro", "Endcards and credits", "End screens and credits", 0xFF0202ED),
+    SponsorCategory("preview", "Preview or recap", "Clips of what's coming or what was shown before", 0xFF008FD6),
+    SponsorCategory("filler", "Filler tangent", "Off-topic jokes and tangents", 0xFF7300FF),
+    SponsorCategory("music_offtopic", "Non-music part", "Talking in a music video", 0xFFFF9900)
+)
+
+/** Skipped until you change it: the same five PlayBook always skipped. */
+val DEFAULT_SKIP_CATEGORIES = setOf("sponsor", "selfpromo", "interaction", "intro", "outro")
+
 data class SkipSegment(val start: Double, val end: Double, val category: String) {
     val label: String
-        get() = when (category) {
-            "sponsor" -> "sponsor"
-            "selfpromo" -> "self-promo"
-            "interaction" -> "reminder"
-            "intro" -> "intro"
-            "outro" -> "outro"
-            else -> category
-        }
+        get() = SPONSOR_CATEGORIES.firstOrNull { it.key == category }?.label?.lowercase() ?: category
 }
+
+/** The segment to jump out of at [posMs], if any. Stops half a second early so it never loops. */
+fun segmentToSkip(segments: List<SkipSegment>, posMs: Long, skip: Set<String>): SkipSegment? =
+    segments.firstOrNull {
+        it.category in skip && posMs >= (it.start * 1000).toLong() && posMs < (it.end * 1000).toLong() - 500
+    }
 
 /** Community-sourced skip segments from sponsor.ajay.app (queried by hash prefix for privacy). */
 object SponsorBlock {
-    private const val CATEGORIES = "[\"sponsor\",\"selfpromo\",\"interaction\",\"intro\",\"outro\"]"
+    // Every kind is fetched, so the seek bar can show them all; only the chosen ones are skipped.
+    private val CATEGORIES = SPONSOR_CATEGORIES.joinToString(",", "[", "]") { "\"${it.key}\"" }
 
     fun videoId(url: String): String? = url.toUri().getQueryParameter("v")
 

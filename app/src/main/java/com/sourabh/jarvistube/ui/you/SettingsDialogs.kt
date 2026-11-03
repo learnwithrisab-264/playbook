@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -121,6 +122,54 @@ internal fun SpeedListDialog(onDismiss: () -> Unit) {
             }) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+/** Ticks the SponsorBlock categories to skip, each with its seek-bar colour. Saved on Save. */
+@Composable
+internal fun SponsorCategoriesDialog(onDismiss: () -> Unit) {
+    var chosen by remember { mutableStateOf(com.sourabh.jarvistube.Graph.player.skipCategories) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("What to skip") },
+        text = {
+            LazyColumn(Modifier.heightIn(max = 460.dp)) {
+                items(com.sourabh.jarvistube.data.SPONSOR_CATEGORIES) { c ->
+                    val on = c.key in chosen
+                    Row(
+                        Modifier.fillMaxWidth().clickable { chosen = if (on) chosen - c.key else chosen + c.key }
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.foundation.layout.Box(
+                            Modifier.size(12.dp).then(
+                                androidx.compose.ui.Modifier.drawBehind {
+                                    drawCircle(androidx.compose.ui.graphics.Color(c.color))
+                                }
+                            )
+                        )
+                        Spacer(Modifier.size(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(c.label, style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                c.description, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        androidx.compose.material3.Checkbox(
+                            checked = on,
+                            onCheckedChange = { chosen = if (it) chosen + c.key else chosen - c.key }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { com.sourabh.jarvistube.Graph.player.updateSkipCategories(chosen); onDismiss() }) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = { chosen = com.sourabh.jarvistube.data.DEFAULT_SKIP_CATEGORIES }) { Text("Reset") }
+        }
     )
 }
 

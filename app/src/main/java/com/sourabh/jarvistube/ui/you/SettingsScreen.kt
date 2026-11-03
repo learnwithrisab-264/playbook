@@ -70,6 +70,7 @@ fun SettingsScreen(
     /** The account the ✕ was tapped on (asks before signing out of it). */
     var removeTarget by remember { mutableStateOf<com.sourabh.jarvistube.data.Account?>(null) }
     var speedDialog by remember { mutableStateOf(false) }
+    var sponsorDialog by remember { mutableStateOf(false) }
     /** "font" / "size" / "color", or null when no caption dialog is open. */
     var captionDialog by remember { mutableStateOf<String?>(null) }
 
@@ -119,6 +120,13 @@ fun SettingsScreen(
                     onCheckedChange = { Graph.player.updateSponsorBlock(it) }
                 )
             }
+        }
+        if (Graph.player.sponsorBlock) item {
+            SettingRow(
+                Icons.Rounded.SkipNext, "What to skip",
+                "${Graph.player.skipCategories.size} of ${com.sourabh.jarvistube.data.SPONSOR_CATEGORIES.size} kinds. All are marked on the seek bar.",
+                onClick = { sponsorDialog = true }
+            )
         }
 
         item { SectionLabel("Playback speed") }
@@ -311,6 +319,7 @@ fun SettingsScreen(
         )
     }
     if (speedDialog) SpeedListDialog(onDismiss = { speedDialog = false })
+    if (sponsorDialog) SponsorCategoriesDialog(onDismiss = { sponsorDialog = false })
     removeTarget?.let { a ->
         val label = a.email ?: a.name ?: "This account"
         AlertDialog(
