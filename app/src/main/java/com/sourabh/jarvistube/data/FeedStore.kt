@@ -24,11 +24,15 @@ object FeedStore {
         dir = File(context.filesDir, "feeds").apply { mkdirs() }
     }
 
-    private fun file(feed: Feed, tag: String) = File(dir, "${feed.name}_${Session.dataKey}_$tag.json")
+    /** One file per feed, account and region, so two accounts can never read each other's list. */
+    fun fileName(feed: Feed, owner: String, tag: String) = "${feed.name}_${owner}_$tag.json"
+
+    private fun file(feed: Feed, owner: String, tag: String) = File(dir, fileName(feed, owner, tag))
+
 
     /** The saved list, or null when there is none yet. [tag] separates regions. */
     fun load(feed: Feed, tag: String = ""): Saved? = runCatching {
-        val o = JSONObject(file(feed, tag).readText())
+        val o = JSONObject(file(feed, Session.dataKey, tag).readText())
         val arr = o.getJSONArray("items")
         val items = (0 until arr.length()).map { i ->
             val v = arr.getJSONObject(i)
@@ -44,9 +48,12 @@ object FeedStore {
         Saved(items, o.optString("note"))
     }.getOrNull()?.takeIf { it.items.isNotEmpty() }
 
-    /** [note] is anything the feed needs back with the list. */
-    fun save(feed: Feed, items: List<VideoItem>, tag: String = "", note: String = "") {
-        val target = file(feed, tag)
+    /**
+     * [note] is anything the feed needs back with the list. [owner] is the account the list was
+     * loaded for: a load that finishes after an account switch still lands in its own account.
+     */
+    fun save(feed: Feed, items: List<VideoItem>, tag: String = "", note: String = "", owner: String = Session.dataKey) {
+        val target = file(feed, owner, tag)
         val arr = JSONArray()
         items.take(MAX).forEach { v ->
             val o = JSONObject().put("url", v.url).put("title", v.title).put("channel", v.channel)

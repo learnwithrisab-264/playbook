@@ -98,6 +98,15 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Runs when the account changes: nothing from the previous account stays on screen. */
     private val accountChanged: (String) -> Unit = { key ->
+        // Recommended: drop the old account's list, next-page token and any load still running,
+        // so nothing of it can be shown, continued with the new login, or saved as the new account's.
+        recommendedJob?.cancel()
+        recommended = FeedState()
+        recommendedSource = null
+        recommendedKey = null
+        homeToken = null
+        trending = null
+        resumeHome = false
         loadRecents(key)
         // Shorts and their saved list belong to one account; each feed reloads for the new one.
         shortsJob?.cancel()
@@ -270,9 +279,11 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     /** A saved list came back: the next Load more starts from the top of YouTube's home feed. */
     private var resumeHome = false
 
-    private fun saveRecommended() {
+    /** Saves the list as [owner]'s, the account it was loaded for. A switch since then drops it. */
+    private fun saveRecommended(owner: String) {
+        if (owner != com.sourabh.jarvistube.data.Session.dataKey) return
         if (recommended.error == null) {
-            FeedStore.save(Feed.Recommended, recommended.items, AppSettings.region, recommendedSource.orEmpty())
+            FeedStore.save(Feed.Recommended, recommended.items, AppSettings.region, recommendedSource.orEmpty(), owner)
         }
     }
 
@@ -298,9 +309,12 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         recommended = if (key == recommendedKey) recommended.copy(loading = true, error = null) else FeedState(loading = true)
         resumeHome = false
         recommendedKey = key
+        val startedFor = com.sourabh.jarvistube.data.Session.dataKey
         recommendedJob = viewModelScope.launch {
-            recommended = runCatchingFeed(fallback = recommended) { FeedState(items = firstRecommendedPage()) }
-            saveRecommended()
+            val loaded = runCatchingFeed(fallback = recommended) { FeedState(items = firstRecommendedPage()) }
+            if (startedFor != com.sourabh.jarvistube.data.Session.dataKey) return@launch // switched meanwhile
+            recommended = loaded
+            saveRecommended(startedFor)
             recommended.items.take(3).forEach { com.sourabh.jarvistube.data.Repo.prefetch(it.url) }
         }
     }
@@ -311,9 +325,10 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         val token = homeToken
         val session = trending
         if (cur.loading || cur.loadingMore || cur.items.isEmpty()) return
+        val startedFor = com.sourabh.jarvistube.data.Session.dataKey
         recommendedJob = viewModelScope.launch {
             recommended = cur.copy(loadingMore = true)
-            recommended = runCatchingFeed(fallback = cur) {
+            val loaded = runCatchingFeed(fallback = cur) {
                 val next = when {
                     session?.hasMore == true -> session.loadMore()
                     token != null -> homeFeed(token)
@@ -324,7 +339,9 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
                 val more = SeenVideos.unseen(Feed.Recommended, next).ifEmpty { subjectMix() }
                 cur.copy(items = (cur.items + more).distinctBy { it.url }, loadingMore = false)
             }
-            saveRecommended()
+            if (startedFor != com.sourabh.jarvistube.data.Session.dataKey) return@launch // switched meanwhile
+            recommended = loaded
+            saveRecommended(startedFor)
         }
     }
 
