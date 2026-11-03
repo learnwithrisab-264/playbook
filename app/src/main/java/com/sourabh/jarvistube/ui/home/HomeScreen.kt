@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.home
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.Avatar
 import com.sourabh.jarvistube.ui.common.feedItems
@@ -131,7 +133,7 @@ internal fun StudyChannelsEmpty(onPick: () -> Unit) {
             Icon(Icons.Rounded.School, null, Modifier.size(34.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
         }
         Spacer(Modifier.height(16.dp))
-        Text("Build your feed", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.build_your_feed), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         Text(
             "Home shows videos only from the channels you choose. Add your favorite channels to get started.",
@@ -146,7 +148,7 @@ internal fun StudyChannelsEmpty(onPick: () -> Unit) {
         ) {
             Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
             Spacer(Modifier.size(8.dp))
-            Text("My Channels", fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.my_channels), fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -170,7 +172,7 @@ internal fun StudyChannelsRow(
                 modifier = Modifier.weight(1f)
             )
             androidx.compose.material3.TextButton(onClick = onManage) {
-                Text("Manage", fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.manage), fontWeight = FontWeight.Medium)
             }
         }
         LazyRow(
@@ -200,7 +202,7 @@ internal fun StudyChannelsRow(
                         contentAlignment = Alignment.Center
                     ) { Icon(Icons.Rounded.Add, "Add channels", tint = MaterialTheme.colorScheme.primary) }
                     Spacer(Modifier.height(8.dp))
-                    Text("Add", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.add), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
                 }
             }
         }

@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.channel
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.EmptyLine
 import com.sourabh.jarvistube.ui.common.Avatar
@@ -183,13 +185,13 @@ internal fun ChannelHeader(c: ChannelPage) {
                 FilledTonalButton(onClick = { StudyChannels.toggle(c.ref) }, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Rounded.Check, null, Modifier.size(18.dp))
                     Spacer(Modifier.size(8.dp))
-                    Text("In my channels")
+                    Text(stringResource(R.string.in_my_channels))
                 }
             } else {
                 Button(onClick = { StudyChannels.toggle(c.ref) }, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
                     Spacer(Modifier.size(8.dp))
-                    Text("Add to my channels")
+                    Text(stringResource(R.string.add_to_my_channels))
                 }
             }
         }

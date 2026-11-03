@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.common
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Brand
 import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.theme.OnVideo
@@ -131,36 +133,36 @@ fun VideoCard(
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(
-                        text = { Text("Play next") },
+                        text = { Text(stringResource(R.string.play_next)) },
                         leadingIcon = { Icon(Icons.Rounded.SkipNext, null) },
                         onClick = { menu = false; Graph.player.playNextUp(video); toast("Plays next") }
                     )
                     DropdownMenuItem(
-                        text = { Text("Add to queue") },
+                        text = { Text(stringResource(R.string.add_to_queue)) },
                         leadingIcon = { Icon(Icons.Rounded.PlaylistAdd, null) },
                         onClick = { menu = false; Graph.player.enqueue(video); toast("Added to queue") }
                     )
                     if (com.sourabh.jarvistube.data.Session.isSignedIn) {
                         DropdownMenuItem(
-                            text = { Text("Save to playlist") },
+                            text = { Text(stringResource(R.string.save_to_playlist)) },
                             leadingIcon = { Icon(Icons.Rounded.BookmarkBorder, null) },
                             onClick = { menu = false; SaveToPlaylist.open(video) }
                         )
                     }
                     DropdownMenuItem(
-                        text = { Text("Download") },
+                        text = { Text(stringResource(R.string.download)) },
                         leadingIcon = { Icon(Icons.Rounded.Download, null) },
                         onClick = { menu = false; DownloadSheet.open(video) }
                     )
                     if (video.channelUrl != null) {
                         DropdownMenuItem(
-                            text = { Text("Go to channel") },
+                            text = { Text(stringResource(R.string.go_to_channel)) },
                             leadingIcon = { Icon(Icons.Rounded.AccountCircle, null) },
                             onClick = { menu = false; openChannel(video) }
                         )
                     }
                     DropdownMenuItem(
-                        text = { Text("Share") },
+                        text = { Text(stringResource(R.string.share)) },
                         leadingIcon = { Icon(Icons.Rounded.Share, null) },
                         onClick = {
                             menu = false

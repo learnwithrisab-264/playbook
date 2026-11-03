@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.player
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.common.formatClock
 import com.sourabh.jarvistube.ui.study.PlayerPopups
 import com.sourabh.jarvistube.ui.study.StudyLockButton
@@ -195,7 +197,7 @@ internal fun QualityMenu(now: NowPlaying, expanded: Boolean, onDismiss: () -> Un
     // Only resolutions this video really offers AND this phone can decode smoothly.
     DropdownMenu(expanded, onDismiss) {
         DropdownMenuItem(
-            text = { Text("Auto") },
+            text = { Text(stringResource(R.string.auto)) },
             trailingIcon = { if (now.autoQuality) Icon(Icons.Rounded.Check, null) },
             onClick = { Graph.player.setQuality(0); onDismiss() }
         )
@@ -213,7 +215,7 @@ internal fun QualityMenu(now: NowPlaying, expanded: Boolean, onDismiss: () -> Un
 internal fun CaptionsMenu(now: NowPlaying, expanded: Boolean, onDismiss: () -> Unit) {
     DropdownMenu(expanded, onDismiss) {
         DropdownMenuItem(
-            text = { Text("Off") },
+            text = { Text(stringResource(R.string.off)) },
             trailingIcon = { if (now.subtitleId == null) Icon(Icons.Rounded.Check, null) },
             onClick = { Graph.player.setSubtitle(null); onDismiss() }
         )

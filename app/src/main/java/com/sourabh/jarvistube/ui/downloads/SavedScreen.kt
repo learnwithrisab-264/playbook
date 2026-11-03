@@ -86,7 +86,7 @@ fun SavedScreen(vm: TubeViewModel, bottomPadding: Dp, onBack: () -> Unit) {
             item {
                 EmptyState(
                     Icons.Rounded.Download,
-                    "Nothing saved yet",
+                    "No downloads yet",
                     "Open any video and tap Download to watch it offline."
                 )
             }

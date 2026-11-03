@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.study
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.common.TopicChip
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Arrangement
@@ -96,7 +98,7 @@ internal fun LongLockDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = JarvisViolet, contentColor = Color.White)
             ) { Text(confirmLabel) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }
 
@@ -142,9 +144,9 @@ internal fun DaysWheelDialog(title: String, from: Long, onConfirm: (Int) -> Unit
             Button(
                 onClick = { onConfirm(days) },
                 colors = ButtonDefaults.buttonColors(containerColor = JarvisViolet, contentColor = Color.White)
-            ) { Text("Lock") }
+            ) { Text(stringResource(R.string.lock)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }
 

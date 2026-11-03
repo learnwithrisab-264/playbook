@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.player
 
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Motion
 import com.sourabh.jarvistube.ui.theme.OnVideo
 import com.sourabh.jarvistube.ui.common.Thumb
@@ -269,7 +270,7 @@ internal fun VideoBox(
                 ) {
                     Icon(Icons.Rounded.Headphones, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.size(8.dp))
-                    Text("Watch video", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.watch_video), color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -328,7 +329,7 @@ internal fun VideoBox(
                     maxLines = 4,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (!now.error.startsWith("Blocked")) TextButton(onClick = { Graph.player.retry() }) { Text("Retry") }
+                if (!now.error.startsWith("Blocked")) TextButton(onClick = { Graph.player.retry() }) { Text(stringResource(R.string.retry)) }
             }
         }
 

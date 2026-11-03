@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.channel
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.common.LoadMoreEffect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -99,7 +101,7 @@ internal fun PlaylistScreen(vm: TubeViewModel, page: Page.Playlist, bottomPaddin
                     ) {
                         Icon(Icons.Rounded.PlayArrow, null)
                         Spacer(Modifier.size(8.dp))
-                        Text("Play all")
+                        Text(stringResource(R.string.play_all))
                     }
                 }
             }

@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.study
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Brand
 import com.sourabh.jarvistube.ui.theme.Corners
 import androidx.compose.material3.SwitchDefaults
@@ -38,9 +40,9 @@ fun StudyScreen(vm: TubeViewModel, lib: LibraryViewModel, bottomPadding: Dp) {
     if (study.justCompleted > 0) {
         AlertDialog(
             onDismissRequest = { study.justCompleted = 0 },
-            title = { Text("Session complete") },
+            title = { Text(stringResource(R.string.session_complete)) },
             text = { Text("You stayed focused for ${study.justCompleted} minutes. Nice work.") },
-            confirmButton = { TextButton(onClick = { study.justCompleted = 0 }) { Text("Done") } }
+            confirmButton = { TextButton(onClick = { study.justCompleted = 0 }) { Text(stringResource(R.string.done)) } }
         )
     }
     if (study.active) ActiveSession(vm, bottomPadding) else SetupSession(lib, bottomPadding)

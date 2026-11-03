@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.study
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Brand
 import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.Avatar
@@ -136,7 +138,7 @@ internal fun ActiveSession(vm: TubeViewModel, bottomPadding: Dp) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Lock, null, Modifier.size(20.dp))
                     Spacer(Modifier.size(8.dp))
-                    Text("Focus mode", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.focus_mode), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     Text(
                         "${remainingText(remaining / 1000)} left",
                         style = MaterialTheme.typography.labelLarge,
@@ -159,8 +161,8 @@ internal fun ActiveSession(vm: TubeViewModel, bottomPadding: Dp) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
-                    if (study.longLock) TextButton(onClick = { extendDialog = true }) { Text("Extend") }
-                    if (!study.strict) TextButton(onClick = { confirmEnd = true }) { Text("End early") }
+                    if (study.longLock) TextButton(onClick = { extendDialog = true }) { Text(stringResource(R.string.extend)) }
+                    if (!study.strict) TextButton(onClick = { confirmEnd = true }) { Text(stringResource(R.string.end_early)) }
                 }
             }
         }
@@ -240,9 +242,9 @@ internal fun ActiveSession(vm: TubeViewModel, bottomPadding: Dp) {
     if (confirmEnd) {
         AlertDialog(
             onDismissRequest = { confirmEnd = false },
-            title = { Text("End focus early?") },
-            confirmButton = { TextButton(onClick = { confirmEnd = false; study.endEarly() }) { Text("End") } },
-            dismissButton = { TextButton(onClick = { confirmEnd = false }) { Text("Keep going") } }
+            title = { Text(stringResource(R.string.end_focus_early)) },
+            confirmButton = { TextButton(onClick = { confirmEnd = false; study.endEarly() }) { Text(stringResource(R.string.end)) } },
+            dismissButton = { TextButton(onClick = { confirmEnd = false }) { Text(stringResource(R.string.keep_going)) } }
         )
     }
 }
@@ -263,7 +265,7 @@ internal fun ChannelBubble(name: String, avatar: String?, selected: Boolean, onC
         ) {
             if (avatar == null && name == "All") {
                 Box(Modifier.fillMaxSize().clip(CircleShape).background(cs.surfaceVariant), contentAlignment = Alignment.Center) {
-                    Text("All", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.all), fontWeight = FontWeight.Bold)
                 }
             } else {
                 Avatar(name, 52, avatar)

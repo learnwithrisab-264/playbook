@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.player
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.Thumb
 import androidx.compose.foundation.layout.Column
@@ -44,8 +46,8 @@ fun QueueSheet(onDismiss: () -> Unit) {
                 Modifier.fillMaxWidth().padding(start = 24.dp, end = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Up next", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                if (queue.isNotEmpty()) TextButton(onClick = { Graph.player.clearQueue() }) { Text("Clear") }
+                Text(stringResource(R.string.up_next), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                if (queue.isNotEmpty()) TextButton(onClick = { Graph.player.clearQueue() }) { Text(stringResource(R.string.clear)) }
             }
             if (queue.isEmpty()) {
                 Text(

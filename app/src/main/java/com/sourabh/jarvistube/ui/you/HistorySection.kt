@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.you
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.pressScale
 import com.sourabh.jarvistube.ui.common.Thumb
@@ -69,11 +71,11 @@ fun LazyListScope.historySection(
         ) {
             OutlinedTextField(
                 value = query, onValueChange = onQuery, singleLine = true,
-                placeholder = { Text("Search history") },
+                placeholder = { Text(stringResource(R.string.search_history)) },
                 leadingIcon = { Icon(Icons.Rounded.Search, null) },
                 modifier = Modifier.weight(1f)
             )
-            if (all.isNotEmpty()) TextButton(onClick = onClearAll) { Text("Clear all") }
+            if (all.isNotEmpty()) TextButton(onClick = onClearAll) { Text(stringResource(R.string.clear_all)) }
         }
     }
     if (shown.isEmpty()) {
@@ -127,11 +129,11 @@ fun LazyListScope.historySection(
 fun ClearHistoryDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Clear all history?") },
-        text = { Text("This removes the history saved for this account on this phone. It can't be undone.") },
+        title = { Text(stringResource(R.string.clear_all_history)) },
+        text = { Text(stringResource(R.string.this_removes_the_history_saved_for_this)) },
         confirmButton = {
-            TextButton(onClick = { WatchHistory.clear(); onDismiss() }) { Text("Clear all") }
+            TextButton(onClick = { WatchHistory.clear(); onDismiss() }) { Text(stringResource(R.string.clear_all)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }

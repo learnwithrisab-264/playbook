@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.lock
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -117,11 +119,11 @@ private fun BlockScreen(onStudy: () -> Unit, onPhone: () -> Unit) {
             if (exiting) {
                 EmergencyExit(onEnd = { if (study.useEmergencyExit()) onStudy() }, onCancel = { exiting = false })
             } else {
-                Button(onClick = onStudy, Modifier.fillMaxWidth()) { Text("Back to study video") }
+                Button(onClick = onStudy, Modifier.fillMaxWidth()) { Text(stringResource(R.string.back_to_study_video)) }
                 Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = onPhone, Modifier.fillMaxWidth()) { Text("Open Phone") }
+                OutlinedButton(onClick = onPhone, Modifier.fillMaxWidth()) { Text(stringResource(R.string.open_the_phone_app)) }
                 Spacer(Modifier.height(8.dp))
-                TextButton(onClick = { exiting = true }) { Text("Emergency exit") }
+                TextButton(onClick = { exiting = true }) { Text(stringResource(R.string.emergency_exit)) }
             }        }
     }
 }
@@ -144,7 +146,7 @@ private fun EmergencyExit(onEnd: () -> Unit, onCancel: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
-        TextButton(onClick = onCancel) { Text("Keep studying") }
+        TextButton(onClick = onCancel) { Text(stringResource(R.string.keep_studying)) }
         return
     }
     var typed by remember { mutableStateOf("") }
@@ -162,7 +164,7 @@ private fun EmergencyExit(onEnd: () -> Unit, onCancel: () -> Unit) {
         textAlign = TextAlign.Center
     )
     Spacer(Modifier.height(12.dp))
-    Text("To end the session, type:", style = MaterialTheme.typography.bodyMedium)
+    Text(stringResource(R.string.to_end_the_session_type), style = MaterialTheme.typography.bodyMedium)
     Spacer(Modifier.height(4.dp))
     Text(EXIT_PHRASE, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(12.dp))
@@ -171,5 +173,5 @@ private fun EmergencyExit(onEnd: () -> Unit, onCancel: () -> Unit) {
     Button(onClick = onEnd, Modifier.fillMaxWidth(), enabled = exitReady(typed, waited)) {
         Text(if (waited < EXIT_WAIT_SECONDS) "Wait ${EXIT_WAIT_SECONDS - waited} seconds" else "End session now")
     }
-    TextButton(onClick = onCancel) { Text("Keep studying") }
+    TextButton(onClick = onCancel) { Text(stringResource(R.string.keep_studying)) }
 }

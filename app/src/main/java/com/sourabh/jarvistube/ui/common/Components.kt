@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.common
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Brand
 import com.sourabh.jarvistube.ui.theme.Corners
 import kotlinx.coroutines.flow.collectLatest
@@ -160,7 +162,7 @@ fun ErrorBox(
             tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(40.dp)
         )
         Spacer(Modifier.height(12.dp))
-        Text("Couldn't load", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.couldn_t_load), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(4.dp))
         Text(
             message,
@@ -171,7 +173,7 @@ fun ErrorBox(
             overflow = TextOverflow.Ellipsis
         )
         Spacer(Modifier.height(16.dp))
-        Button(onClick = onRetry) { Text("Try again") }
+        Button(onClick = onRetry) { Text(stringResource(R.string.try_again)) }
         if (extraLabel != null && onExtra != null) {
             androidx.compose.material3.TextButton(onClick = onExtra) { Text(extraLabel) }
         }

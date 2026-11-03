@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.you
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.Avatar
 import com.sourabh.jarvistube.ui.common.EmptyState
@@ -150,7 +152,7 @@ fun LibraryScreen(
                             com.sourabh.jarvistube.Graph.player.clearQueue()
                             com.sourabh.jarvistube.Graph.player.enqueueAll(videos.drop(1))
                             vm.play(videos.first())
-                        }) { Text("Play all") }
+                        }) { Text(stringResource(R.string.play_all)) }
                     }
                 }
             }
@@ -167,7 +169,7 @@ fun LibraryScreen(
                         contentAlignment = Alignment.Center
                     ) { Icon(Icons.Rounded.Add, null) }
                     Spacer(Modifier.size(16.dp))
-                    Text("New playlist", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.new_playlist), style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
@@ -267,7 +269,7 @@ private fun RowCard(
             onDismissRequest = { asking = false },
             text = { Text(confirm ?: "${action.first}?") },
             confirmButton = { TextButton(onClick = { asking = false; action.second() }) { Text(action.first) } },
-            dismissButton = { TextButton(onClick = { asking = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { asking = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
     Row(
@@ -349,17 +351,17 @@ private fun NewPlaylistDialog(onCreate: (String) -> Unit, onDismiss: () -> Unit)
     var title by remember { mutableStateOf("") }
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New playlist") },
+        title = { Text(stringResource(R.string.new_playlist)) },
         text = {
             androidx.compose.material3.OutlinedTextField(
                 value = title, onValueChange = { title = it }, singleLine = true,
-                placeholder = { Text("Title") }, modifier = Modifier.fillMaxWidth()
+                placeholder = { Text(stringResource(R.string.title)) }, modifier = Modifier.fillMaxWidth()
             )
         },
         confirmButton = {
-            TextButton(enabled = title.isNotBlank(), onClick = { onCreate(title); onDismiss() }) { Text("Create") }
+            TextButton(enabled = title.isNotBlank(), onClick = { onCreate(title); onDismiss() }) { Text(stringResource(R.string.create)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -369,7 +371,7 @@ private fun YouHeader(onOpenDownloads: () -> Unit, onOpenSettings: () -> Unit) {
         Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("You", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.you), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
         IconButton(onClick = onOpenDownloads) { Icon(Icons.Rounded.Download, "Downloads") }
         IconButton(onClick = onOpenSettings) { Icon(Icons.Rounded.Settings, "Settings") }
     }
@@ -415,7 +417,7 @@ private fun SignedOutBody(onSignIn: () -> Unit) {
             "Your library",
             "Sign in to see your subscription, watch history and playlists, without the recommendations."
         )
-        Button(onClick = onSignIn) { Text("Sign in with Google") }
+        Button(onClick = onSignIn) { Text(stringResource(R.string.sign_in_with_google)) }
         Spacer(Modifier.height(12.dp))
         Text(
             "Unofficial sign-in. A secondary Google account is safest.",

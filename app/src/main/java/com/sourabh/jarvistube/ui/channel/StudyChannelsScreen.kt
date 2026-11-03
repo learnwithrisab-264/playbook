@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.channel
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.common.LoadingView
 import com.sourabh.jarvistube.ui.common.SectionHeader
 import com.sourabh.jarvistube.ui.common.Avatar
@@ -108,7 +110,7 @@ internal fun StudyChannelsScreen(vm: TubeViewModel, lib: LibraryViewModel, botto
                 value = query,
                 onValueChange = { query = it },
                 singleLine = true,
-                placeholder = { Text("Search channels, e.g. JEE Wallah") },
+                placeholder = { Text(stringResource(R.string.search_channels_e_g_jee_wallah)) },
                 leadingIcon = { Icon(Icons.Rounded.Search, null) },
                 shape = CircleShape,
                 colors = TextFieldDefaults.colors(
@@ -129,7 +131,7 @@ internal fun StudyChannelsScreen(vm: TubeViewModel, lib: LibraryViewModel, botto
             items(results, key = { "r:" + it.url }) { c -> ChannelPickRow(vm, c) }
         }
         if (StudyChannels.list.isNotEmpty()) {
-            item { SectionHeader("Your channels") }
+            item { SectionHeader("My Channels") }
             items(StudyChannels.list.toList(), key = { "s:" + it.url }) { c -> ChannelPickRow(vm, c) }
         }
         if (subs.isNotEmpty()) {
@@ -150,9 +152,9 @@ internal fun ChannelPickRow(vm: TubeViewModel, c: ChannelRef) {
         Spacer(Modifier.size(16.dp))
         Text(c.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (added) {
-            FilledTonalButton(onClick = { StudyChannels.toggle(c) }) { Text("Added") }
+            FilledTonalButton(onClick = { StudyChannels.toggle(c) }) { Text(stringResource(R.string.added)) }
         } else {
-            OutlinedButton(onClick = { StudyChannels.toggle(c) }) { Text("Add") }
+            OutlinedButton(onClick = { StudyChannels.toggle(c) }) { Text(stringResource(R.string.add)) }
         }
     }
 }

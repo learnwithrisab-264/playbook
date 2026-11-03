@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.search
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.common.feedItems
 import com.sourabh.jarvistube.ui.common.LoadMoreEffect
 import com.sourabh.jarvistube.ui.common.TopicChip
@@ -80,7 +82,7 @@ fun SearchOverlay(vm: TubeViewModel, bottomPadding: Dp = 0.dp) {
                 value = vm.query,
                 onValueChange = { vm.query = it; vm.updateSuggestions(it) },
                 singleLine = true,
-                placeholder = { Text("Search PlayBook") },
+                placeholder = { Text(stringResource(R.string.search_playbook)) },
                 trailingIcon = {
                     if (vm.query.isNotEmpty()) {
                         IconButton(onClick = { vm.clearSearch(); vm.suggestions.clear(); requester.requestFocus() }) {

@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.shorts
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.EmptyState
 import com.sourabh.jarvistube.ui.common.ErrorBox
@@ -170,7 +172,7 @@ fun ShortsBlockCard() {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Lock, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.size(8.dp))
-            Text("Block Shorts", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.block_shorts), style = MaterialTheme.typography.titleMedium)
         }
         Text(
             if (left > 0) "Blocked: ${timeLeftText(left)} left. You can make it longer, not shorter."
@@ -206,7 +208,7 @@ fun ShortsBlockCard() {
                     Text(if (shorter) "OK" else "Block")
                 }
             },
-            dismissButton = { if (!shorter) TextButton(onClick = { asking = null }) { Text("Cancel") } }
+            dismissButton = { if (!shorter) TextButton(onClick = { asking = null }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 }

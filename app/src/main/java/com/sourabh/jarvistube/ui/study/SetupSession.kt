@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.study
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.common.Avatar
 import com.sourabh.jarvistube.ui.common.TopicChip
 import androidx.compose.foundation.background
@@ -89,7 +91,7 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp) {
     ) {
         item {
             Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 4.dp)) {
-                Text("Study", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.study), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 Text(
                     "Lock yourself in. Only your channels play until the timer ends.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -130,7 +132,7 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp) {
                 ) {
                     Icon(Icons.Rounded.Lock, null, Modifier.size(18.dp))
                     Spacer(Modifier.size(8.dp))
-                    Text("Start & lock", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                    Text(stringResource(R.string.start_lock), fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                 }
                 Text(
                     "Once started it can't be stopped early. Calls, alarms and settings still work.",
@@ -275,7 +277,7 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp) {
                     value = newChannel,
                     onValueChange = { newChannel = it },
                     singleLine = true,
-                    placeholder = { Text("Add a channel by name") },
+                    placeholder = { Text(stringResource(R.string.add_a_channel_by_name)) },
                     trailingIcon = {
                         IconButton(onClick = { study.addChannel(newChannel); newChannel = "" }) {
                             Icon(Icons.Rounded.Add, "Add channel")
@@ -297,7 +299,7 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp) {
                         onClick = { lib.ensure(LibTab.Channels); showImport = true },
                         shape = CircleShape,
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Pick from my subscriptions") }
+                    ) { Text(stringResource(R.string.pick_from_my_subscriptions)) }
                 }
             }
         }
@@ -324,7 +326,7 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp) {
         AlertDialog(
             onDismissRequest = { lockDialog = false },
             title = { Text("Lock the ${study.dailyLimit}-min limit?") },
-            text = { Text("While locked you can lower the limit, but not raise it or turn it off.") },
+            text = { Text(stringResource(R.string.while_locked_you_can_lower_the_limit_but)) },
             confirmButton = {
                 Row {
                     listOf(1, 7, 30).forEach { d ->
@@ -334,7 +336,7 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp) {
                     }
                 }
             },
-            dismissButton = { TextButton(onClick = { lockDialog = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { lockDialog = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 
@@ -349,7 +351,7 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp) {
             )
             if (names.isEmpty()) {
                 Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                    if (feed.loading) CircularProgressIndicator() else Text("No subscriptions found.")
+                    if (feed.loading) CircularProgressIndicator() else Text(stringResource(R.string.no_subscriptions_found))
                 }
             } else {
                 LazyColumn(Modifier.height(420.dp)) {

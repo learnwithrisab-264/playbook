@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.you
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.common.Avatar
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -91,7 +93,7 @@ fun SubscribeButton(channelUrl: String?, channelName: String, modifier: Modifier
         true -> FilledTonalButton(onClick = { confirm = true }, enabled = !busy, modifier = modifier) {
             Icon(Icons.Rounded.NotificationsNone, null, Modifier.size(18.dp))
             Spacer(Modifier.size(8.dp))
-            Text("Subscribed")
+            Text(stringResource(R.string.subscribed))
         }
         false -> Button(
             onClick = { set(true) }, enabled = !busy, modifier = modifier,
@@ -99,14 +101,14 @@ fun SubscribeButton(channelUrl: String?, channelName: String, modifier: Modifier
                 containerColor = MaterialTheme.colorScheme.onSurface,
                 contentColor = MaterialTheme.colorScheme.surface
             )
-        ) { Text("Subscribe") }
+        ) { Text(stringResource(R.string.subscribe)) }
     }
     if (confirm) {
         AlertDialog(
             onDismissRequest = { confirm = false },
             text = { Text("Unsubscribe from $channelName?") },
-            confirmButton = { TextButton(onClick = { confirm = false; set(false) }) { Text("Unsubscribe") } },
-            dismissButton = { TextButton(onClick = { confirm = false }) { Text("Cancel") } }
+            confirmButton = { TextButton(onClick = { confirm = false; set(false) }) { Text(stringResource(R.string.unsubscribe)) } },
+            dismissButton = { TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 }
@@ -166,7 +168,7 @@ fun SaveToPlaylistHost() {
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 12.dp)) {
-            Text("Save video to…", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+            Text(stringResource(R.string.save_video_to), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
             if (loading) {
                 CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally).padding(24.dp))
             }
@@ -197,7 +199,7 @@ fun SaveToPlaylistHost() {
             Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = newTitle, onValueChange = { newTitle = it }, singleLine = true,
-                    placeholder = { Text("New playlist name") }, modifier = Modifier.weight(1f)
+                    placeholder = { Text(stringResource(R.string.new_playlist_name)) }, modifier = Modifier.weight(1f)
                 )
                 Spacer(Modifier.size(8.dp))
                 TextButton(
@@ -211,7 +213,7 @@ fun SaveToPlaylistHost() {
                             if (ok) { newTitle = ""; load() }
                         }
                     }
-                ) { Text("Create") }
+                ) { Text(stringResource(R.string.create)) }
             }
         }
     }
@@ -227,7 +229,7 @@ fun AccountSheet(lib: LibraryViewModel, onAddAccount: () -> Unit, onDismiss: () 
     var confirmSignOut by remember { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 12.dp)) {
-            Text("Accounts", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+            Text(stringResource(R.string.accounts), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
             lib.accounts.forEach { a ->
                 Row(
                     Modifier.fillMaxWidth().clickable { lib.switchAccount(a.id); onDismiss() }
@@ -257,10 +259,10 @@ fun AccountSheet(lib: LibraryViewModel, onAddAccount: () -> Unit, onDismiss: () 
     if (confirmSignOut) {
         AlertDialog(
             onDismissRequest = { confirmSignOut = false },
-            title = { Text("Sign out?") },
+            title = { Text(stringResource(R.string.sign_out)) },
             text = { Text("${Session.active?.email ?: "This account"} will be removed from PlayBook. Other accounts stay signed in.") },
-            confirmButton = { TextButton(onClick = { confirmSignOut = false; lib.signOut(); onDismiss() }) { Text("Sign out") } },
-            dismissButton = { TextButton(onClick = { confirmSignOut = false }) { Text("Cancel") } }
+            confirmButton = { TextButton(onClick = { confirmSignOut = false; lib.signOut(); onDismiss() }) { Text(stringResource(R.string.sign_out_2)) } },
+            dismissButton = { TextButton(onClick = { confirmSignOut = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 }

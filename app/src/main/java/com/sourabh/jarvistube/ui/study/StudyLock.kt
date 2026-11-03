@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.study
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.OnVideo
 import com.sourabh.jarvistube.ui.common.TopicChip
 import androidx.compose.foundation.background
@@ -135,7 +137,7 @@ private fun LockDurationDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) 
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Lock study session") },
+        title = { Text(stringResource(R.string.lock_study_session)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
@@ -146,11 +148,11 @@ private fun LockDurationDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) 
                 if (!guardOn) {
                     TextButton(onClick = {
                         context.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                    }) { Text("Step 1: turn on PlayBook Study Lock") }
+                    }) { Text(stringResource(R.string.step_1_turn_on_playbook_study_lock)) }
                 }
                 if (!overAppsOn) {
                     TextButton(onClick = { context.startActivity(StudyGuardService.overlaySettings(context)) }) {
-                        Text("Step 2: allow Display over other apps")
+                        Text(stringResource(R.string.step_2_allow_display_over_other_apps))
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -174,7 +176,7 @@ private fun LockDurationDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) 
                 Text(if (!ready) "Finish the steps first" else if (total > 0) "Continue" else "Pick a duration")
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }
 
@@ -200,8 +202,8 @@ private fun ConfirmLockDialog(minutes: Int, onConfirm: () -> Unit, onBack: () ->
                 style = MaterialTheme.typography.bodyMedium
             )
         },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("Lock now") } },
-        dismissButton = { TextButton(onClick = onBack) { Text("Go back") } }
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.lock_now)) } },
+        dismissButton = { TextButton(onClick = onBack) { Text(stringResource(R.string.go_back)) } }
     )
 }
 

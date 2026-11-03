@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.you
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.webkit.CookieManager
@@ -54,7 +56,7 @@ fun LoginScreen(onCookie: (String) -> Unit, onClose: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, "Close") }
-            Text("Sign in to Google", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.sign_in_to_google), style = MaterialTheme.typography.titleMedium)
         }
         AndroidView(
             modifier = Modifier.fillMaxSize(),

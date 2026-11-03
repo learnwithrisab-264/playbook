@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.player
 
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.Avatar
 import com.sourabh.jarvistube.ui.common.compact
@@ -235,7 +236,7 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                 PillChip(
                     selected = ui.loop,
                     onClick = { ui.toggleLoop() },
-                    label = { Text("Loop") },
+                    label = { Text(stringResource(R.string.loop)) },
                     leadingIcon = { Icon(Icons.Rounded.Repeat, null, Modifier.size(18.dp)) }
                 )
                 PillChip(
@@ -249,20 +250,20 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                     PillChip(
                         selected = false,
                         onClick = { PlayerPopups.lockPicker = true },
-                        label = { Text("Lock Study Session") },
+                        label = { Text(stringResource(R.string.lock_study_session)) },
                         leadingIcon = { Icon(Icons.Rounded.Lock, null, Modifier.size(18.dp)) }
                     )
                 }
                 PillChip(
                     selected = Graph.player.sponsorBlock,
                     onClick = { Graph.player.updateSponsorBlock(!Graph.player.sponsorBlock) },
-                    label = { Text("SponsorBlock") },
+                    label = { Text(stringResource(R.string.sponsorblock)) },
                     leadingIcon = { Icon(Icons.Rounded.SkipNext, null, Modifier.size(18.dp)) }
                 )
                 PillChip(
                     selected = Graph.player.audioOnly,
                     onClick = { Graph.player.updateAudioOnly(!Graph.player.audioOnly) },
-                    label = { Text("Listen") }, // audio only: no video download, saves data and battery
+                    label = { Text(stringResource(R.string.listen)) }, // audio only: no video download, saves data and battery
                     leadingIcon = { Icon(Icons.Rounded.Headphones, null, Modifier.size(18.dp)) }
                 )
                 Box {
@@ -285,7 +286,7 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                     PillChip(
                         selected = false,
                         onClick = { DownloadSheet.open(now.video, info) },
-                        label = { Text("Download") },
+                        label = { Text(stringResource(R.string.download)) },
                         leadingIcon = { Icon(Icons.Rounded.Download, null, Modifier.size(18.dp)) }
                     )
                 }
@@ -298,7 +299,7 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                         }
                         context.startActivity(Intent.createChooser(send, "Share"))
                     },
-                    label = { Text("Share") },
+                    label = { Text(stringResource(R.string.share)) },
                     leadingIcon = { Icon(Icons.Rounded.Share, null, Modifier.size(18.dp)) }
                 )
             }
@@ -325,7 +326,7 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Related videos hidden", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.related_videos_hidden), style = MaterialTheme.typography.titleMedium)
                         Text(
                             "Distraction-free mode. Tap to reveal.",
                             style = MaterialTheme.typography.bodySmall,
@@ -346,7 +347,7 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Related videos", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.related_videos), style = MaterialTheme.typography.titleMedium)
                             Text(
                                 "Tap to hide them again.",
                                 style = MaterialTheme.typography.bodySmall,

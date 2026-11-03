@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.you
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.common.TopicChip
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -69,7 +71,7 @@ internal fun SpeedListDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Playback speeds") },
+        title = { Text(stringResource(R.string.playback_speeds)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(
@@ -93,24 +95,24 @@ internal fun SpeedListDialog(onDismiss: () -> Unit) {
                     value = input,
                     onValueChange = { input = it },
                     singleLine = true,
-                    label = { Text("Add speeds") },
-                    placeholder = { Text("e.g. 1.1, 2.2, 3.75") },
+                    label = { Text(stringResource(R.string.add_speeds)) },
+                    placeholder = { Text(stringResource(R.string.e_g_1_1_2_2_3_75)) },
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                         keyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
                         imeAction = androidx.compose.ui.text.input.ImeAction.Done
                     ),
                     keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { addTyped() }),
-                    trailingIcon = { TextButton(onClick = { addTyped() }, enabled = input.isNotBlank()) { Text("Add") } },
+                    trailingIcon = { TextButton(onClick = { addTyped() }, enabled = input.isNotBlank()) { Text(stringResource(R.string.add)) } },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.size(8.dp))
                 Row {
-                    TextButton(onClick = { chosen = offered.toSet() }) { Text("Select all") }
-                    TextButton(onClick = { chosen = setOf(1f) }) { Text("Clear all") }
+                    TextButton(onClick = { chosen = offered.toSet() }) { Text(stringResource(R.string.select_all)) }
+                    TextButton(onClick = { chosen = setOf(1f) }) { Text(stringResource(R.string.clear_all)) }
                     TextButton(onClick = {
                         chosen = AppSettings.defaultSpeeds.toSet()
                         offered = (standard + AppSettings.defaultSpeeds).distinct().sorted()
-                    }) { Text("Reset") }
+                    }) { Text(stringResource(R.string.reset)) }
                 }
             }
         },
@@ -119,9 +121,9 @@ internal fun SpeedListDialog(onDismiss: () -> Unit) {
                 AppSettings.updateSpeeds(chosen)
                 Toast.makeText(context, "${AppSettings.speeds.size} speeds in the menu", Toast.LENGTH_SHORT).show()
                 onDismiss()
-            }) { Text("Save") }
+            }) { Text(stringResource(R.string.save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }
 
@@ -131,7 +133,7 @@ internal fun SponsorCategoriesDialog(onDismiss: () -> Unit) {
     var chosen by remember { mutableStateOf(com.sourabh.jarvistube.Graph.player.skipCategories) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("What to skip") },
+        title = { Text(stringResource(R.string.what_to_skip)) },
         text = {
             LazyColumn(Modifier.heightIn(max = 460.dp)) {
                 items(com.sourabh.jarvistube.data.SPONSOR_CATEGORIES) { c ->
@@ -165,10 +167,10 @@ internal fun SponsorCategoriesDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = { com.sourabh.jarvistube.Graph.player.updateSkipCategories(chosen); onDismiss() }) { Text("Save") }
+            TextButton(onClick = { com.sourabh.jarvistube.Graph.player.updateSkipCategories(chosen); onDismiss() }) { Text(stringResource(R.string.save)) }
         },
         dismissButton = {
-            TextButton(onClick = { chosen = com.sourabh.jarvistube.data.DEFAULT_SKIP_CATEGORIES }) { Text("Reset") }
+            TextButton(onClick = { chosen = com.sourabh.jarvistube.data.DEFAULT_SKIP_CATEGORIES }) { Text(stringResource(R.string.reset)) }
         }
     )
 }
@@ -198,6 +200,6 @@ internal fun <T> ChoiceDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } }
     )
 }

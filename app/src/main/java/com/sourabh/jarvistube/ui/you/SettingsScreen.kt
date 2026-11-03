@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.you
 
+import com.sourabh.jarvistube.R
+import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.SectionHeader
 import com.sourabh.jarvistube.ui.common.Avatar
@@ -216,7 +218,7 @@ fun SettingsScreen(
                     )
                 }
                 if (current) {
-                    Text("Using", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.using), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
                 androidx.compose.material3.IconButton(onClick = { removeTarget = a }) {
                     Icon(Icons.Rounded.Close, "Sign out of ${a.email ?: a.name ?: "this account"}", tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -326,7 +328,7 @@ fun SettingsScreen(
         val label = a.email ?: a.name ?: "This account"
         AlertDialog(
             onDismissRequest = { removeTarget = null },
-            title = { Text("Sign out of this account?") },
+            title = { Text(stringResource(R.string.sign_out_of_this_account)) },
             text = {
                 Text(
                     if (lib.accounts.size > 1) "$label will be removed from PlayBook. Your other accounts stay signed in."
@@ -338,9 +340,9 @@ fun SettingsScreen(
                     removeTarget = null
                     lib.removeAccount(a.id)
                     Toast.makeText(context, "Signed out of $label", Toast.LENGTH_SHORT).show()
-                }) { Text("Sign out") }
+                }) { Text(stringResource(R.string.sign_out_2)) }
             },
-            dismissButton = { TextButton(onClick = { removeTarget = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { removeTarget = null }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 }
