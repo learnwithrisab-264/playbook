@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
@@ -47,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -107,6 +109,20 @@ internal fun VideoBox(
         delay(700)
         adjusting = null
     }
+    // Fit / Fill for upright videos, and two-finger zoom for every video. Both reset for a new video.
+    var fill by remember(now.video.url) { mutableStateOf(false) }
+    var zoom by remember(now.video.url) { mutableFloatStateOf(MIN_ZOOM) }
+    var pan by remember(now.video.url) { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    var vertical by remember { mutableStateOf(player.videoSize.height > player.videoSize.width) }
+    androidx.compose.runtime.DisposableEffect(player) {
+        val sizeListener = object : androidx.media3.common.Player.Listener {
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                vertical = videoSize.height > videoSize.width
+            }
+        }
+        player.addListener(sizeListener)
+        onDispose { player.removeListener(sizeListener) }
+    }
     // PlayBook's own brightness lasts only for fullscreen; the phone's setting comes back after.
     androidx.compose.runtime.DisposableEffect(fullscreen) {
         onDispose { brightness.reset() }
@@ -115,6 +131,7 @@ internal fun VideoBox(
     Box(
         modifier
             .background(Color.Black)
+            .clipToBounds() // a zoomed picture stays inside the player
             // Tap / double-tap first (outer) ...
             .pointerInput(Unit) {
                 // No onDoubleTap: that makes Compose hold every single tap ~300 ms to rule out a
@@ -191,6 +208,16 @@ internal fun VideoBox(
                     }
                 )
             }
+            // ... and two-finger zoom innermost, so it claims two-finger touches before the others.
+            .pointerInput(Unit) {
+                detectVideoZoom(
+                    onTransform = { z, p ->
+                        zoom = clampZoom(zoom * z)
+                        pan = clampPan(pan + p, zoom, size.width.toFloat(), size.height.toFloat())
+                    },
+                    onReset = { zoom = MIN_ZOOM; pan = androidx.compose.ui.geometry.Offset.Zero }
+                )
+            }
     ) {
         AndroidView(
             factory = { ctx ->
@@ -201,7 +228,15 @@ internal fun VideoBox(
                     it.subtitleView?.visibility = android.view.View.GONE
                 }
             },
-            update = { if (it.player !== player) it.player = player },
+            update = {
+                if (it.player !== player) it.player = player
+                it.resizeMode = if (fill && vertical) androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                else androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                it.scaleX = zoom
+                it.scaleY = zoom
+                it.translationX = pan.x
+                it.translationY = pan.y
+            },
             onRelease = { it.player = null },
             modifier = Modifier.fillMaxSize()
         )
@@ -361,5 +396,30 @@ internal fun VideoBox(
                 )
             }
         }
+
+        // Fit / Fill for upright videos, and Reset while zoomed. On top, so the controls can't cover it.
+        val zoomed = zoom > MIN_ZOOM
+        if (showControls && controlsVisible && (vertical || zoomed)) {
+            Row(
+                Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+            ) {
+                if (vertical) VideoPill(if (fill) "Fit" else "Fill") { fill = !fill }
+                if (zoomed) VideoPill("Reset zoom") { zoom = MIN_ZOOM; pan = androidx.compose.ui.geometry.Offset.Zero }
+            }
+        }
     }
+}
+
+/** A small round button drawn on the video. */
+@Composable
+private fun VideoPill(label: String, onClick: () -> Unit) {
+    Text(
+        label,
+        color = Color.White,
+        style = MaterialTheme.typography.labelMedium,
+        modifier = Modifier.clip(CircleShape).background(com.sourabh.jarvistube.ui.theme.OnVideo.scrim)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 6.dp)
+    )
 }
