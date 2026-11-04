@@ -86,6 +86,7 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
             androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY
         ).toString().trim()
     }
+    val links = rememberLinkActions(vm, now.video.url)
 
     LazyColumn(modifier.navigationBarsPadding(), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) {
         item {
@@ -113,11 +114,13 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                     Text(meta, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                     if (desc.isNotBlank()) {
                         Spacer(Modifier.height(4.dp))
-                        Text(
-                            desc,
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = if (expanded) Int.MAX_VALUE else 2,
-                            overflow = TextOverflow.Ellipsis
+                        // Blue links open; times jump; a tap anywhere else expands or collapses.
+                        com.sourabh.jarvistube.ui.common.LinkedText(
+                            info?.description?.content.orEmpty(),
+                            html = info?.description?.type == org.schabi.newpipe.extractor.stream.Description.HTML,
+                            onUrl = links.onUrl,
+                            onSeek = links.onSeek,
+                            maxLines = if (expanded) Int.MAX_VALUE else 2
                         )
                         Text(
                             if (expanded) "Show less" else "…more",
