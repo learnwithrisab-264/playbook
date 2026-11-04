@@ -75,6 +75,10 @@ object AppSettings {
     var showRecommended by mutableStateOf(true); private set
     /** The Shorts tab in the bottom bar. Off only hides the tab; Shorts in search stay. */
     var showShorts by mutableStateOf(true); private set
+    /** "dark" (default), "light" or "system" (follow the phone). */
+    var appearance by mutableStateOf("dark"); private set
+    val appearances = listOf("dark" to "Dark", "light" to "Light", "system" to "Follow the phone")
+    val appearanceName: String get() = appearances.firstOrNull { it.first == appearance }?.second ?: "Dark"
     var captionFont by mutableStateOf("default"); private set
     var captionScale by mutableFloatStateOf(1f); private set
     var captionColor by mutableLongStateOf(0xFFFFFFFF); private set
@@ -92,6 +96,7 @@ object AppSettings {
         defaultQuality = prefs.getInt("quality", 0)
         showRecommended = prefs.getBoolean("showRecommended", true)
         showShorts = prefs.getBoolean("showShorts", true)
+        appearance = prefs.getString("appearance", "dark") ?: "dark"
         captionFont = prefs.getString("captionFont", "default") ?: "default"
         captionScale = prefs.getFloat("captionScale", 1f)
         captionColor = prefs.getLong("captionColor", 0xFFFFFFFF)
@@ -132,6 +137,11 @@ object AppSettings {
     fun updateShowRecommended(on: Boolean) {
         showRecommended = on
         prefs.edit().putBoolean("showRecommended", on).apply()
+    }
+
+    fun updateAppearance(key: String) {
+        appearance = key
+        prefs.edit().putString("appearance", key).apply()
     }
 
     fun updateShowShorts(on: Boolean) {

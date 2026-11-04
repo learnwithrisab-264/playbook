@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Explore
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.FontDownload
@@ -72,6 +73,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     var regionDialog by remember { mutableStateOf(false) }
     var qualityDialog by remember { mutableStateOf(false) }
+    var appearanceDialog by remember { mutableStateOf(false) }
     /** The account the ✕ was tapped on (asks before signing out of it). */
     var removeTarget by remember { mutableStateOf<com.sourabh.jarvistube.data.Account?>(null) }
     var speedDialog by remember { mutableStateOf(false) }
@@ -86,6 +88,14 @@ fun SettingsScreen(
         contentPadding = PaddingValues(bottom = bottomPadding + 16.dp)
     ) {
         item { SubPageHeader("Settings", onBack) }
+
+        item { SectionHeader("Appearance") }
+        item {
+            SettingRow(
+                Icons.Rounded.DarkMode, "Appearance", AppSettings.appearanceName,
+                onClick = { appearanceDialog = true }
+            )
+        }
 
         item { SectionHeader("Content") }
         item {
@@ -298,6 +308,18 @@ fun SettingsScreen(
                 vm.loadStudyFeed()
             },
             onDismiss = { regionDialog = false }
+        )
+    }
+    if (appearanceDialog) {
+        ChoiceDialog(
+            title = "Appearance",
+            options = AppSettings.appearances,
+            selected = AppSettings.appearance,
+            onPick = { key ->
+                appearanceDialog = false
+                AppSettings.updateAppearance(key)
+            },
+            onDismiss = { appearanceDialog = false }
         )
     }
     if (qualityDialog) {

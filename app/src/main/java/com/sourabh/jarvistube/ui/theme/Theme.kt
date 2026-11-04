@@ -121,9 +121,28 @@ object OnVideo {
     val track = Color.White.copy(alpha = 0.3f)
 }
 
+/** Dark unless the Appearance setting says Light, or says follow the phone and the phone is light. */
 @Composable
-fun JarvisTubeTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+fun appIsDark(): Boolean = when (com.sourabh.jarvistube.AppSettings.appearance) {
+    "light" -> false
+    "system" -> isSystemInDarkTheme()
+    else -> true
+}
+
+@Composable
+fun JarvisTubeTheme(dark: Boolean = appIsDark(), content: @Composable () -> Unit) {
     val scheme = if (dark) Night else Day
+    // Status and navigation bars: dark bars get light icons, light bars get dark icons.
+    val view = androidx.compose.ui.platform.LocalView.current
+    if (!view.isInEditMode) {
+        androidx.compose.runtime.SideEffect {
+            val window = (view.context as? android.app.Activity)?.window ?: return@SideEffect
+            androidx.core.view.WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !dark
+                isAppearanceLightNavigationBars = !dark
+            }
+        }
+    }
     MaterialTheme(colorScheme = scheme, typography = AppTypography) {
         // Screens drawn outside a Scaffold/Surface (player, search, login) would otherwise fall
         // back to black text and icons. Give the whole app the theme's content colour.
