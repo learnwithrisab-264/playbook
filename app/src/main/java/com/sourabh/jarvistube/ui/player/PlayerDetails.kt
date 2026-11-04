@@ -87,6 +87,9 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
         ).toString().trim()
     }
     val links = rememberLinkActions(vm, now.video.url)
+    val comments = rememberComments(now.video.url)
+    var commentsOpen by remember(now.video.url) { mutableStateOf(false) }
+    if (commentsOpen) CommentsSheet(comments, links) { commentsOpen = false }
 
     LazyColumn(modifier.navigationBarsPadding(), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) {
         item {
@@ -158,6 +161,8 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                     }
                     if (!Graph.study.lockActive) SubscribeButton(channelUrl, info?.uploaderName ?: now.video.channel)
                 }
+                Spacer(Modifier.height(16.dp))
+                CommentsCard(comments, links) { commentsOpen = true }
             }
         }
         item {
