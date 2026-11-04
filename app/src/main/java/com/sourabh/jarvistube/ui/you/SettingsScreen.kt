@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.Close
@@ -102,6 +103,18 @@ fun SettingsScreen(
                 Switch(
                     checked = AppSettings.showRecommended,
                     onCheckedChange = { AppSettings.updateShowRecommended(it) }
+                )
+            }
+        }
+        item {
+            SettingRow(
+                Icons.Rounded.PlayCircle, "Show Shorts tab",
+                "The Shorts tab in the bottom bar. Shorts in search results still show.",
+                onClick = { AppSettings.updateShowShorts(!AppSettings.showShorts) }
+            ) {
+                Switch(
+                    checked = AppSettings.showShorts,
+                    onCheckedChange = { AppSettings.updateShowShorts(it) }
                 )
             }
         }

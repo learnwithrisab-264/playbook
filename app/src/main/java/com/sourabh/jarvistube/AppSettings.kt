@@ -73,6 +73,8 @@ object AppSettings {
     var defaultQuality by mutableIntStateOf(0); private set
     /** The Recommended tab (YouTube home feed / Trending). Never reachable during a session or lock. */
     var showRecommended by mutableStateOf(true); private set
+    /** The Shorts tab in the bottom bar. Off only hides the tab; Shorts in search stay. */
+    var showShorts by mutableStateOf(true); private set
     var captionFont by mutableStateOf("default"); private set
     var captionScale by mutableFloatStateOf(1f); private set
     var captionColor by mutableLongStateOf(0xFFFFFFFF); private set
@@ -89,6 +91,7 @@ object AppSettings {
         region = prefs.getString("region", "IN") ?: "IN"
         defaultQuality = prefs.getInt("quality", 0)
         showRecommended = prefs.getBoolean("showRecommended", true)
+        showShorts = prefs.getBoolean("showShorts", true)
         captionFont = prefs.getString("captionFont", "default") ?: "default"
         captionScale = prefs.getFloat("captionScale", 1f)
         captionColor = prefs.getLong("captionColor", 0xFFFFFFFF)
@@ -129,6 +132,11 @@ object AppSettings {
     fun updateShowRecommended(on: Boolean) {
         showRecommended = on
         prefs.edit().putBoolean("showRecommended", on).apply()
+    }
+
+    fun updateShowShorts(on: Boolean) {
+        showShorts = on
+        prefs.edit().putBoolean("showShorts", on).apply()
     }
 
     fun updateCaptionFont(key: String) {
