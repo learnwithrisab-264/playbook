@@ -69,20 +69,32 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
     var holdPortrait by remember { mutableStateOf(false) }
     var wasFullscreen by remember { mutableStateOf(false) }
-    LaunchedEffect(landscape) { if (landscape && !holdPortrait && !inPip) fullscreen = true }
+    // Swiping up while holding the phone upright gives fullscreen that stays upright (the video
+    // sits in the middle, full width; pinch zoom can fill the screen). The button, a lock and
+    // turning the phone sideways give the normal landscape fullscreen.
+    var portraitFullscreen by remember { mutableStateOf(false) }
+    var wasPortraitFullscreen by remember { mutableStateOf(false) }
+    LaunchedEffect(landscape) {
+        if (landscape) portraitFullscreen = false
+        if (landscape && !holdPortrait && !inPip) fullscreen = true
+    }
+    LaunchedEffect(locked) { if (locked) portraitFullscreen = false }
 
-    DisposableEffect(fullscreen) {
+    DisposableEffect(fullscreen, portraitFullscreen) {
         val window = activity?.window
         val ctl = window?.let { WindowInsetsControllerCompat(it, it.decorView) }
         if (fullscreen) {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            // Upright fullscreen doesn't force a rotation, so turning the phone still switches to landscape.
+            activity?.requestedOrientation = if (portraitFullscreen) ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             ctl?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             ctl?.hide(WindowInsetsCompat.Type.systemBars())
-        } else if (wasFullscreen) {
+        } else if (wasFullscreen && !wasPortraitFullscreen) {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             holdPortrait = true
         }
         wasFullscreen = fullscreen
+        wasPortraitFullscreen = fullscreen && portraitFullscreen
         onDispose { ctl?.show(WindowInsetsCompat.Type.systemBars()) }
     }
     DisposableEffect(holdPortrait) {
@@ -115,12 +127,12 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
             ui = ui,
             fullscreen = fs,
             showControls = !inPip,
-            onToggleFullscreen = { if (!locked) fullscreen = !fullscreen },
+            onToggleFullscreen = { if (!locked) { portraitFullscreen = false; fullscreen = !fullscreen } },
             onCollapse = { if (!locked) vm.playerExpanded = false },
             // Swipe up on the video = fullscreen; swipe down = leave fullscreen, or minimise to the mini-player.
             onSwipe = { dir -> if (!locked)
                 when {
-                    dir < 0 && !fullscreen -> fullscreen = true
+                    dir < 0 && !fullscreen -> { portraitFullscreen = !landscape; fullscreen = true }
                     dir > 0 && fullscreen -> fullscreen = false
                     dir > 0 -> vm.playerExpanded = false
                 }
