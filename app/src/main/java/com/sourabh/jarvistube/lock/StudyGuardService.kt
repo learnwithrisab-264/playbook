@@ -43,7 +43,12 @@ class StudyGuardService : AccessibilityService() {
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val study = Graph.study
         study.tick()
-        if (!study.lockActive) return
+        if (!study.lockActive) {
+            // Banking apps object to any accessibility service: step aside until you leave them.
+            val opened = event.packageName?.toString()
+            if (opened != null && isBankingApp(opened) && BankPause.canPause(this)) BankPause.pause(this, opened)
+            return
+        }
         if (!StudyLockService.running) StudyLockService.start(this)
         val pkg = event.packageName?.toString() ?: return
         if (pkg == "com.android.systemui") return closeShade()

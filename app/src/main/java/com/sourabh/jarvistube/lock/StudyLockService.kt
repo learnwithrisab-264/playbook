@@ -95,7 +95,9 @@ class StudyLockService : Service() {
 /** A session still running after a restart carries on. */
 class LockBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED && Graph.study.lockActive) StudyLockService.start(context)
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
+        BankPause.recover(context)
+        if (Graph.study.lockActive) StudyLockService.start(context)
     }
 }
 
