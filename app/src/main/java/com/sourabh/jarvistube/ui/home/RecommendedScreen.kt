@@ -2,7 +2,6 @@ package com.sourabh.jarvistube.ui.home
 
 import com.sourabh.jarvistube.ui.common.feedItems
 import com.sourabh.jarvistube.ui.common.HomeTopBar
-import com.sourabh.jarvistube.ui.common.LoadMoreEffect
 import com.sourabh.jarvistube.ui.common.TrackSeen
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,8 +46,9 @@ fun RecommendedScreen(
     val filterOn = Graph.study.entertainmentBlocked
     // Last check before the list is drawn: no Shorts here, whichever source the videos came from.
     val shown = remember(feed, filterOn) {
-        feed.copy(items = com.sourabh.jarvistube.data.ContentFilter.filter(feed.items).filterNot { it.isShort || it.durationSec in 1L..60L })
+        feed.copy(items = com.sourabh.jarvistube.data.ContentFilter.filter(feed.pageItems()).filterNot { it.isShort || it.durationSec in 1L..60L })
     }
+    com.sourabh.jarvistube.ui.common.ScrollTopOnPageChange(listState, feed.page)
 
     androidx.compose.material3.pulltorefresh.PullToRefreshBox(
         isRefreshing = feed.loading && feed.items.isNotEmpty(),
@@ -79,8 +79,15 @@ fun RecommendedScreen(
                 emptyBody = if (filterOn) "Recommended videos that look like entertainment are filtered out. Pull down to refresh."
                 else "No recommendations right now. Pull down to refresh."
             )
+            if (feed.items.isNotEmpty()) {
+                item {
+                    com.sourabh.jarvistube.ui.common.PageDots(
+                        feed.pageCount, feed.page, feed.loadingMore,
+                        onPick = vm::showRecommendedPage, onNext = vm::loadMoreRecommended
+                    )
+                }
+            }
         }
         TrackSeen(listState, com.sourabh.jarvistube.data.Feed.Recommended)
-        LoadMoreEffect(listState, feed.items.size, vm::loadMoreRecommended)
     }
 }

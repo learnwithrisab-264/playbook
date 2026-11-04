@@ -67,7 +67,8 @@ fun HomeScreen(
         vm.ensureStudyFeed()
     }
     val filter = vm.channelFilter
-    val shown = if (filter == null) feed else {
+    // "All" shows one page at a time with page dots; a channel chip shows everything loaded from it.
+    val shown = if (filter == null) feed.copy(items = feed.pageItems()) else {
         val name = channels.firstOrNull { it.url == filter }?.name
         feed.copy(items = feed.items.filter { it.channelUrl == filter || (name != null && it.channel.equals(name, true)) })
     }
@@ -108,10 +109,19 @@ fun HomeScreen(
                     }
                 }
                 feedItems(shown, onRetry = vm::loadStudyFeed, onPlay = vm::play)
+                if (filter == null && feed.items.isNotEmpty()) {
+                    item {
+                        com.sourabh.jarvistube.ui.common.PageDots(
+                            feed.pageCount, feed.page, feed.loadingMore,
+                            onPick = vm::showStudyPage, onNext = vm::loadMoreStudy
+                        )
+                    }
+                }
             }
         }
         TrackSeen(listState, com.sourabh.jarvistube.data.Feed.MyFeed)
-        LoadMoreEffect(listState, shown.items.size, vm::loadMoreStudy)
+        if (filter != null) LoadMoreEffect(listState, shown.items.size, vm::loadMoreStudy)
+        com.sourabh.jarvistube.ui.common.ScrollTopOnPageChange(listState, feed.page)
     }
 }
 

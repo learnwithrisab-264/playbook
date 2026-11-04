@@ -31,8 +31,27 @@ data class FeedState(
     val items: List<VideoItem> = emptyList(),
     val loading: Boolean = false,
     val loadingMore: Boolean = false,
-    val error: String? = null
-)
+    val error: String? = null,
+    /** Where each page starts in [items]; page dots show one slice at a time from memory. */
+    val pageStarts: List<Int> = listOf(0),
+    val page: Int = 0
+) {
+    val pageCount: Int get() = pageStarts.size
+
+    /** The videos of the page being shown. */
+    fun pageItems(): List<VideoItem> {
+        val start = pageStarts.getOrElse(page) { 0 }.coerceIn(0, items.size)
+        val end = (pageStarts.getOrNull(page + 1) ?: items.size).coerceIn(start, items.size)
+        return items.subList(start, end)
+    }
+
+    /** Adds what Load more fetched as a new page and shows it. Nothing new = stay where you are. */
+    fun withNewPage(merged: List<VideoItem>): FeedState =
+        if (merged.size > items.size) copy(items = merged, pageStarts = pageStarts + items.size, page = pageStarts.size, loadingMore = false)
+        else copy(loadingMore = false)
+
+    fun showPage(i: Int): FeedState = copy(page = i.coerceIn(0, pageStarts.size - 1))
+}
 
 class TubeViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -205,8 +224,9 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
 
     fun loadMoreStudy() {
         val cur = studyFeed
-        // After a saved list comes back there are no pages open yet: start them now.
-        if (studySessions.isEmpty()) {
+        // After a saved list comes back there are no pages open yet, and at the end of every
+        // channel's list a fresh start finds what you haven't seen: start them now.
+        if (studySessions.none { it.hasMore }) {
             studySessions = com.sourabh.jarvistube.data.StudyChannels.list.toList().shuffled()
                 .map { com.sourabh.jarvistube.data.ChannelVideos(it.url) }
         }
@@ -216,7 +236,7 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
             studyFeed = cur.copy(loadingMore = true)
             studyFeed = runCatchingFeed(fallback = cur) {
                 val more = SeenVideos.unseen(Feed.MyFeed, channelPages(sessions)).shuffled()
-                cur.copy(items = (cur.items + more).distinctBy { it.url }, loadingMore = false)
+                cur.withNewPage((cur.items + more).distinctBy { it.url })
             }
             saveStudyFeed()
         }
@@ -319,6 +339,10 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** A page dot was tapped: show that page again from memory. */
+    fun showRecommendedPage(i: Int) { recommended = recommended.showPage(i) }
+    fun showStudyPage(i: Int) { studyFeed = studyFeed.showPage(i) }
+
     fun loadMoreRecommended() {
         if (!recommendedAllowed) return
         val cur = recommended
@@ -337,7 +361,7 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 // At the end of YouTube's list, or with nothing new on the page, new searches carry on.
                 val more = SeenVideos.unseen(Feed.Recommended, next).ifEmpty { subjectMix() }
-                cur.copy(items = (cur.items + more).distinctBy { it.url }, loadingMore = false)
+                cur.withNewPage((cur.items + more).distinctBy { it.url })
             }
             if (startedFor != com.sourabh.jarvistube.data.Session.dataKey) return@launch // switched meanwhile
             recommended = loaded

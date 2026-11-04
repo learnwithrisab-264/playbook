@@ -11,11 +11,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -91,6 +94,68 @@ internal fun LazyListScope.feedItems(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * One dot per loaded page; the page on screen is the big highlighted one. Tapping a dot shows that
+ * page again from memory; "+" loads a new page. The row scrolls sideways past about 7 dots.
+ */
+@Composable
+internal fun PageDots(count: Int, current: Int, loading: Boolean, onPick: (Int) -> Unit, onNext: () -> Unit) {
+    val rowState = androidx.compose.foundation.lazy.rememberLazyListState()
+    androidx.compose.runtime.LaunchedEffect(current, count) {
+        rowState.animateScrollToItem((current - 3).coerceAtLeast(0))
+    }
+    androidx.compose.foundation.layout.Column(
+        Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            "Page ${current + 1} of $count",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        androidx.compose.foundation.lazy.LazyRow(
+            state = rowState,
+            modifier = Modifier.padding(top = 4.dp).widthIn(max = 36.dp * 8),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            items(count) { i ->
+                val on = i == current
+                Box(
+                    Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape).clickable { if (!on) onPick(i) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        Modifier.size(if (on) 14.dp else 8.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f))
+                    )
+                }
+            }
+            item {
+                Box(
+                    Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape).clickable(enabled = !loading) { onNext() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (loading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.Rounded.Add, "Next page", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                }
+            }
+        }
+    }
+}
+
+
+/** When another page is picked, start it from the top (not when coming back to the tab). */
+@Composable
+internal fun ScrollTopOnPageChange(state: androidx.compose.foundation.lazy.LazyListState, page: Int) {
+    var shownPage by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(page) }
+    androidx.compose.runtime.LaunchedEffect(page) {
+        if (page != shownPage) {
+            shownPage = page
+            state.scrollToItem(0)
         }
     }
 }
