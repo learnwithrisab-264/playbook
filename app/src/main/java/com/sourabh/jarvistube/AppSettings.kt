@@ -75,6 +75,8 @@ object AppSettings {
     var showRecommended by mutableStateOf(true); private set
     /** The Shorts tab in the bottom bar. Off only hides the tab; Shorts in search stay. */
     var showShorts by mutableStateOf(true); private set
+    /** The Study tab in the bottom bar. Hiding it never stops a session or lock: see [studyTabRequired]. */
+    var showStudy by mutableStateOf(true); private set
     /** "dark" (default), "light" or "system" (follow the phone). */
     var appearance by mutableStateOf("dark"); private set
     val appearances = listOf("dark" to "Dark", "light" to "Light", "system" to "Follow the phone")
@@ -96,6 +98,7 @@ object AppSettings {
         defaultQuality = prefs.getInt("quality", 0)
         showRecommended = prefs.getBoolean("showRecommended", true)
         showShorts = prefs.getBoolean("showShorts", true)
+        showStudy = prefs.getBoolean("showStudy", true)
         appearance = prefs.getString("appearance", "dark") ?: "dark"
         captionFont = prefs.getString("captionFont", "default") ?: "default"
         captionScale = prefs.getFloat("captionScale", 1f)
@@ -142,6 +145,17 @@ object AppSettings {
     fun updateAppearance(key: String) {
         appearance = key
         prefs.edit().putString("appearance", key).apply()
+    }
+
+    /** A session, Lock Study Session, daily-limit lock or filter lock keeps the Study tab in the bar. */
+    val studyTabRequired: Boolean
+        get() = Graph.study.let { it.active || it.lockActive || it.limitLocked || it.filterLocked }
+
+    val studyTabShown: Boolean get() = showStudy || studyTabRequired
+
+    fun updateShowStudy(on: Boolean) {
+        showStudy = on
+        prefs.edit().putBoolean("showStudy", on).apply()
     }
 
     fun updateShowShorts(on: Boolean) {

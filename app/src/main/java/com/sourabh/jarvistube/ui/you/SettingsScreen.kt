@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.FontDownload
@@ -125,6 +126,23 @@ fun SettingsScreen(
                 Switch(
                     checked = AppSettings.showShorts,
                     onCheckedChange = { AppSettings.updateShowShorts(it) }
+                )
+            }
+        }
+
+        item {
+            // During a session or any study lock the tab has to stay, so the switch is greyed out.
+            val required = AppSettings.studyTabRequired
+            SettingRow(
+                Icons.Rounded.School, "Show Study tab",
+                if (required) "Stays on while a study session or lock is running."
+                else "The Study tab in the bottom bar. Sessions and locks still work when it is hidden.",
+                onClick = { if (!required) AppSettings.updateShowStudy(!AppSettings.showStudy) }
+            ) {
+                Switch(
+                    checked = AppSettings.studyTabShown,
+                    enabled = !required,
+                    onCheckedChange = { AppSettings.updateShowStudy(it) }
                 )
             }
         }

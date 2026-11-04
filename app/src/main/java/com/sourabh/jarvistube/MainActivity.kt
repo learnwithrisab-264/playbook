@@ -309,7 +309,7 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
     val study = Graph.study
     // Recommended is gone while the setting is off and during any session, multi-day lock,
     // scheduled window or timed video lock (the bar stays visible during a video lock).
-    val tabs = Tab.entries.filter { (it != Tab.Recommended || vm.recommendedAllowed) && (it != Tab.Shorts || (vm.shortsAllowed && AppSettings.showShorts)) }
+    val tabs = Tab.entries.filter { (it != Tab.Recommended || vm.recommendedAllowed) && (it != Tab.Shorts || (vm.shortsAllowed && AppSettings.showShorts)) && (it != Tab.Study || AppSettings.studyTabShown) }
     val shownTab = when {
         study.active -> Tab.Study
         tab !in tabs -> Tab.Home
