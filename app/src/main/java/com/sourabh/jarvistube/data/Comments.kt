@@ -19,7 +19,11 @@ data class Comment(
     val pinned: Boolean,
     val hearted: Boolean,
     val replyCount: Int,
-    val replies: Page?
+    val replies: Page?,
+    /** Written by the video's own channel (shown as a highlighted name). */
+    val byCreator: Boolean = false,
+    /** The video's channel replied in this thread. */
+    val creatorReplied: Boolean = false
 )
 
 /** The first page of a video's comments. [count] is -1 when YouTube doesn't say. */
@@ -54,6 +58,8 @@ class CommentsSource(private val videoUrl: String) {
         pinned = c.isPinned,
         hearted = c.isHeartedByUploader,
         replyCount = c.replyCount,
-        replies = c.replies?.takeIf { Page.isValid(it) }
+        replies = c.replies?.takeIf { Page.isValid(it) },
+        byCreator = runCatching { c.isChannelOwner }.getOrDefault(false),
+        creatorReplied = runCatching { c.hasCreatorReply() }.getOrDefault(false)
     )
 }

@@ -156,7 +156,7 @@ internal fun CommentsCard(state: CommentsState, links: LinkActions, onOpen: () -
             state.failed -> CardNote("Couldn't load comments. Tap to try again.")
             first == null -> CardNote("No comments yet.")
             else -> Row(verticalAlignment = Alignment.CenterVertically) {
-                Avatar(first.author.removePrefix("@"), 24, first.avatar)
+                CommentAvatar(first.author, 24, first.avatar)
                 Spacer(Modifier.width(8.dp))
                 // Plain preview here; links work once the comments are open.
                 Text(
@@ -173,113 +173,4 @@ internal fun CommentsCard(state: CommentsState, links: LinkActions, onOpen: () -
 @Composable
 private fun CardNote(text: String) {
     Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun CommentsSheet(state: CommentsState, links: LinkActions, onDismiss: () -> Unit) {
-    val listState = rememberLazyListState()
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Text(
-            if (state.count > 0) "Comments  ${compact(state.count.toLong())}" else "Comments",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-        LazyColumn(state = listState, contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 32.dp)) {
-            when {
-                state.loading -> item { SheetSpinner() }
-                state.disabled -> item { SheetNote("Comments are turned off for this video.") }
-                state.failed -> item { SheetNote("Couldn't load comments.") }
-                state.items.isEmpty() -> item { SheetNote("No comments yet.") }
-            }
-            items(state.items, key = { it.id }) { c ->
-                Column {
-                    CommentRow(c, links, reply = false)
-                    val shown = state.replies[c.id]
-                    shown?.forEach { r -> CommentRow(r, links, reply = true) }
-                    val busy = state.replyLoading[c.id] == true
-                    val moreReplies = if (shown == null) c.replies != null else state.replyNext[c.id] != null
-                    when {
-                        busy -> Box(Modifier.padding(start = 56.dp, bottom = 8.dp)) {
-                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                        }
-                        moreReplies -> TextButton(onClick = { state.loadReplies(c) }, modifier = Modifier.padding(start = 44.dp)) {
-                            Text(
-                                when {
-                                    shown != null -> "Show more replies"
-                                    c.replyCount > 0 -> "Show ${c.replyCount} " + if (c.replyCount == 1) "reply" else "replies"
-                                    else -> "Show replies"
-                                }
-                            )
-                        }
-                        shown != null -> TextButton(onClick = { state.hideReplies(c) }, modifier = Modifier.padding(start = 44.dp)) {
-                            Text("Hide replies")
-                        }
-                    }
-                }
-            }
-            if (state.loadingMore) item { SheetSpinner() }
-        }
-        LoadMoreEffect(listState, state.items.size, state::loadMore)
-    }
-}
-
-@Composable
-private fun CommentRow(c: Comment, links: LinkActions, reply: Boolean) {
-    Row(
-        Modifier.fillMaxWidth().padding(start = if (reply) 56.dp else 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
-    ) {
-        Avatar(c.author.removePrefix("@"), if (reply) 24 else 32, c.avatar)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            if (c.pinned) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.PushPin, null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.width(4.dp))
-                    Text("Pinned", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            Text(
-                listOfNotNull(c.author.ifBlank { null }, c.time).joinToString("  ·  "),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(2.dp))
-            LinkedText(c.text, html = c.html, onUrl = links.onUrl, onSeek = links.onSeek)
-            Row(
-                Modifier.padding(top = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(Icons.Rounded.ThumbUp, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (c.likes > 0) {
-                    Text(compact(c.likes.toLong()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                if (c.hearted) {
-                    Spacer(Modifier.width(6.dp))
-                    Icon(Icons.Rounded.Favorite, "Hearted by the creator", Modifier.size(14.dp), tint = MaterialTheme.colorScheme.error)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SheetSpinner() {
-    Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
-    }
-}
-
-@Composable
-private fun SheetNote(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(16.dp)
-    )
 }

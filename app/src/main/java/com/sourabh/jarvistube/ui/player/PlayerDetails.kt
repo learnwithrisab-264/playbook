@@ -89,7 +89,11 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
     val links = rememberLinkActions(vm, now.video.url)
     val comments = rememberComments(now.video.url)
     var commentsOpen by remember(now.video.url) { mutableStateOf(false) }
-    if (commentsOpen) CommentsSheet(comments, links) { commentsOpen = false }
+    // Comments take the place of the details under the video, as on YouTube; the video keeps playing.
+    if (commentsOpen) {
+        CommentsPanel(comments, links, info?.uploaderName ?: now.video.channel, onClose = { commentsOpen = false }, modifier = modifier)
+        return
+    }
 
     LazyColumn(modifier.navigationBarsPadding(), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) {
         item {

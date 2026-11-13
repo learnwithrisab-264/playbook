@@ -67,7 +67,8 @@ internal fun Controls(
     onDragging: (Boolean) -> Unit,
     onToggleFullscreen: () -> Unit,
     onCollapse: () -> Unit,
-    onBottomHeight: (Int) -> Unit
+    onBottomHeight: (Int) -> Unit,
+    onMoreVideos: (() -> Unit)? = null
 ) {
     val player = Graph.player.player
     var scrubMs by remember { mutableStateOf<Long?>(null) }
@@ -170,6 +171,18 @@ internal fun Controls(
                     color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium
                 )
                 Spacer(Modifier.weight(1f))
+                if (fullscreen && onMoreVideos != null) {
+                    Text(
+                        "More videos",
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(com.sourabh.jarvistube.ui.theme.OnVideo.scrim)
+                            .clickable(onClick = onMoreVideos)
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
                 if (!Graph.study.lockActive) IconButton(onClick = onToggleFullscreen) {
                     Icon(
                         if (fullscreen) Icons.Rounded.FullscreenExit else Icons.Rounded.Fullscreen,

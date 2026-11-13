@@ -72,12 +72,16 @@ internal fun VideoBox(
     showControls: Boolean,
     onToggleFullscreen: () -> Unit,
     onCollapse: () -> Unit,
-    onSwipe: (Int) -> Unit
+    onSwipe: (Int) -> Unit,
+    onPlay: (com.sourabh.jarvistube.data.VideoItem) -> Unit = {}
 ) {
     val player = Graph.player.player
     var controlsVisible by remember { mutableStateOf(true) }
     val synced = Graph.player.loadedUrl.collectAsStateWithLifecycle().value == now.video.url
     val currentOnSwipe by androidx.compose.runtime.rememberUpdatedState(onSwipe)
+    var moreOpen by remember { mutableStateOf(false) }
+    val moreAllowed = fullscreen && showControls && !Graph.study.active && !Graph.study.lockActive
+    LaunchedEffect(moreAllowed) { if (!moreAllowed) moreOpen = false }
     var dragging by remember { mutableStateOf(false) }
     var flash by remember { mutableIntStateOf(0) }
     var flashKey by remember { mutableIntStateOf(0) }
@@ -392,9 +396,21 @@ internal fun VideoBox(
                     onDragging = { dragging = it },
                     onToggleFullscreen = onToggleFullscreen,
                     onCollapse = onCollapse,
-                    onBottomHeight = { controlsBottomPx = it }
+                    onBottomHeight = { controlsBottomPx = it },
+                    onMoreVideos = if (moreAllowed) ({ moreOpen = true; controlsVisible = false }) else null
                 )
             }
+        }
+
+        // More videos (fullscreen only; never during a study session or lock).
+        if (moreOpen && moreAllowed) {
+            androidx.activity.compose.BackHandler { moreOpen = false }
+            MoreVideosPanel(
+                now,
+                onPlay = { moreOpen = false; onPlay(it) },
+                onClose = { moreOpen = false },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
 
         // Fit / Fill for upright videos, and Reset while zoomed. On top, so the controls can't cover it.

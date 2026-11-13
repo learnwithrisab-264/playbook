@@ -103,6 +103,12 @@ fun LinkedText(
     Text(annotated, modifier, style = style, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
 }
 
+/** Times look like small blue chips, as on YouTube ("0:41"). */
+private fun timeStyles(styles: TextLinkStyles): TextLinkStyles {
+    val c = styles.style?.color ?: Color(0xFF3EA6FF)
+    return TextLinkStyles(SpanStyle(color = c, background = c.copy(alpha = 0.16f)))
+}
+
 private fun linkify(
     text: String,
     html: Boolean,
@@ -123,7 +129,7 @@ private fun linkify(
         // Bare addresses and times that aren't already inside an anchor.
         findLinks(plain).filter { f -> taken.none { f.start < it.end && f.end > it.start } }.forEach { f ->
             val link = if (f.url != null) LinkAnnotation.Clickable(f.url, styles) { onUrl(f.url) }
-            else LinkAnnotation.Clickable("t${f.seconds}", styles) { onSeek(f.seconds ?: 0) }
+            else LinkAnnotation.Clickable("t${f.seconds}", timeStyles(styles)) { onSeek(f.seconds ?: 0) }
             addLink(link, f.start, f.end)
         }
     }

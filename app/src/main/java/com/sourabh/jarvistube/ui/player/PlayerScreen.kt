@@ -129,6 +129,7 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
             showControls = !inPip,
             onToggleFullscreen = { if (!locked) { portraitFullscreen = false; fullscreen = !fullscreen } },
             onCollapse = { if (!locked) vm.playerExpanded = false },
+            onPlay = vm::play,
             // Swipe up on the video = fullscreen; swipe down = leave fullscreen, or minimise to the mini-player.
             onSwipe = { dir -> if (!locked)
                 when {
