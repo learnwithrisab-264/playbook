@@ -79,6 +79,33 @@ object BankPause {
         service.disableSelf()
     }
 
+    /**
+     * Without the adb grants (for example after a fresh install) the guard can't switch itself back
+     * on. Payments still come first: it switches off and leaves a notification to turn it on again.
+     * Only outside a Study Lock, and starting a lock asks for the guard again anyway.
+     */
+    fun stepAside(service: AccessibilityService) {
+        val nm = service.getSystemService(NotificationManager::class.java)
+        nm.createNotificationChannel(NotificationChannel(STEP_CHANNEL, "Study guard off for banking", NotificationManager.IMPORTANCE_LOW))
+        val open = android.app.PendingIntent.getActivity(
+            service, 0,
+            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+        val n = Notification.Builder(service, STEP_CHANNEL)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
+            .setContentTitle("Study guard turned off for banking")
+            .setContentText("So payments work. Tap to turn PlayBook Study Lock back on when you're done.")
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .build()
+        runCatching { nm.notify(STEP_NOTIFICATION, n) }
+        service.disableSelf()
+    }
+
+    private const val STEP_CHANNEL = "bank_step_aside"
+    private const val STEP_NOTIFICATION = 4712
+
     /** Switches the guard back on (no-op unless it was paused for banking). */
     fun resume(context: Context) {
         if (!isPaused(context)) return

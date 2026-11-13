@@ -46,7 +46,9 @@ class StudyGuardService : AccessibilityService() {
         if (!study.lockActive) {
             // Banking apps object to any accessibility service: step aside until you leave them.
             val opened = event.packageName?.toString()
-            if (opened != null && isBankingApp(opened) && BankPause.canPause(this)) BankPause.pause(this, opened)
+            if (opened != null && isBankingApp(opened)) {
+                if (BankPause.canPause(this)) BankPause.pause(this, opened) else BankPause.stepAside(this)
+            }
             return
         }
         if (!StudyLockService.running) StudyLockService.start(this)
