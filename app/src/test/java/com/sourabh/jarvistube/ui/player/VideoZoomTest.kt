@@ -26,3 +26,21 @@ class VideoZoomTest {
         assertEquals(Offset(100f, 50f), clampPan(Offset(100f, 50f), 2f, 1000f, 500f))
     }
 }
+
+class ZoomSnapTest {
+    @Test
+    fun fillCropsTheBars() {
+        // A 16:9 video on a 20:9 screen grows by 20/16 to fill; an upright 9:16 one by much more.
+        assertEquals(1.25f, fillScale(2000f, 900f, 16f / 9f), 0.001f)
+        assertEquals(1f, fillScale(1600f, 900f, 16f / 9f), 0.001f)
+        assertEquals((20f / 9f) / (9f / 16f), fillScale(2000f, 900f, 9f / 16f), 0.01f)
+    }
+
+    @Test
+    fun pinchSettlesLikeYouTube() {
+        assertEquals(1f, snapZoom(1.1f, 1.25f), 0f)       // small pinch: Original
+        assertEquals(1.25f, snapZoom(1.2f, 1.25f), 0f)    // near fill: Zoomed to fill
+        assertEquals(1.25f, snapZoom(1.4f, 1.25f), 0f)
+        assertEquals(2.2f, snapZoom(2.2f, 1.25f), 0f)     // deeper: free zoom stays
+    }
+}

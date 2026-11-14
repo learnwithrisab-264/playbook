@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import com.sourabh.jarvistube.data.bestUrl
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.material.icons.rounded.Lock
@@ -121,8 +123,15 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
         if (!fs) {
             Box(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(Color.Black))
         }
+        // Fullscreen comments sit beside the video (it keeps playing on the left), as on YouTube.
+        val comments = rememberComments(cur.video.url)
+        val links = rememberLinkActions(vm, cur.video.url)
+        var sideComments by remember(cur.video.url) { mutableStateOf(false) }
+        LaunchedEffect(fullscreen, landscape) { if (!fullscreen || !landscape) sideComments = false }
+        androidx.compose.foundation.layout.Row(if (fs) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
         VideoBox(
-            modifier = if (fs) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+            onComments = if (fullscreen && landscape && !inPip) ({ sideComments = true }) else null,
             now = cur,
             ui = ui,
             fullscreen = fs,
@@ -139,6 +148,16 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
                 }
             }
         )
+        if (sideComments && fullscreen) {
+            CommentsPanel(
+                comments, links,
+                channelName = cur.info?.uploaderName ?: cur.video.channel,
+                channelAvatar = cur.info?.uploaderAvatars?.let { it.bestUrl() } ?: cur.video.avatar,
+                onClose = { sideComments = false },
+                modifier = Modifier.fillMaxHeight().fillMaxWidth(0.42f)
+            )
+        }
+        }
         if (!fs) {
             Details(vm, cur, ui, Modifier.weight(1f))
         }

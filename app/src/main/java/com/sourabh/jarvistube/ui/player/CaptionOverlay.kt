@@ -19,7 +19,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.media3.common.text.Cue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameMillis
+import androidx.compose.ui.text.withStyle
 import com.sourabh.jarvistube.AppSettings
 
 /** Compose font for a caption font key from AppSettings.captionFonts. */
@@ -33,15 +41,48 @@ fun captionFontFamily(key: String): FontFamily = when (key) {
 }
 
 /**
- * YouTube-style captions: always centred at the bottom of the video, [bottomInset] above the
- * bottom edge (so they sit just above the controls when those are showing). The caption file's
- * own positioning is ignored on purpose (YouTube's TTML places lines near the top).
- * Font, size and colour come from Settings › Captions and apply instantly.
+ * YouTube-style captions: one clean line, centred at the bottom of the video, [bottomInset] above
+ * the bottom edge (just above the controls when those show). Lines come from PlayBook's own
+ * caption engine (see player/Captions), checked every frame against the playback position, and
+ * the word being spoken is lit up when YouTube gives word timings (Settings › Captions).
  */
 @Composable
-fun CaptionOverlay(cues: List<Cue>, bottomInset: Dp, modifier: Modifier = Modifier) {
-    val text = cues.mapNotNull { it.text?.toString()?.trim()?.takeIf(String::isNotEmpty) }.joinToString("\n")
-    if (text.isEmpty()) return
+fun CaptionOverlay(bottomInset: Dp, modifier: Modifier = Modifier) {
+    val lines by com.sourabh.jarvistube.Graph.player.captionLines.collectAsState()
+    if (lines.isEmpty()) return
+    val player = com.sourabh.jarvistube.Graph.player.player
+    var line by remember(lines) { mutableStateOf<com.sourabh.jarvistube.player.CaptionLine?>(null) }
+    var word by remember(lines) { mutableIntStateOf(-1) }
+    LaunchedEffect(lines) {
+        while (true) {
+            withFrameMillis { }
+            val pos = player.currentPosition
+            val l = com.sourabh.jarvistube.player.Captions.lineAt(lines, pos)
+            if (l !== line) line = l
+            val w = if (l != null && AppSettings.captionHighlight) com.sourabh.jarvistube.player.Captions.wordAt(l, pos) else -1
+            if (w != word) word = w
+        }
+    }
+    val current = line ?: return
+    val accent = androidx.compose.material3.MaterialTheme.colorScheme.primary
+    val text = remember(current, word, accent) {
+        androidx.compose.ui.text.buildAnnotatedString {
+            if (word < 0) append(current.text)
+            else {
+                // Trim the first word's leading space so the line stays centred.
+                current.words.forEachIndexed { i, w ->
+                    val t = if (i == 0) w.text.trimStart() else w.text
+                    if (i == word) {
+                        val lead = t.takeWhile { it == ' ' }
+                        append(lead)
+                        withStyle(androidx.compose.ui.text.SpanStyle(background = accent.copy(alpha = 0.85f), color = Color.White)) {
+                            append(t.drop(lead.length))
+                        }
+                    } else append(t)
+                }
+            }
+        }
+    }
     BoxWithConstraints(modifier) {
         // Scale with the player like YouTube: small in the portrait player, bigger in fullscreen.
         val base = (maxHeight.value * 0.055f).coerceIn(11f, 28f)
@@ -58,7 +99,11 @@ fun CaptionOverlay(cues: List<Cue>, bottomInset: Dp, modifier: Modifier = Modifi
 
 /** One caption block in the user's style; also used for the preview in Settings. */
 @Composable
-fun CaptionText(text: String, fontSizeSp: Float, modifier: Modifier = Modifier) {
+fun CaptionText(text: String, fontSizeSp: Float, modifier: Modifier = Modifier) =
+    CaptionText(androidx.compose.ui.text.AnnotatedString(text), fontSizeSp, modifier)
+
+@Composable
+fun CaptionText(text: androidx.compose.ui.text.AnnotatedString, fontSizeSp: Float, modifier: Modifier = Modifier) {
     Text(
         text,
         color = Color(AppSettings.captionColor),

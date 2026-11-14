@@ -84,6 +84,10 @@ object AppSettings {
     var captionFont by mutableStateOf("default"); private set
     var captionScale by mutableFloatStateOf(1f); private set
     var captionColor by mutableLongStateOf(0xFFFFFFFF); private set
+    /** "en" / "hi" while captions are on; kept so the next video starts with them. */
+    var captionLanguage by mutableStateOf<String?>(null); private set
+    /** Light up the word being spoken (auto-generated captions carry word timings). */
+    var captionHighlight by mutableStateOf(true); private set
     var speeds by mutableStateOf(defaultSpeeds); private set
     /** Corner the floating in-app player sits in: 0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right. */
     var floatCorner by mutableIntStateOf(3); private set
@@ -103,6 +107,8 @@ object AppSettings {
         captionFont = prefs.getString("captionFont", "default") ?: "default"
         captionScale = prefs.getFloat("captionScale", 1f)
         captionColor = prefs.getLong("captionColor", 0xFFFFFFFF)
+        captionLanguage = prefs.getString("captionLanguage", null)
+        captionHighlight = prefs.getBoolean("captionHighlight", true)
         speeds = prefs.getString("speeds", null)
             ?.split(",")?.mapNotNull { it.toFloatOrNull() }?.let(::cleanSpeeds)
             ?: defaultSpeeds
@@ -156,6 +162,16 @@ object AppSettings {
     fun updateShowStudy(on: Boolean) {
         showStudy = on
         prefs.edit().putBoolean("showStudy", on).apply()
+    }
+
+    fun updateCaptionLanguage(lang: String?) {
+        captionLanguage = lang
+        prefs.edit().putString("captionLanguage", lang).apply()
+    }
+
+    fun updateCaptionHighlight(on: Boolean) {
+        captionHighlight = on
+        prefs.edit().putBoolean("captionHighlight", on).apply()
     }
 
     fun updateShowShorts(on: Boolean) {

@@ -1,5 +1,16 @@
 package com.sourabh.jarvistube.ui.player
 
+import androidx.compose.material.icons.automirrored.rounded.Comment
+import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Headphones
+import androidx.compose.material.icons.rounded.HeadsetOff
+
+import androidx.compose.foundation.layout.width
+
+import androidx.compose.foundation.border
+
 import com.sourabh.jarvistube.R
 import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.common.formatClock
@@ -68,7 +79,8 @@ internal fun Controls(
     onToggleFullscreen: () -> Unit,
     onCollapse: () -> Unit,
     onBottomHeight: (Int) -> Unit,
-    onMoreVideos: (() -> Unit)? = null
+    onMoreVideos: (() -> Unit)? = null,
+    onComments: (() -> Unit)? = null
 ) {
     val player = Graph.player.player
     var scrubMs by remember { mutableStateOf<Long?>(null) }
@@ -90,14 +102,23 @@ internal fun Controls(
                 Icon(Icons.Rounded.KeyboardArrowDown, "Minimize", tint = Color.White, modifier = Modifier.size(30.dp))
             }
             if (fullscreen) {
-                Text(
-                    now.info?.name ?: now.video.title,
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        now.info?.name ?: now.video.title,
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        now.info?.uploaderName ?: now.video.channel,
+                        color = Color.White.copy(alpha = 0.75f),
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             } else Spacer(Modifier.weight(1f))
             // CC button only when YouTube actually offers captions for this video.
             if (now.subtitles.isNotEmpty()) {
@@ -111,13 +132,25 @@ internal fun Controls(
                     CaptionsMenu(now, PlayerPopups.ccMenu) { PlayerPopups.ccMenu = false }
                 }
             }
-            // Quality on the player itself, so it is reachable in fullscreen and during a lock.
-            if (now.heights.isNotEmpty()) {
-                Box {
-                    IconButton(onClick = { PlayerPopups.qualityMenu = true }) {
-                        Icon(Icons.Rounded.HighQuality, "Quality", tint = Color.White)
+            // Playback speed right next to CC, one tap away (quality lives in the gear sheet).
+            Box {
+                Text(
+                    AppSettings.speedText(ui.speed),
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 4.dp).clip(CircleShape)
+                        .clickable { PlayerPopups.speedMenu = true }
+                        .padding(horizontal = 10.dp, vertical = 10.dp)
+                )
+                DropdownMenu(PlayerPopups.speedMenu, { PlayerPopups.speedMenu = false }) {
+                    AppSettings.speeds.forEach { s ->
+                        DropdownMenuItem(
+                            text = { Text(AppSettings.speedLabel(s)) },
+                            trailingIcon = { if (s == ui.speed) Icon(Icons.Rounded.Check, null) },
+                            onClick = { player.setPlaybackSpeed(s); PlayerPopups.speedMenu = false }
+                        )
                     }
-                    QualityMenu(now, PlayerPopups.qualityMenu) { PlayerPopups.qualityMenu = false }
                 }
             }
             StudyLockButton(now)
@@ -171,18 +204,6 @@ internal fun Controls(
                     color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium
                 )
                 Spacer(Modifier.weight(1f))
-                if (fullscreen && onMoreVideos != null) {
-                    Text(
-                        "More videos",
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.clip(androidx.compose.foundation.shape.CircleShape)
-                            .background(com.sourabh.jarvistube.ui.theme.OnVideo.scrim)
-                            .clickable(onClick = onMoreVideos)
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
-                }
                 if (!Graph.study.lockActive) IconButton(onClick = onToggleFullscreen) {
                     Icon(
                         if (fullscreen) Icons.Rounded.FullscreenExit else Icons.Rounded.Fullscreen,
@@ -199,7 +220,8 @@ internal fun Controls(
                 onSeek = { player.seekTo(it) },
                 onScrub = { scrubMs = it; onDragging(it != null) }
             )
-            Spacer(Modifier.height(if (fullscreen) 10.dp else 0.dp))
+            if (fullscreen) FullscreenActions(now, onComments, onMoreVideos)
+            Spacer(Modifier.height(if (fullscreen) 6.dp else 0.dp))
         }
     }
 }
@@ -240,4 +262,67 @@ internal fun CaptionsMenu(now: NowPlaying, expanded: Boolean, onDismiss: () -> U
             )
         }
     }
+}
+
+
+/**
+ * YouTube's fullscreen action row: everything you'd leave the video for, without leaving it.
+ * Comments open beside the video; More videos shows a peek of what's next.
+ */
+@Composable
+private fun FullscreenActions(now: NowPlaying, onComments: (() -> Unit)?, onMoreVideos: (() -> Unit)?) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val locked = Graph.study.lockActive
+    Row(
+        Modifier.fillMaxWidth().padding(start = 8.dp, end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (onComments != null) ActionIcon(androidx.compose.material.icons.Icons.AutoMirrored.Rounded.Comment, "Comments", onComments)
+        if (!locked) {
+            if (com.sourabh.jarvistube.data.Session.isSignedIn) {
+                ActionIcon(androidx.compose.material.icons.Icons.Rounded.BookmarkBorder, "Save to playlist") {
+                    com.sourabh.jarvistube.ui.you.SaveToPlaylist.open(now.video)
+                }
+            }
+            ActionIcon(androidx.compose.material.icons.Icons.Rounded.Share, "Share") {
+                val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(android.content.Intent.EXTRA_TEXT, now.video.url)
+                }
+                context.startActivity(android.content.Intent.createChooser(send, "Share"))
+            }
+            now.info?.let { info ->
+                ActionIcon(androidx.compose.material.icons.Icons.Rounded.Download, "Download") {
+                    com.sourabh.jarvistube.ui.downloads.DownloadSheet.open(now.video, info)
+                }
+            }
+        }
+        ActionIcon(
+            if (Graph.player.audioOnly) androidx.compose.material.icons.Icons.Rounded.Headphones else androidx.compose.material.icons.Icons.Rounded.HeadsetOff,
+            if (Graph.player.audioOnly) "Back to video" else "Listen (audio only)"
+        ) { Graph.player.updateAudioOnly(!Graph.player.audioOnly) }
+        Spacer(Modifier.weight(1f))
+        if (onMoreVideos != null) {
+            val peek = remember(now.info) { relatedVideos(now).firstOrNull()?.thumb }
+            Row(
+                Modifier.clip(CircleShape).clickable(onClick = onMoreVideos).padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("More videos", color = Color.White, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                if (peek != null) {
+                    Spacer(Modifier.width(10.dp))
+                    com.sourabh.jarvistube.ui.common.Thumb(
+                        peek,
+                        Modifier.width(56.dp).height(32.dp).clip(com.sourabh.jarvistube.ui.theme.Corners.small)
+                            .border(1.5.dp, Color.White, com.sourabh.jarvistube.ui.theme.Corners.small)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+    IconButton(onClick = onClick) { Icon(icon, label, tint = Color.White, modifier = Modifier.size(24.dp)) }
 }

@@ -1,5 +1,11 @@
 package com.sourabh.jarvistube.ui.player
 
+import kotlinx.coroutines.launch
+
+import androidx.compose.runtime.mutableLongStateOf
+
+import androidx.compose.ui.layout.onSizeChanged
+
 import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Motion
 import com.sourabh.jarvistube.ui.theme.OnVideo
@@ -73,7 +79,8 @@ internal fun VideoBox(
     onToggleFullscreen: () -> Unit,
     onCollapse: () -> Unit,
     onSwipe: (Int) -> Unit,
-    onPlay: (com.sourabh.jarvistube.data.VideoItem) -> Unit = {}
+    onPlay: (com.sourabh.jarvistube.data.VideoItem) -> Unit = {},
+    onComments: (() -> Unit)? = null
 ) {
     val player = Graph.player.player
     var controlsVisible by remember { mutableStateOf(true) }
@@ -114,14 +121,46 @@ internal fun VideoBox(
         adjusting = null
     }
     // Fit / Fill for upright videos, and two-finger zoom for every video. Both reset for a new video.
-    var fill by remember(now.video.url) { mutableStateOf(false) }
     var zoom by remember(now.video.url) { mutableFloatStateOf(MIN_ZOOM) }
     var pan by remember(now.video.url) { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
     var vertical by remember { mutableStateOf(player.videoSize.height > player.videoSize.width) }
+    fun aspectOf(v: androidx.media3.common.VideoSize) =
+        if (v.height > 0) v.width * v.pixelWidthHeightRatio / v.height else 16f / 9f
+    var videoAspect by remember { mutableFloatStateOf(aspectOf(player.videoSize)) }
+    var frame by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    val fillZoom = fillScale(frame.width.toFloat(), frame.height.toFloat(), videoAspect)
+    val maxZoom = maxOf(MAX_ZOOM, fillZoom * 1.6f)
+    /** "Original" / "Zoomed to fill" / "2.4x", shown briefly over the video while pinching. */
+    var zoomLabel by remember { mutableStateOf<String?>(null) }
+    var zoomLabelAt by remember { mutableLongStateOf(0L) }
+    val zoomScope = androidx.compose.runtime.rememberCoroutineScope()
+    fun labelFor(z: Float) = when {
+        kotlin.math.abs(z - 1f) < 0.02f -> "Original"
+        kotlin.math.abs(z - fillZoom) < 0.02f && fillZoom > 1.02f -> "Zoomed to fill"
+        else -> String.format(java.util.Locale.US, "%.1fx", z)
+    }
+    fun showZoomLabel(z: Float) { zoomLabel = labelFor(z); zoomLabelAt = System.currentTimeMillis() }
+    /** Glides the picture to [target]; the pan recentres for Original and Zoomed to fill. */
+    fun settleZoom(target: Float) {
+        val from = zoom
+        val fromPan = pan
+        val centre = kotlin.math.abs(target - 1f) < 0.01f || kotlin.math.abs(target - fillZoom) < 0.01f
+        zoomScope.launch {
+            androidx.compose.animation.core.animate(0f, 1f, animationSpec = androidx.compose.animation.core.tween(220)) { t, _ ->
+                zoom = from + (target - from) * t
+                if (centre) pan = fromPan * (1f - t)
+            }
+        }
+        showZoomLabel(target)
+    }
+    LaunchedEffect(zoomLabelAt) {
+        if (zoomLabel != null) { kotlinx.coroutines.delay(1200); zoomLabel = null }
+    }
     androidx.compose.runtime.DisposableEffect(player) {
         val sizeListener = object : androidx.media3.common.Player.Listener {
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 vertical = videoSize.height > videoSize.width
+                videoAspect = aspectOf(videoSize)
             }
         }
         player.addListener(sizeListener)
@@ -136,6 +175,7 @@ internal fun VideoBox(
         modifier
             .background(Color.Black)
             .clipToBounds() // a zoomed picture stays inside the player
+            .onSizeChanged { frame = it }
             // Tap / double-tap first (outer) ...
             .pointerInput(Unit) {
                 // No onDoubleTap: that makes Compose hold every single tap ~300 ms to rule out a
@@ -216,10 +256,13 @@ internal fun VideoBox(
             .pointerInput(Unit) {
                 detectVideoZoom(
                     onTransform = { z, p ->
-                        zoom = clampZoom(zoom * z)
+                        zoom = clampZoom(zoom * z, maxZoom)
                         pan = clampPan(pan + p, zoom, size.width.toFloat(), size.height.toFloat())
+                        showZoomLabel(zoom)
                     },
-                    onReset = { zoom = MIN_ZOOM; pan = androidx.compose.ui.geometry.Offset.Zero }
+                    onReset = { settleZoom(MIN_ZOOM) },
+                    // Let go: settle on Original, Zoomed to fill, or keep a deeper free zoom.
+                    onEnd = { settleZoom(snapZoom(zoom, fillZoom)) }
                 )
             }
     ) {
@@ -234,8 +277,7 @@ internal fun VideoBox(
             },
             update = {
                 if (it.player !== player) it.player = player
-                it.resizeMode = if (fill && vertical) androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                else androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                it.resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
                 it.scaleX = zoom
                 it.scaleY = zoom
                 it.translationX = pan.x
@@ -324,7 +366,7 @@ internal fun VideoBox(
                 animationSpec = tween(Motion.NORMAL, delayMillis = if (controlsUp) 0 else 320),
                 label = "captionLift"
             )
-            CaptionOverlay(ui.cues, bottomInset = lift, modifier = Modifier.matchParentSize())
+            CaptionOverlay(bottomInset = lift, modifier = Modifier.matchParentSize())
         }
         AnimatedVisibility(
             visible = boosting,
@@ -397,7 +439,8 @@ internal fun VideoBox(
                     onToggleFullscreen = onToggleFullscreen,
                     onCollapse = onCollapse,
                     onBottomHeight = { controlsBottomPx = it },
-                    onMoreVideos = if (moreAllowed) ({ moreOpen = true; controlsVisible = false }) else null
+                    onMoreVideos = if (moreAllowed) ({ moreOpen = true; controlsVisible = false }) else null,
+                    onComments = onComments?.let { open -> { controlsVisible = false; open() } }
                 )
             }
         }
@@ -413,6 +456,22 @@ internal fun VideoBox(
             )
         }
 
+        // The zoom label, as on YouTube (Original, Zoomed to fill).
+        androidx.compose.animation.AnimatedVisibility(
+            visible = zoomLabel != null,
+            enter = androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 56.dp)
+        ) {
+            Text(
+                zoomLabel.orEmpty(),
+                color = Color.White,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                modifier = Modifier.clip(CircleShape).background(OnVideo.scrim).padding(horizontal = 14.dp, vertical = 6.dp)
+            )
+        }
+
         // Fit / Fill for upright videos, and Reset while zoomed. On top, so the controls can't cover it.
         val zoomed = zoom > MIN_ZOOM
         if (showControls && controlsVisible && (vertical || zoomed)) {
@@ -420,8 +479,9 @@ internal fun VideoBox(
                 Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
             ) {
-                if (vertical) VideoPill(if (fill) "Fit" else "Fill") { fill = !fill }
-                if (zoomed) VideoPill("Reset zoom") { zoom = MIN_ZOOM; pan = androidx.compose.ui.geometry.Offset.Zero }
+                val filled = fillZoom > 1.02f && zoom >= fillZoom - 0.02f
+                if (vertical) VideoPill(if (filled) "Fit" else "Fill") { settleZoom(if (filled) MIN_ZOOM else fillZoom) }
+                if (zoomed && !(vertical && filled)) VideoPill("Original") { settleZoom(MIN_ZOOM) }
             }
         }
     }

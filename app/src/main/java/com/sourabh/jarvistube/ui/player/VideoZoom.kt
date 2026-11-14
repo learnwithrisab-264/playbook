@@ -11,8 +11,26 @@ import kotlin.math.abs
 const val MIN_ZOOM = 1f
 const val MAX_ZOOM = 3f
 
-/** Zoom limited to 1x..3x. */
-fun clampZoom(zoom: Float): Float = zoom.coerceIn(MIN_ZOOM, MAX_ZOOM)
+/** Zoom limited to 1x..[max] (3x by default; more when filling the screen needs it). */
+fun clampZoom(zoom: Float, max: Float = MAX_ZOOM): Float = zoom.coerceIn(MIN_ZOOM, max)
+
+/**
+ * How much a fitted video must grow to fill the whole frame (crop the black bars): 1 when the
+ * shapes already match. [videoAspect] is width / height.
+ */
+fun fillScale(frameW: Float, frameH: Float, videoAspect: Float): Float {
+    if (frameW <= 0f || frameH <= 0f || videoAspect <= 0f) return 1f
+    val frameAspect = frameW / frameH
+    return if (videoAspect > frameAspect) videoAspect / frameAspect else frameAspect / videoAspect
+}
+
+/** Where a pinch settles, like YouTube: Original (1x), Zoomed to fill, or a free zoom beyond fill. */
+fun snapZoom(zoom: Float, fill: Float): Float = when {
+    fill <= 1.02f -> if (zoom < 1.1f) 1f else zoom
+    zoom <= 1f + (fill - 1f) / 2f -> 1f
+    zoom <= fill * 1.15f -> fill
+    else -> zoom
+}
 
 /** Keeps the zoomed picture covering the frame: you can't pan past its edges. */
 fun clampPan(pan: Offset, zoom: Float, width: Float, height: Float): Offset {
@@ -26,7 +44,11 @@ fun clampPan(pan: Offset, zoom: Float, width: Float, height: Float): Offset {
  * two-finger double tap to reset. Events with only one finger are left alone, so taps, double-tap
  * seek and the swipes keep working. Two-finger events are consumed so they don't seek or swipe.
  */
-suspend fun PointerInputScope.detectVideoZoom(onTransform: (zoom: Float, pan: Offset) -> Unit, onReset: () -> Unit) {
+suspend fun PointerInputScope.detectVideoZoom(
+    onTransform: (zoom: Float, pan: Offset) -> Unit,
+    onReset: () -> Unit,
+    onEnd: () -> Unit = {}
+) {
     var lastTwoFingerTap = 0L
     awaitEachGesture {
         awaitFirstDown(requireUnconsumed = false)
@@ -50,6 +72,7 @@ suspend fun PointerInputScope.detectVideoZoom(onTransform: (zoom: Float, pan: Of
             if (twoFingers) event.changes.forEach { it.consume() }
             endedAt = event.changes.first().uptimeMillis
         } while (event.changes.any { it.pressed })
+        if (twoFingers && moved) onEnd()
         if (twoFingers && !moved && endedAt - startedAt < 300) {
             if (endedAt - lastTwoFingerTap < 450) {
                 onReset()

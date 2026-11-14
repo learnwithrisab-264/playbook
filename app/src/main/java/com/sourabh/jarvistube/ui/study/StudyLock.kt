@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalIconButton
@@ -81,8 +82,8 @@ fun StudyLockButton(now: NowPlaying) {
             Text(formatLeft(left), color = Color.White, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
         }
     }
-    // ⋮ opens the YouTube-style settings sheet (PlayerMoreSheetHost), also during a lock.
-    IconButton(onClick = { PlayerPopups.moreSheet = true }) { Icon(Icons.Rounded.MoreVert, "More", tint = Color.White) }
+    // The gear opens the YouTube-style settings sheet (PlayerMoreSheetHost), also during a lock.
+    IconButton(onClick = { PlayerPopups.moreSheet = true }) { Icon(Icons.Rounded.Settings, "Player settings", tint = Color.White) }
 }
 
 /**
@@ -95,7 +96,8 @@ object PlayerPopups {
     var ccMenu by mutableStateOf(false)
     var qualityMenu by mutableStateOf(false)
     var moreSheet by mutableStateOf(false)
-    val anyOpen: Boolean get() = lockMenu || lockPicker || ccMenu || qualityMenu || moreSheet
+    var speedMenu by mutableStateOf(false)
+    val anyOpen: Boolean get() = lockMenu || lockPicker || ccMenu || qualityMenu || moreSheet || speedMenu
 }
 
 /** Always composed by the player screen; shows the duration picker when requested. */
