@@ -8,6 +8,8 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -34,7 +36,16 @@ private val Night = darkColorScheme(
     error = Color(0xFFFF6B6B),
     surfaceContainer = Color(0xFF1A1A1A),
     surfaceContainerHigh = Color(0xFF212121),
-    surfaceContainerHighest = Color(0xFF2C2C2C)
+    surfaceContainerHighest = Color(0xFF2C2C2C),
+    surfaceContainerLow = Color(0xFF161616),
+    surfaceContainerLowest = Color(0xFF0B0B0B),
+    surfaceBright = Color(0xFF2C2C2C),
+    surfaceDim = Color(0xFF0F0F0F),
+    surfaceTint = Color(0xFF0F0F0F),
+    secondaryContainer = Color(0xFF272727),
+    onSecondaryContainer = Color(0xFFF1F1F1),
+    tertiaryContainer = Color(0xFF272727),
+    onTertiaryContainer = Color(0xFFF1F1F1)
 )
 
 private val Day = lightColorScheme(
@@ -54,7 +65,16 @@ private val Day = lightColorScheme(
     error = Color(0xFFD63B3B),
     surfaceContainer = Color(0xFFF7F7F7),
     surfaceContainerHigh = Color(0xFFF2F2F2),
-    surfaceContainerHighest = Color(0xFFEBEBEB)
+    surfaceContainerHighest = Color(0xFFEBEBEB),
+    surfaceContainerLow = Color(0xFFFAFAFA),
+    surfaceContainerLowest = Color.White,
+    surfaceBright = Color.White,
+    surfaceDim = Color(0xFFE6E6E6),
+    surfaceTint = Color.White,
+    secondaryContainer = Color(0xFFF2F2F2),
+    onSecondaryContainer = Color(0xFF0F0F0F),
+    tertiaryContainer = Color(0xFFF2F2F2),
+    onTertiaryContainer = Color(0xFF0F0F0F)
 )
 
 private val AppTypography = Typography(
@@ -139,11 +159,14 @@ fun JarvisTubeTheme(dark: Boolean = appIsDark(), content: @Composable () -> Unit
     @Suppress("NAME_SHADOWING") val dark = dark && !theme.lightOnly
     // Status and navigation bars: dark bars get light icons, light bars get dark icons.
     val view = androidx.compose.ui.platform.LocalView.current
+    // Read here (not inside SideEffect) so opening or closing the player recomposes this.
+    val overVideo = SystemBars.overVideo
     if (!view.isInEditMode) {
         androidx.compose.runtime.SideEffect {
             val window = (view.context as? android.app.Activity)?.window ?: return@SideEffect
             androidx.core.view.WindowCompat.getInsetsController(window, view).apply {
-                isAppearanceLightStatusBars = !dark
+                // Over the full player the status bar sits on black, so its icons stay white.
+                isAppearanceLightStatusBars = !dark && !overVideo
                 isAppearanceLightNavigationBars = !dark
             }
         }
@@ -167,6 +190,15 @@ private fun animateScheme(t: androidx.compose.material3.ColorScheme): androidx.c
         surface = a(t.surface), onSurface = a(t.onSurface), surfaceVariant = a(t.surfaceVariant),
         onSurfaceVariant = a(t.onSurfaceVariant), outline = a(t.outline), outlineVariant = a(t.outlineVariant),
         surfaceContainer = a(t.surfaceContainer), surfaceContainerHigh = a(t.surfaceContainerHigh),
-        surfaceContainerHighest = a(t.surfaceContainerHighest)
+        surfaceContainerHighest = a(t.surfaceContainerHighest), surfaceContainerLow = a(t.surfaceContainerLow),
+        surfaceContainerLowest = a(t.surfaceContainerLowest), surfaceBright = a(t.surfaceBright),
+        surfaceDim = a(t.surfaceDim), surfaceTint = a(t.surfaceTint),
+        secondaryContainer = a(t.secondaryContainer), onSecondaryContainer = a(t.onSecondaryContainer)
     )
+}
+
+
+/** Lets a screen that draws black under the status bar (the full player) ask for white icons. */
+object SystemBars {
+    var overVideo by androidx.compose.runtime.mutableStateOf(false)
 }

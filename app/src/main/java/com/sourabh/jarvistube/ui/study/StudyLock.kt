@@ -97,6 +97,8 @@ object PlayerPopups {
     var qualityMenu by mutableStateOf(false)
     var moreSheet by mutableStateOf(false)
     var speedMenu by mutableStateOf(false)
+    /** "Lock screen": the video ignores touches until held to unlock (TouchLockOverlay). */
+    var touchLock by mutableStateOf(false)
     val anyOpen: Boolean get() = lockMenu || lockPicker || ccMenu || qualityMenu || moreSheet || speedMenu
 }
 

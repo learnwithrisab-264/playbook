@@ -126,6 +126,11 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
         onDispose { activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
     }
 
+    // The status bar sits on black above the video: keep its icons white in every theme.
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        com.sourabh.jarvistube.ui.theme.SystemBars.overVideo = true
+        onDispose { com.sourabh.jarvistube.ui.theme.SystemBars.overVideo = false }
+    }
     // YouTube's pull-to-minimise: the player follows the finger down and shrinks; let go past the
     // threshold and it drops into the mini player, otherwise it springs back.
     val pull = remember { androidx.compose.animation.core.Animatable(0f) }

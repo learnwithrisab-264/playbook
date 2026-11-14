@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -96,6 +97,10 @@ fun PlayerMoreSheetHost(now: NowPlaying, ui: PlayerUi) {
                         ) { page = "captions" }
                     }
                     SheetRow(Icons.Rounded.Speed, "Playback speed", speedLabel(ui.speed)) { page = "speed" }
+                    SheetRow(Icons.Rounded.TouchApp, "Lock screen", "Off") {
+                        close()
+                        PlayerPopups.touchLock = true
+                    }
                     if (now.audioTracks.size > 1) {
                         SheetRow(
                             Icons.Rounded.Language, "Audio track",

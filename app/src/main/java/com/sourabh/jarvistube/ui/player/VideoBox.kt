@@ -268,6 +268,7 @@ internal fun VideoBox(
             .pointerInput(Unit) {
                 detectVideoZoom(
                     onTransform = { z, p ->
+                        if (PlayerPopups.touchLock) return@detectVideoZoom
                         zoom = clampZoom(zoom * z, maxZoom)
                         pan = clampPan(pan + p, zoom, size.width.toFloat(), size.height.toFloat())
                         showZoomLabel(zoom)
@@ -439,7 +440,7 @@ internal fun VideoBox(
 
         if (showControls) {
             AnimatedVisibility(
-                visible = controlsVisible,
+                visible = controlsVisible && !PlayerPopups.touchLock,
                 enter = fadeIn(), exit = fadeOut(),
                 modifier = Modifier.matchParentSize()
             ) {
@@ -473,6 +474,9 @@ internal fun VideoBox(
                 onClose = { moreOpen = false }
             )
         }
+
+        // Lock screen: on top of everything else on the video.
+        if (showControls) TouchLockOverlay(Modifier.matchParentSize())
 
         // The zoom label, as on YouTube (Original, Zoomed to fill).
         androidx.compose.animation.AnimatedVisibility(

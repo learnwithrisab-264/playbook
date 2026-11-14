@@ -85,7 +85,16 @@ fun EpicTheme.scheme(dark: Boolean, agniNight: ColorScheme, agniDay: ColorScheme
         error = Color(0xFFFF6B6B),
         surfaceContainer = lerp(night, raised, 0.45f),
         surfaceContainerHigh = lerp(night, raised, 0.75f),
-        surfaceContainerHighest = lerp(raised, Color.White, 0.05f)
+        surfaceContainerHighest = lerp(raised, Color.White, 0.05f),
+        surfaceContainerLow = lerp(night, raised, 0.3f),
+        surfaceContainerLowest = night,
+        surfaceBright = lerp(raised, Color.White, 0.05f),
+        surfaceDim = night,
+        surfaceTint = night,
+        secondaryContainer = raised,
+        onSecondaryContainer = Color(0xFFF1EFEA),
+        tertiaryContainer = raised,
+        onTertiaryContainer = Color(0xFFF1EFEA)
     ) else {
         // Light: a paper tinted by the theme, and a deeper accent so white text on it stays readable.
         val accent = if (lightOnly) primary else lerp(primary, Color.Black, 0.28f)
@@ -110,7 +119,16 @@ fun EpicTheme.scheme(dark: Boolean, agniNight: ColorScheme, agniDay: ColorScheme
             error = Color(0xFFD63B3B),
             surfaceContainer = lerp(paper, card, 0.5f),
             surfaceContainerHigh = card,
-            surfaceContainerHighest = lerp(card, Color.Black, 0.04f)
+            surfaceContainerHighest = lerp(card, Color.Black, 0.04f),
+            surfaceContainerLow = lerp(paper, card, 0.3f),
+            surfaceContainerLowest = paper,
+            surfaceBright = paper,
+            surfaceDim = card,
+            surfaceTint = paper,
+            secondaryContainer = card,
+            onSecondaryContainer = Color(0xFF14110C),
+            tertiaryContainer = card,
+            onTertiaryContainer = Color(0xFF14110C)
         )
     }
 }
