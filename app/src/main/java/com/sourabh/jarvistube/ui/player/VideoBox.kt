@@ -235,7 +235,11 @@ internal fun VideoBox(
                     },
                     onDragEnd = {
                         if (!ignore && zone == SwipeZone.Exit) {
-                            if (total < -upThreshold) currentOnSwipe(-1) else if (total > downThreshold) currentOnSwipe(1)
+                            if (total < -upThreshold) {
+                                if (fullscreen && moreAllowed) { moreOpen = true; controlsVisible = false } else currentOnSwipe(-1)
+                            } else if (total > downThreshold) {
+                                if (moreOpen) moreOpen = false else currentOnSwipe(1)
+                            }
                         }
                         total = 0f
                         adjustDone++
@@ -446,13 +450,19 @@ internal fun VideoBox(
         }
 
         // More videos (fullscreen only; never during a study session or lock).
-        if (moreOpen && moreAllowed) {
-            androidx.activity.compose.BackHandler { moreOpen = false }
+        if (moreOpen && moreAllowed) androidx.activity.compose.BackHandler { moreOpen = false }
+        androidx.compose.animation.AnimatedVisibility(
+            visible = moreOpen && moreAllowed,
+            enter = androidx.compose.animation.slideInVertically(androidx.compose.animation.core.tween(260)) { it } +
+                androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200)),
+            exit = androidx.compose.animation.slideOutVertically(androidx.compose.animation.core.tween(220)) { it } +
+                androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(180)),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
             MoreVideosPanel(
                 now,
                 onPlay = { moreOpen = false; onPlay(it) },
-                onClose = { moreOpen = false },
-                modifier = Modifier.align(Alignment.BottomCenter)
+                onClose = { moreOpen = false }
             )
         }
 

@@ -399,6 +399,9 @@ class PlayerController(val app: Context, http: OkHttpClient) {
 
     private fun forgetPosition(url: String) { resume.edit().remove(resumeKey(url)).remove(url).apply() }
 
+    /** Where you left [url] (0 when unwatched or finished): for progress bars and "Resume at". */
+    fun resumePositionMs(url: String): Long = savedPosition(url)
+
     private fun savedPosition(url: String): Long =
         (resume.getLong(resumeKey(url), 0L).takeIf { it > 0 } ?: resume.getLong(url, 0L)).takeIf { it > 10_000 } ?: 0L
 

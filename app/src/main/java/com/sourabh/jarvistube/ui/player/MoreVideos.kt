@@ -1,5 +1,11 @@
 package com.sourabh.jarvistube.ui.player
 
+import androidx.compose.foundation.gestures.detectTapGestures
+
+import androidx.compose.runtime.LaunchedEffect
+
+import androidx.compose.runtime.mutableIntStateOf
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -74,12 +80,24 @@ internal fun relatedVideos(now: NowPlaying): List<VideoItem> =
  */
 @Composable
 internal fun MoreVideosPanel(now: NowPlaying, onPlay: (VideoItem) -> Unit, onClose: () -> Unit, modifier: Modifier = Modifier) {
-    var watched by remember { mutableStateOf(false) }
-    val list = if (watched) {
-        WatchHistory.items.asSequence().map { it.video }
+    /** 0 = All (related), 1 = From this channel, 2 = Watched. */
+    var tab by remember { mutableIntStateOf(0) }
+    val channelUrl = now.info?.uploaderUrl?.takeIf { it.isNotBlank() } ?: now.video.channelUrl
+    val channelName = now.info?.uploaderName ?: now.video.channel
+    var fromChannel by remember(channelUrl) { mutableStateOf<List<VideoItem>?>(null) }
+    LaunchedEffect(tab, channelUrl) {
+        if (tab == 1 && fromChannel == null && channelUrl != null) {
+            fromChannel = runCatching { com.sourabh.jarvistube.data.ChannelVideos(channelUrl).load() }.getOrDefault(emptyList())
+                .filter { it.url != now.video.url && !it.isShort && !ContentFilter.hides(it) }
+        }
+    }
+    val list = when (tab) {
+        2 -> WatchHistory.items.asSequence().map { it.video }
             .filter { it.url != now.video.url && !it.isShort && !ContentFilter.hides(it) }
             .take(50).toList()
-    } else remember(now.info) { relatedVideos(now) }
+        1 -> fromChannel.orEmpty()
+        else -> remember(now.info) { relatedVideos(now) }
+    }
 
     Column(
         modifier.fillMaxWidth()
@@ -96,13 +114,20 @@ internal fun MoreVideosPanel(now: NowPlaying, onPlay: (VideoItem) -> Unit, onClo
             IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, "Close more videos", tint = Color.White) }
         }
         Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StripChip("All", !watched) { watched = false }
-            StripChip("Watched", watched) { watched = true }
+            StripChip("All", tab == 0) { tab = 0 }
+            if (channelUrl != null) StripChip(channelName.ifBlank { "This channel" }, tab == 1) { tab = 1 }
+            StripChip("Watched", tab == 2) { tab = 2 }
         }
         Spacer(Modifier.height(10.dp))
         if (list.isEmpty()) {
             Text(
-                if (watched) "Nothing watched yet." else if (now.info == null) "Loading…" else "No related videos.",
+                when {
+                    tab == 2 -> "Nothing watched yet."
+                    tab == 1 && fromChannel == null -> "Loading this channel's videos…"
+                    tab == 1 -> "No other videos from this channel."
+                    now.info == null -> "Loading…"
+                    else -> "No related videos."
+                },
                 color = Color.White.copy(alpha = 0.7f),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
@@ -132,9 +157,27 @@ private fun StripChip(label: String, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun StripCard(v: VideoItem, onClick: () -> Unit) {
-    Column(Modifier.width(220.dp).clip(Corners.small).clickable(onClick = onClick)) {
+    // Start fetching the moment a finger lands, so the video is ready by the time it lifts.
+    val resume = remember(v.url) { com.sourabh.jarvistube.Graph.player.resumePositionMs(v.url) }
+    Column(
+        Modifier.width(220.dp).clip(Corners.small).pointerInput(v.url) {
+            detectTapGestures(
+                onPress = { com.sourabh.jarvistube.data.Repo.prefetch(v.url); tryAwaitRelease() },
+                onTap = { onClick() }
+            )
+        }
+    ) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(Corners.small)) {
             Thumb(v.thumb, Modifier.matchParentSize())
+            // How much of it you've already watched, as YouTube's red line.
+            if (resume > 0 && v.durationSec > 0) {
+                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.35f)))
+                Box(
+                    Modifier.align(Alignment.BottomStart).height(3.dp)
+                        .fillMaxWidth((resume / 1000f / v.durationSec).coerceIn(0.02f, 1f))
+                        .background(com.sourabh.jarvistube.ui.theme.Brand.live)
+                )
+            }
             val badge = if (v.isLive) "LIVE" else formatDuration(v.durationSec)
             if (badge.isNotEmpty()) {
                 Text(
@@ -154,6 +197,12 @@ private fun StripCard(v: VideoItem, onClick: () -> Unit) {
                     v.views.takeIf { it > 0 }?.let { "${compact(it)} views" },
                     prettyDate(v.uploaded)
                 ).joinToString(" · ")
+                if (resume > 0) {
+                    Text(
+                        "Resume at " + com.sourabh.jarvistube.ui.common.formatClock(resume),
+                        color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, maxLines = 1
+                    )
+                }
                 if (meta.isNotEmpty()) {
                     Text(meta, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
