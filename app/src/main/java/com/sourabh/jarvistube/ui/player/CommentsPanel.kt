@@ -292,8 +292,23 @@ private fun CommentRow(c: Comment, links: LinkActions, channelAvatar: String?, r
                 c.time?.let { Text("  ·  $it", style = MaterialTheme.typography.labelMedium, color = muted, maxLines = 1) }
             }
             Spacer(Modifier.height(4.dp))
+            // Translate to English, as YouTube offers "Translate to Hindi": the English shows in
+            // place of the original, with "See original" to switch back.
+            val plain = remember(c.text, c.html) {
+                if (c.html) androidx.core.text.HtmlCompat.fromHtml(c.text, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY).toString() else c.text
+            }
+            val foreign = remember(plain) { com.sourabh.jarvistube.data.Translate.looksNonEnglish(plain) }
+            val translated = com.sourabh.jarvistube.data.Translate.done[plain]
+            var showEnglish by remember(c.id) { mutableStateOf(false) }
+            LaunchedEffect(translated) { if (translated != null && showEnglish) expanded = true }
             // Long comments fold to six lines, with Read more, as on YouTube.
-            LinkedText(
+            if (showEnglish && translated != null) {
+                LinkedText(
+                    translated, html = false,
+                    onUrl = links.onUrl, onSeek = links.onSeek,
+                    maxLines = if (expanded) Int.MAX_VALUE else 6
+                )
+            } else LinkedText(
                 c.text, html = c.html, links = c.links,
                 onUrl = links.onUrl, onSeek = links.onSeek,
                 maxLines = if (expanded) Int.MAX_VALUE else 6,
@@ -307,6 +322,27 @@ private fun CommentRow(c: Comment, links: LinkActions, channelAvatar: String?, r
                     fontWeight = FontWeight.SemiBold,
                     color = muted,
                     modifier = Modifier.padding(top = 4.dp).clickable { expanded = !expanded }
+                )
+            }
+            if (foreign) {
+                val busy = com.sourabh.jarvistube.data.Translate.busy[plain] == true
+                val failedNow = com.sourabh.jarvistube.data.Translate.failed[plain] == true
+                Text(
+                    when {
+                        busy -> "Translating…"
+                        failedNow -> "Couldn't translate · Try again"
+                        showEnglish && translated != null -> "See original (Translated by Google)"
+                        else -> "Translate to English"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = muted,
+                    modifier = Modifier.padding(top = 8.dp).clip(CircleShape).clickable(enabled = !busy) {
+                        if (showEnglish && translated != null) showEnglish = false
+                        else {
+                            showEnglish = true
+                            com.sourabh.jarvistube.data.Translate.toEnglish(plain)
+                        }
+                    }.padding(vertical = 2.dp)
                 )
             }
             Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
