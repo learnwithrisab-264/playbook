@@ -45,7 +45,7 @@ fun StudyScreen(vm: TubeViewModel, lib: LibraryViewModel, bottomPadding: Dp) {
             confirmButton = { TextButton(onClick = { study.justCompleted = 0 }) { Text(stringResource(R.string.done)) } }
         )
     }
-    if (study.active) ActiveSession(vm, bottomPadding) else SetupSession(lib, bottomPadding)
+    if (study.active) ActiveSession(vm, bottomPadding) else SetupSession(lib, bottomPadding, onPlay = vm::play)
 }
 
 // ---------------------------------------------------------------- setup

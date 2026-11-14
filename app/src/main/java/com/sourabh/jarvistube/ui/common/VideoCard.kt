@@ -1,5 +1,9 @@
 package com.sourabh.jarvistube.ui.common
 
+import androidx.compose.material.icons.rounded.DateRange
+
+import androidx.compose.material.icons.rounded.Today
+
 import com.sourabh.jarvistube.R
 import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Brand
@@ -136,6 +140,16 @@ fun VideoCard(
                         text = { Text(stringResource(R.string.play_next)) },
                         leadingIcon = { Icon(Icons.Rounded.SkipNext, null) },
                         onClick = { menu = false; Graph.player.playNextUp(video); toast("Plays next") }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Add to Today's plan") },
+                        leadingIcon = { Icon(Icons.Rounded.Today, null) },
+                        onClick = { menu = false; com.sourabh.jarvistube.data.StudyPlan.add(video, today = true); toast("Added to today's plan") }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Add to this week") },
+                        leadingIcon = { Icon(Icons.Rounded.DateRange, null) },
+                        onClick = { menu = false; com.sourabh.jarvistube.data.StudyPlan.add(video, today = false); toast("Added to this week's plan") }
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.add_to_queue)) },

@@ -189,6 +189,7 @@ class PlayerController(val app: Context, http: OkHttpClient) {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED) {
                     preparedUrl?.let(::forgetPosition)
+                    preparedUrl?.let(com.sourabh.jarvistube.data.StudyPlan::markWatched)
                     // Ended within moments of resuming = a stale resume point at the very end:
                     // start the video from the beginning instead of skipping to the next one.
                     if (resumedFrom > 0 && android.os.SystemClock.elapsedRealtime() - preparedAt < 5_000) {
@@ -391,7 +392,10 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         val dur = player.duration
         val nearEnd = dur != C.TIME_UNSET && dur > 0 && pos > dur - 10_000
         if (pos > 10_000 && !nearEnd) resume.edit().putLong(resumeKey(url), pos).apply()
-        else if (nearEnd) forgetPosition(url)
+        else if (nearEnd) {
+            forgetPosition(url)
+            com.sourabh.jarvistube.data.StudyPlan.markWatched(url)
+        }
     }
 
     // Each account has its own place in a video. A position saved before this existed has no account.

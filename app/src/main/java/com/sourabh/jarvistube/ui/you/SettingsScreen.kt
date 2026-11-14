@@ -1,5 +1,13 @@
 package com.sourabh.jarvistube.ui.you
 
+import androidx.compose.material.icons.rounded.FormatColorFill
+
+import androidx.compose.material.icons.rounded.Tune
+
+import androidx.compose.material.icons.rounded.Fullscreen
+
+import androidx.compose.material.icons.rounded.Apps
+
 import com.sourabh.jarvistube.R
 import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Corners
@@ -94,235 +102,205 @@ fun SettingsScreen(
     ) {
         item { SubPageHeader("Settings", onBack) }
 
-        item { SectionHeader("Look & feel") }
-        // Themes from the Ramayana and the Mahabharata, each with its meaning.
-        item { ThemeGallery() }
-        item {
-            SettingRow(
-                Icons.Rounded.DarkMode, "Appearance",
-                if (com.sourabh.jarvistube.ui.theme.EpicTheme.of(AppSettings.themeKey).lightOnly) "Ayodhya is always light"
-                else AppSettings.appearanceName,
-                onClick = { appearanceDialog = true }
-            )
-        }
-        item {
-            val m = com.sourabh.jarvistube.ui.theme.MotionStyle.of(AppSettings.motionStyle)
-            SettingRow(
-                Icons.Rounded.AutoAwesome, "Animation style", "${m.title}: ${m.meaning}",
-                onClick = { motionDialog = true }
-            )
-        }
-        item {
-            SettingRow(
-                Icons.Rounded.Vibration, "Haptic touches",
-                "A light tap under your finger when you choose something.",
-                onClick = { AppSettings.updateHaptics(!AppSettings.haptics) }
-            ) { Switch(checked = AppSettings.haptics, onCheckedChange = { AppSettings.updateHaptics(it) }) }
-        }
-        item {
-            SettingRow(
-                Icons.Rounded.WbTwilight, "Ambient mode",
-                "The video's colours glow softly behind the player.",
-                onClick = { AppSettings.updateAmbient(!AppSettings.ambient) }
-            ) { Switch(checked = AppSettings.ambient, onCheckedChange = { AppSettings.updateAmbient(it) }) }
-        }
-
-        item { SectionHeader("Content") }
-        item {
-            SettingRow(
-                Icons.Rounded.Public, "Region", AppSettings.regionName,
-                onClick = { regionDialog = true }
-            )
-        }
-        item {
-            SettingRow(
-                Icons.Rounded.Explore, "Show Recommended tab",
-                "Your YouTube home feed, or Trending when signed out. Hidden during study sessions and locks.",
-                onClick = { AppSettings.updateShowRecommended(!AppSettings.showRecommended) }
-            ) {
-                Switch(
-                    checked = AppSettings.showRecommended,
-                    onCheckedChange = { AppSettings.updateShowRecommended(it) }
-                )
-            }
-        }
-        item {
-            SettingRow(
-                Icons.Rounded.PlayCircle, "Show Shorts tab",
-                "The Shorts tab in the bottom bar. Shorts in search results still show.",
-                onClick = { AppSettings.updateShowShorts(!AppSettings.showShorts) }
-            ) {
-                Switch(
-                    checked = AppSettings.showShorts,
-                    onCheckedChange = { AppSettings.updateShowShorts(it) }
-                )
-            }
-        }
-
-        item {
-            // During a session or any study lock the tab has to stay, so the switch is greyed out.
-            val required = AppSettings.studyTabRequired
-            SettingRow(
-                Icons.Rounded.School, "Show Study tab",
-                if (required) "Stays on while a study session or lock is running."
-                else "The Study tab in the bottom bar. Sessions and locks still work when it is hidden.",
-                onClick = { if (!required) AppSettings.updateShowStudy(!AppSettings.showStudy) }
-            ) {
-                Switch(
-                    checked = AppSettings.studyTabShown,
-                    enabled = !required,
-                    onCheckedChange = { AppSettings.updateShowStudy(it) }
-                )
-            }
-        }
-
-        item { SectionHeader("Playback") }
-        item {
-            SettingRow(
-                Icons.Rounded.HighQuality, "Default quality", AppSettings.qualityLabel(AppSettings.defaultQuality),
-                onClick = { qualityDialog = true }
-            )
-        }
-        item {
-            SettingRow(
-                Icons.Rounded.SkipNext, "Skip sponsors (SponsorBlock)",
-                "Jumps over sponsor reads, intros and reminders",
-                onClick = { Graph.player.updateSponsorBlock(!Graph.player.sponsorBlock) }
-            ) {
-                Switch(
-                    checked = Graph.player.sponsorBlock,
-                    onCheckedChange = { Graph.player.updateSponsorBlock(it) }
-                )
-            }
-        }
-        if (Graph.player.sponsorBlock) item {
-            SettingRow(
-                Icons.Rounded.SkipNext, "What to skip",
-                "${Graph.player.skipCategories.size} of ${com.sourabh.jarvistube.data.SPONSOR_CATEGORIES.size} kinds. All are marked on the seek bar.",
-                onClick = { sponsorDialog = true }
-            )
-        }
-
-        item { SectionHeader("Playback speed") }
-        item {
-            SettingRow(
-                Icons.Rounded.Speed, "Speeds in the speed menu",
-                AppSettings.speeds.joinToString(", ") { AppSettings.speedText(it) },
-                onClick = { speedDialog = true }
-            )
-        }
-
-        item { SectionHeader("Captions") }
-        item {
-            // Live preview on a video-like background; changes below show here and on the video at once.
-            androidx.compose.foundation.layout.Box(
-                Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)
-                    .clip(Corners.medium)
-                    .background(androidx.compose.ui.graphics.Color(0xFF2A2F3A))
-                    .heightIn(min = 96.dp),
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                CaptionText(
-                    "Captions will look like this",
-                    fontSizeSp = 15f * AppSettings.captionScale,
-                    modifier = Modifier.padding(bottom = 12.dp, start = 12.dp, end = 12.dp)
-                )
-            }
-        }
-        item {
-            SettingRow(
-                Icons.Rounded.FontDownload, "Font",
-                AppSettings.captionFonts.firstOrNull { it.first == AppSettings.captionFont }?.second ?: "Default",
-                onClick = { captionDialog = "font" }
-            )
-        }
-        item {
-            SettingRow(
-                Icons.Rounded.FormatSize, "Size",
-                AppSettings.captionSizes.firstOrNull { it.first == AppSettings.captionScale }?.second ?: "Normal",
-                onClick = { captionDialog = "size" }
-            )
-        }
-        item {
-            SettingRow(
-                Icons.Rounded.Palette, "Colour",
-                AppSettings.captionColors.firstOrNull { it.first == AppSettings.captionColor }?.second ?: "White",
-                onClick = { captionDialog = "color" }
-            )
-        }
-
-        item { SectionHeader("Privacy") }
-        item {
-            SettingRow(
-                Icons.Rounded.History, "Clear search history", "${vm.recents.size} saved searches",
-                onClick = {
-                    vm.clearRecents()
-                    Toast.makeText(context, "Search history cleared", Toast.LENGTH_SHORT).show()
-                }
-            )
-        }
-
+        // ---- Account: who you are, first.
         item { SectionHeader("Account") }
-        // Every Google account added to PlayBook (photo, name, email). Tap one to switch to it;
-        // ✕ signs out of / removes just that account.
-        items(lib.accounts, key = { it.id }) { a ->
-            val current = a.id == lib.account?.id
-            androidx.compose.foundation.layout.Row(
-                Modifier.fillMaxWidth()
-                    .clickable(enabled = !current) {
-                        lib.switchAccount(a.id)
-                        Toast.makeText(context, "Switched to ${a.name ?: a.email ?: "account"}", Toast.LENGTH_SHORT).show()
+        item {
+            SettingsGroup {
+                // Every Google account added to PlayBook. Tap one to switch; ✕ signs out of just that one.
+                lib.accounts.forEach { a ->
+                    val current = a.id == lib.account?.id
+                    androidx.compose.foundation.layout.Row(
+                        Modifier.fillMaxWidth()
+                            .clickable(enabled = !current) {
+                                lib.switchAccount(a.id)
+                                Toast.makeText(context, "Switched to ${a.name ?: a.email ?: "account"}", Toast.LENGTH_SHORT).show()
+                            }
+                            .padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Avatar(a.name ?: a.email ?: "?", 40, a.photo)
+                        Spacer(Modifier.size(16.dp))
+                        androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+                            Text(a.name ?: "Google account", style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                            Text(
+                                a.email ?: "Loading email…",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                        if (current) {
+                            Text(stringResource(R.string.using), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        }
+                        androidx.compose.material3.IconButton(onClick = { removeTarget = a }) {
+                            Icon(Icons.Rounded.Close, "Sign out of ${a.email ?: a.name ?: "this account"}", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
-                    .padding(start = 24.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Avatar(a.name ?: a.email ?: "?", 40, a.photo)
-                Spacer(Modifier.size(16.dp))
-                androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
-                    Text(a.name ?: "Google account", style = MaterialTheme.typography.bodyLarge, maxLines = 1)
-                    Text(
-                        a.email ?: "Loading email…",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
+                }
+                if (lib.signedIn) {
+                    SettingRow(
+                        Icons.Rounded.PersonAdd, "Add another account",
+                        "Switch between Google accounts any time.",
+                        onClick = { lib.prepareAddAccount(); onSignIn() }
+                    )
+                } else {
+                    SettingRow(
+                        Icons.Rounded.AccountCircle, "Sign in with Google",
+                        "Your subscriptions, history and playlists",
+                        onClick = onSignIn
                     )
                 }
-                if (current) {
-                    Text(stringResource(R.string.using), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                }
-                androidx.compose.material3.IconButton(onClick = { removeTarget = a }) {
-                    Icon(Icons.Rounded.Close, "Sign out of ${a.email ?: a.name ?: "this account"}", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
             }
         }
+
+        // ---- Look & feel: themes from the Ramayana and the Mahabharata, each with its meaning.
+        item { SectionHeader("Look & feel") }
+        item { ThemeGallery() }
         item {
-            if (lib.signedIn) {
+            SettingsGroup {
                 SettingRow(
-                    Icons.Rounded.PersonAdd, "Add another account",
-                    "Sign in with a different Google account. You can switch any time.",
-                    onClick = { lib.prepareAddAccount(); onSignIn() }
+                    Icons.Rounded.DarkMode, "Appearance",
+                    if (com.sourabh.jarvistube.ui.theme.EpicTheme.of(AppSettings.themeKey).lightOnly) "Ayodhya is always light"
+                    else AppSettings.appearanceName,
+                    onClick = { appearanceDialog = true }
                 )
-            } else {
+                val m = com.sourabh.jarvistube.ui.theme.MotionStyle.of(AppSettings.motionStyle)
+                SettingRow(Icons.Rounded.AutoAwesome, "Animation style", "${m.title}: ${m.meaning}", onClick = { motionDialog = true })
                 SettingRow(
-                    Icons.Rounded.AccountCircle, "Sign in with Google",
-                    "See your subscriptions, history and playlists",
-                    onClick = onSignIn
+                    Icons.Rounded.Apps, "App icon follows theme",
+                    "The home-screen icon takes the theme's colours (applies when you leave the app).",
+                    onClick = { AppSettings.updateIconFollowsTheme(!AppSettings.iconFollowsTheme) }
+                ) { Switch(checked = AppSettings.iconFollowsTheme, onCheckedChange = { AppSettings.updateIconFollowsTheme(it) }) }
+                SettingRow(
+                    Icons.Rounded.Vibration, "Haptic touches", "A light tap under your finger when you choose something.",
+                    onClick = { AppSettings.updateHaptics(!AppSettings.haptics) }
+                ) { Switch(checked = AppSettings.haptics, onCheckedChange = { AppSettings.updateHaptics(it) }) }
+                SettingRow(
+                    Icons.Rounded.WbTwilight, "Ambient mode", "The video's colours glow softly behind the player.",
+                    onClick = { AppSettings.updateAmbient(!AppSettings.ambient) }
+                ) { Switch(checked = AppSettings.ambient, onCheckedChange = { AppSettings.updateAmbient(it) }) }
+            }
+        }
+
+        // ---- Playback
+        item { SectionHeader("Playback") }
+        item {
+            SettingsGroup {
+                SettingRow(
+                    Icons.Rounded.Fullscreen, "Open videos full screen",
+                    "Upright, like YouTube. \"Details, comments & related\" takes you to the normal page.",
+                    onClick = { AppSettings.updateStartUpright(!AppSettings.startUpright) }
+                ) { Switch(checked = AppSettings.startUpright, onCheckedChange = { AppSettings.updateStartUpright(it) }) }
+                SettingRow(
+                    Icons.Rounded.HighQuality, "Default quality", AppSettings.qualityLabel(AppSettings.defaultQuality),
+                    onClick = { qualityDialog = true }
+                )
+                SettingRow(
+                    Icons.Rounded.Speed, "Speeds in the speed menu",
+                    AppSettings.speeds.joinToString(", ") { AppSettings.speedText(it) },
+                    onClick = { speedDialog = true }
+                )
+                SettingRow(
+                    Icons.Rounded.SkipNext, "Skip sponsors (SponsorBlock)", "Jumps over sponsor reads, intros and reminders",
+                    onClick = { Graph.player.updateSponsorBlock(!Graph.player.sponsorBlock) }
+                ) { Switch(checked = Graph.player.sponsorBlock, onCheckedChange = { Graph.player.updateSponsorBlock(it) }) }
+                if (Graph.player.sponsorBlock) SettingRow(
+                    Icons.Rounded.Tune, "What to skip",
+                    "${Graph.player.skipCategories.size} of ${com.sourabh.jarvistube.data.SPONSOR_CATEGORIES.size} kinds. All are marked on the seek bar.",
+                    onClick = { sponsorDialog = true }
                 )
             }
         }
 
-        item { SectionHeader("About") }
+        // ---- Captions: English and Hindi, one clean line.
+        item { SectionHeader("Captions") }
         item {
-            SettingRow(
-                Icons.Rounded.Info, "PlayBook 0.1",
-                "Ad-free, distraction-free YouTube for learning",
-                onClick = {}
-            )
+            SettingsGroup {
+                // Live preview on a video-like background; changes below show here and on the video at once.
+                androidx.compose.foundation.layout.Box(
+                    Modifier.fillMaxWidth().padding(16.dp)
+                        .clip(Corners.medium)
+                        .background(androidx.compose.ui.graphics.Color(0xFF2A2F3A))
+                        .heightIn(min = 96.dp),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    CaptionText(
+                        "Captions will look like this",
+                        fontSizeSp = 15f * AppSettings.captionScale,
+                        modifier = Modifier.padding(bottom = 12.dp, start = 12.dp, end = 12.dp)
+                    )
+                }
+                SettingRow(
+                    Icons.Rounded.FormatColorFill, "Highlight the spoken word",
+                    "Lights up each word as it's said (auto-generated captions).",
+                    onClick = { AppSettings.updateCaptionHighlight(!AppSettings.captionHighlight) }
+                ) { Switch(checked = AppSettings.captionHighlight, onCheckedChange = { AppSettings.updateCaptionHighlight(it) }) }
+                SettingRow(
+                    Icons.Rounded.FontDownload, "Font",
+                    AppSettings.captionFonts.firstOrNull { it.first == AppSettings.captionFont }?.second ?: "Default",
+                    onClick = { captionDialog = "font" }
+                )
+                SettingRow(
+                    Icons.Rounded.FormatSize, "Size",
+                    AppSettings.captionSizes.firstOrNull { it.first == AppSettings.captionScale }?.second ?: "Normal",
+                    onClick = { captionDialog = "size" }
+                )
+                SettingRow(
+                    Icons.Rounded.Palette, "Colour",
+                    AppSettings.captionColors.firstOrNull { it.first == AppSettings.captionColor }?.second ?: "White",
+                    onClick = { captionDialog = "color" }
+                )
+            }
         }
-        // Maker's mark: quiet, centred, at the very end of Settings.
+
+        // ---- Home & tabs
+        item { SectionHeader("Home & tabs") }
+        item {
+            SettingsGroup {
+                SettingRow(Icons.Rounded.Public, "Region", AppSettings.regionName, onClick = { regionDialog = true })
+                SettingRow(
+                    Icons.Rounded.Explore, "Show Recommended tab",
+                    "Your YouTube home feed, or Trending when signed out. Hidden during study sessions and locks.",
+                    onClick = { AppSettings.updateShowRecommended(!AppSettings.showRecommended) }
+                ) { Switch(checked = AppSettings.showRecommended, onCheckedChange = { AppSettings.updateShowRecommended(it) }) }
+                SettingRow(
+                    Icons.Rounded.PlayCircle, "Show Shorts tab",
+                    "The Shorts tab in the bottom bar. Shorts in search results still show.",
+                    onClick = { AppSettings.updateShowShorts(!AppSettings.showShorts) }
+                ) { Switch(checked = AppSettings.showShorts, onCheckedChange = { AppSettings.updateShowShorts(it) }) }
+                // During a session or any study lock the tab has to stay, so the switch is greyed out.
+                val required = AppSettings.studyTabRequired
+                SettingRow(
+                    Icons.Rounded.School, "Show Study tab",
+                    if (required) "Stays on while a study session or lock is running."
+                    else "The Study tab in the bottom bar. Sessions and locks still work when it is hidden.",
+                    onClick = { if (!required) AppSettings.updateShowStudy(!AppSettings.showStudy) }
+                ) { Switch(checked = AppSettings.studyTabShown, enabled = !required, onCheckedChange = { AppSettings.updateShowStudy(it) }) }
+            }
+        }
+
+        // ---- Focus: the Shorts block now lives here (it left the You tab).
+        item { SectionHeader("Focus") }
+        item { com.sourabh.jarvistube.ui.shorts.ShortsBlockCard() }
+
+        // ---- Privacy
+        item { SectionHeader("Privacy") }
+        item {
+            SettingsGroup {
+                SettingRow(
+                    Icons.Rounded.History, "Clear search history", "${vm.recents.size} saved searches",
+                    onClick = {
+                        vm.clearRecents()
+                        Toast.makeText(context, "Search history cleared", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+        }
+
+        // ---- About, and the maker's mark: quiet, centred, at the very end.
         item {
             androidx.compose.foundation.layout.Column(
-                Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 36.dp),
+                Modifier.fillMaxWidth().padding(top = 32.dp, bottom = 36.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 androidx.compose.foundation.Image(
@@ -330,16 +308,15 @@ fun SettingsScreen(
                     Modifier.size(44.dp).clip(Corners.medium)
                 )
                 Spacer(Modifier.size(12.dp))
+                Text("PlayBook 0.1", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                 Text(
-                    "ClearVision.Co",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    "Made for focus.",
+                    "Ad-free, distraction-free YouTube for learning",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(Modifier.size(8.dp))
+                Text("ClearVision.Co", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text("Made for focus.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -447,7 +424,7 @@ internal fun SettingRow(
     trailing: (@Composable () -> Unit)? = null
 ) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 24.dp, vertical = 16.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -461,4 +438,15 @@ internal fun SettingRow(
             trailing()
         }
     }
+}
+
+
+/** One section's rows in a rounded card, like the phone's own settings. */
+@Composable
+internal fun SettingsGroup(content: @Composable () -> Unit) {
+    androidx.compose.foundation.layout.Column(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(com.sourabh.jarvistube.ui.theme.Corners.large)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+    ) { content() }
 }

@@ -185,6 +185,12 @@ private fun BottomBar(tabs: List<Tab>, current: Tab, onSelect: (Tab) -> Unit) {
 private const val PIP_ACTION = "com.sourabh.jarvistube.PIP_BUTTON"
 
 class MainActivity : ComponentActivity() {
+    override fun onStop() {
+        super.onStop()
+        // The home-screen icon follows the theme; switched only while PlayBook is in the background.
+        com.sourabh.jarvistube.ui.theme.AppIcon.apply(this)
+    }
+
     private val vm: TubeViewModel by viewModels()
     private var inPip by mutableStateOf(false)
 

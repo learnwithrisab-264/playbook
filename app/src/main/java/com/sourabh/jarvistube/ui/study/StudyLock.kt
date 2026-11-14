@@ -1,5 +1,9 @@
 package com.sourabh.jarvistube.ui.study
 
+import androidx.compose.foundation.horizontalScroll
+
+import androidx.compose.foundation.verticalScroll
+
 import androidx.compose.foundation.clickable
 
 import com.sourabh.jarvistube.R
@@ -167,7 +171,8 @@ private fun LockDurationDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) 
                         Text(stringResource(R.string.step_2_allow_display_over_other_apps))
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Scrolls sideways so no chip is squeezed into a column of letters.
+                Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TopicChip("2 min", hours == 0 && minutes == 2) { hours = 0; minutes = 2 }
                     TopicChip("25 min", hours == 0 && minutes == 25) { hours = 0; minutes = 25 }
                     TopicChip("1 hour", hours == 1 && minutes == 0) { hours = 1; minutes = 0 }
@@ -264,7 +269,11 @@ fun LockExitDialogHost() {
         icon = { Icon(Icons.Rounded.Lock, null) },
         title = { Text("Study session locked, ${com.sourabh.jarvistube.lock.minutesLeftText(left)}") },
         text = {
-            androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // Scrolls, so nothing is cut off on a short landscape screen.
+            androidx.compose.foundation.layout.Column(
+                Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 if (exiting) {
                     com.sourabh.jarvistube.lock.EmergencyExit(
                         onEnd = { if (study.useEmergencyExit()) PlayerPopups.lockExit = false },
@@ -282,12 +291,16 @@ fun LockExitDialogHost() {
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Open the Phone app") }
-                    androidx.compose.material3.TextButton(onClick = { exiting = true }) { Text("Emergency exit") }
                 }
             }
         },
         confirmButton = {
             if (!exiting) androidx.compose.material3.TextButton(onClick = { PlayerPopups.lockExit = false }) { Text("Keep studying") }
+        },
+        dismissButton = {
+            if (!exiting) androidx.compose.material3.TextButton(onClick = { exiting = true }) {
+                Text("Emergency exit", color = MaterialTheme.colorScheme.error)
+            }
         }
     )
 }

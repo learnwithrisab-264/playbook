@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.player
 
+import androidx.compose.material.icons.rounded.Today
+
 import com.sourabh.jarvistube.ui.downloads.DownloadSheet
 import com.sourabh.jarvistube.ui.study.PlayerPopups
 import com.sourabh.jarvistube.ui.you.SaveToPlaylist
@@ -97,6 +99,14 @@ fun PlayerMoreSheetHost(now: NowPlaying, ui: PlayerUi) {
                         ) { page = "captions" }
                     }
                     SheetRow(Icons.Rounded.Speed, "Playback speed", speedLabel(ui.speed)) { page = "speed" }
+                    if (!locked) {
+                        val planned = com.sourabh.jarvistube.data.StudyPlan.planned(now.video.url)
+                        SheetRow(Icons.Rounded.Today, if (planned) "In your study plan" else "Add to Today's plan", null) {
+                            close()
+                            com.sourabh.jarvistube.data.StudyPlan.add(now.video.copy(title = now.info?.name ?: now.video.title), today = true)
+                            android.widget.Toast.makeText(context, "Added to today's plan", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
                     SheetRow(Icons.Rounded.TouchApp, "Lock screen", "Off") {
                         close()
                         PlayerPopups.touchLock = true

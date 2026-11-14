@@ -31,12 +31,98 @@
             android:launchMode="singleTask"
             android:supportsPictureInPicture="true"
             android:windowSoftInputMode="adjustResize"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|navigation|uiMode">
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|navigation|uiMode" />
+        <!-- Home-screen icon for the Agni theme (ui/theme/AppIcon picks the enabled one). -->
+        <activity-alias
+            android:name=".IconAgni"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
+            android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <!-- Home-screen icon for the Kurukshetra theme (ui/theme/AppIcon picks the enabled one). -->
+        <activity-alias
+            android:name=".IconKurukshetra"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_kurukshetra"
+            android:roundIcon="@mipmap/ic_launcher_kurukshetra"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- Home-screen icon for the Dwarka theme (ui/theme/AppIcon picks the enabled one). -->
+        <activity-alias
+            android:name=".IconDwarka"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_dwarka"
+            android:roundIcon="@mipmap/ic_launcher_dwarka"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- Home-screen icon for the Vrindavan theme (ui/theme/AppIcon picks the enabled one). -->
+        <activity-alias
+            android:name=".IconVrindavan"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_vrindavan"
+            android:roundIcon="@mipmap/ic_launcher_vrindavan"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- Home-screen icon for the Lanka theme (ui/theme/AppIcon picks the enabled one). -->
+        <activity-alias
+            android:name=".IconLanka"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_lanka"
+            android:roundIcon="@mipmap/ic_launcher_lanka"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- Home-screen icon for the Panchavati theme (ui/theme/AppIcon picks the enabled one). -->
+        <activity-alias
+            android:name=".IconPanchavati"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_panchavati"
+            android:roundIcon="@mipmap/ic_launcher_panchavati"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- Home-screen icon for the Ayodhya theme (ui/theme/AppIcon picks the enabled one). -->
+        <activity-alias
+            android:name=".IconAyodhya"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_ayodhya"
+            android:roundIcon="@mipmap/ic_launcher_ayodhya"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <service
             android:name=".player.PlaybackService"

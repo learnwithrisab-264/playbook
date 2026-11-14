@@ -70,7 +70,7 @@ import com.sourabh.jarvistube.data.LibChannel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp) {
+internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp, onPlay: (com.sourabh.jarvistube.data.VideoItem) -> Unit = {}) {
     val study = Graph.study
     val context = androidx.compose.ui.platform.LocalContext.current
     var newChannel by remember { mutableStateOf("") }
@@ -99,6 +99,9 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp) {
                 )
             }
         }
+
+        // 0. Your plan: what to watch today and this week.
+        item { StudyPlanCard(onPlay) }
 
         // 1. Focus: pick a length, press Start. Always locked: no way to stop early.
         item {
