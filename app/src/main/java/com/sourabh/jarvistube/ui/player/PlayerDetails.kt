@@ -91,7 +91,13 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
     var commentsOpen by remember(now.video.url) { mutableStateOf(false) }
     // Comments take the place of the details under the video, as on YouTube; the video keeps playing.
     if (commentsOpen) {
-        CommentsPanel(comments, links, info?.uploaderName ?: now.video.channel, onClose = { commentsOpen = false }, modifier = modifier)
+        CommentsPanel(
+            comments, links,
+            channelName = info?.uploaderName ?: now.video.channel,
+            channelAvatar = info?.uploaderAvatars?.bestUrl() ?: now.video.avatar,
+            onClose = { commentsOpen = false },
+            modifier = modifier
+        )
         return
     }
 
@@ -166,7 +172,7 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                     if (!Graph.study.lockActive) SubscribeButton(channelUrl, info?.uploaderName ?: now.video.channel)
                 }
                 Spacer(Modifier.height(16.dp))
-                CommentsCard(comments, links) { commentsOpen = true }
+                CommentsCard(comments) { commentsOpen = true }
             }
         }
         item {

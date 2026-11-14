@@ -40,6 +40,13 @@ private fun openLink(context: Context, vm: TubeViewModel, currentUrl: String, ur
         }
         return
     }
+    // Channel links (@handle, /channel/…) open the channel inside PlayBook.
+    val channel = Regex("""^https?://(?:www\.|m\.)?youtube\.com/(@[^/?#]+|channel/[^/?#]+|c/[^/?#]+|user/[^/?#]+)""").find(url)
+    if (channel != null && !Graph.study.lockActive) {
+        val path = channel.groupValues[1]
+        vm.openChannel("https://www.youtube.com/$path", if (path.startsWith("@")) path else path.substringAfter('/'))
+        return
+    }
     if (Graph.study.lockActive) {
         Toast.makeText(context, "Links open after the study lock ends", Toast.LENGTH_SHORT).show()
         return

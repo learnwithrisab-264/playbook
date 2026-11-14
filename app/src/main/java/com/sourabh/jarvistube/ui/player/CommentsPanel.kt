@@ -1,13 +1,27 @@
 package com.sourabh.jarvistube.ui.player
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -15,16 +29,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.PushPin
-import androidx.compose.material.icons.rounded.ThumbUp
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -33,6 +51,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,117 +69,182 @@ import androidx.compose.ui.unit.sp
 import com.sourabh.jarvistube.data.Comment
 import com.sourabh.jarvistube.ui.common.Avatar
 import com.sourabh.jarvistube.ui.common.LinkedText
-import com.sourabh.jarvistube.ui.common.LoadMoreEffect
-import com.sourabh.jarvistube.ui.common.compact
+import com.sourabh.jarvistube.ui.common.PillChip
 import com.sourabh.jarvistube.ui.common.linkColor
 
 /**
  * YouTube-style comments panel. It takes the place of the details under the video, so the video
- * keeps playing above it. "N replies" opens that thread on its own Replies page. Read-only.
+ * keeps playing above it. It slides up on open and down on close; "N replies" slides in that
+ * thread's Replies page, and Back returns to the same scroll position. Read-only.
+ *
+ * Beyond YouTube: a Timestamps filter (every comment that points at a moment of this video, like
+ * viewer-made chapters) and pages loaded well before you reach the bottom.
  */
 @Composable
 internal fun CommentsPanel(
     state: CommentsState,
     links: LinkActions,
     channelName: String,
+    channelAvatar: String?,
     onClose: () -> Unit,
     modifier: Modifier
 ) {
+    val shown = remember { MutableTransitionState(false).apply { targetState = true } }
     var thread by remember { mutableStateOf<Comment?>(null) }
-    BackHandler { if (thread != null) thread = null else onClose() }
-    val open = thread
-    Column(modifier.background(MaterialTheme.colorScheme.background)) {
-        Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.width(36.dp).height(4.dp).clip(CircleShape).background(MaterialTheme.colorScheme.outlineVariant))
-        }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (open != null) {
-                IconButton(onClick = { thread = null }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back to comments") }
-            } else Spacer(Modifier.width(12.dp))
-            Text(if (open != null) "Replies" else "Comments", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            if (open == null && state.count > 0) {
-                Spacer(Modifier.width(8.dp))
-                Text(compact(state.count.toLong()), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    var onlyTimes by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val close = { shown.targetState = false }
+    // Hand back to the details once the slide-down has finished.
+    LaunchedEffect(shown.isIdle, shown.currentState) { if (shown.isIdle && !shown.currentState) onClose() }
+    BackHandler { if (thread != null) thread = null else close() }
+
+    Box(modifier) {
+        AnimatedVisibility(
+            visibleState = shown,
+            enter = slideInVertically(tween(260)) { it / 3 } + fadeIn(tween(200)),
+            exit = slideOutVertically(tween(220)) { it / 3 } + fadeOut(tween(180))
+        ) {
+            Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.width(36.dp).height(4.dp).clip(CircleShape).background(MaterialTheme.colorScheme.outlineVariant))
+                }
+                val open = thread
+                Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (open != null) {
+                        IconButton(onClick = { thread = null }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back to comments") }
+                    } else Spacer(Modifier.width(12.dp))
+                    Text(if (open != null) "Replies" else "Comments", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    if (open == null) state.shortCount?.let {
+                        Spacer(Modifier.width(8.dp))
+                        Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = close) { Icon(Icons.Rounded.Close, "Close comments") }
+                }
+                if (open == null && !state.disabled) {
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        state.sorts.forEachIndexed { i, label ->
+                            PillChip(selected = !onlyTimes && state.sort == i, onClick = {
+                                onlyTimes = false
+                                state.setSortOrder(i)
+                            }, label = { Text(label) })
+                        }
+                        PillChip(
+                            selected = onlyTimes,
+                            onClick = { onlyTimes = !onlyTimes },
+                            label = { Text("Timestamps") },
+                            leadingIcon = { Icon(Icons.Rounded.Schedule, null, Modifier.size(16.dp)) }
+                        )
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                AnimatedContent(
+                    targetState = open,
+                    transitionSpec = {
+                        if (targetState != null) slideInHorizontally(tween(240)) { it } togetherWith slideOutHorizontally(tween(240)) { -it / 4 }
+                        else slideInHorizontally(tween(240)) { -it / 4 } togetherWith slideOutHorizontally(tween(240)) { it }
+                    },
+                    label = "comments-page"
+                ) { page ->
+                    if (page == null) CommentList(state, listState, onlyTimes, links, channelName, channelAvatar) { thread = it }
+                    else ReplyThread(state, page, links, channelName, channelAvatar)
+                }
             }
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, "Close comments") }
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        if (open == null) CommentList(state, links, channelName) { thread = it }
-        else ReplyThread(state, open, links, channelName)
     }
 }
 
+/** Loads the next page while there are still [ahead] items to go, so scrolling never waits. */
 @Composable
-private fun CommentList(state: CommentsState, links: LinkActions, channelName: String, onReplies: (Comment) -> Unit) {
-    val listState = rememberLazyListState()
-    LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 32.dp)) {
+private fun PrefetchEffect(state: LazyListState, itemCount: Int, ahead: Int = 8, onLoad: () -> Unit) {
+    val near by remember(state) {
+        derivedStateOf {
+            val total = state.layoutInfo.totalItemsCount
+            val last = state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            total > 0 && last >= total - ahead
+        }
+    }
+    LaunchedEffect(near, itemCount) { if (near) onLoad() }
+}
+
+@Composable
+private fun CommentList(
+    state: CommentsState,
+    listState: LazyListState,
+    onlyTimes: Boolean,
+    links: LinkActions,
+    channelName: String,
+    channelAvatar: String?,
+    onReplies: (Comment) -> Unit
+) {
+    val shown = if (onlyTimes) state.items.filter { it.hasTimestamp } else state.items
+    // The filter keeps reading pages until it has a screenful (or there are no more).
+    LaunchedEffect(onlyTimes, shown.size, state.loadingMore, state.hasMore) {
+        if (onlyTimes && shown.size < 12 && state.hasMore && !state.loadingMore) state.loadMore()
+    }
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 32.dp)) {
         when {
-            state.loading -> item { PanelSpinner() }
+            state.loading -> items(5) { CommentSkeleton() }
             state.disabled -> item { PanelNote("Comments are turned off for this video.") }
             state.failed -> item { PanelNote("Couldn't load comments. Close and open them again to retry.") }
-            state.items.isEmpty() -> item { PanelNote("No comments yet.") }
+            shown.isEmpty() && onlyTimes && (state.hasMore || state.loadingMore) -> item { PanelNote("Looking for comments with timestamps…") }
+            shown.isEmpty() && onlyTimes -> item { PanelNote("No comments point to a moment in this video.") }
+            shown.isEmpty() -> item { PanelNote("No comments yet.") }
         }
-        items(state.items, key = { it.id }) { c ->
+        if (!state.loading) items(shown, key = { it.id }) { c ->
             Column {
-                CommentRow(c, links, channelName, reply = false)
-                if (c.replies != null) RepliesLink(c, channelName) { onReplies(c) }
+                CommentRow(c, links, channelAvatar, reply = false)
+                if (c.repliesCursor != null) RepliesLink(c, channelName, channelAvatar) { onReplies(c) }
             }
         }
         if (state.loadingMore) item { PanelSpinner() }
     }
-    LoadMoreEffect(listState, state.items.size, state::loadMore)
+    PrefetchEffect(listState, state.items.size, onLoad = state::loadMore)
 }
 
 @Composable
-private fun RepliesLink(c: Comment, channelName: String, onClick: () -> Unit) {
+private fun RepliesLink(c: Comment, channelName: String, channelAvatar: String?, onClick: () -> Unit) {
     val blue = linkColor()
     Row(
         Modifier.padding(start = 52.dp, bottom = 8.dp).clip(CircleShape).clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (c.creatorReplied) {
-            CommentAvatar(channelName, 20)
+        if (c.creatorReplyAvatar != null) {
+            CommentAvatar(channelName, 20, c.creatorReplyAvatar ?: channelAvatar)
             Text(" · ", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text(
-            when {
-                c.replyCount == 1 -> "1 reply"
-                c.replyCount > 1 -> "${compact(c.replyCount.toLong())} replies"
-                else -> "Replies"
-            },
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = blue
-        )
+        Text(c.replyText ?: "Replies", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = blue)
         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, Modifier.size(18.dp), tint = blue)
     }
 }
 
 /** One thread: the comment on top, its replies under it along a thread line. */
 @Composable
-private fun ReplyThread(state: CommentsState, parent: Comment, links: LinkActions, channelName: String) {
+private fun ReplyThread(state: CommentsState, parent: Comment, links: LinkActions, channelName: String, channelAvatar: String?) {
     LaunchedEffect(parent.id) { if (!state.replies.containsKey(parent.id)) state.loadReplies(parent) }
     val replies = state.replies[parent.id].orEmpty()
     val busy = state.replyLoading[parent.id] == true
     val listState = rememberLazyListState()
     val lineColor = MaterialTheme.colorScheme.outlineVariant
-    LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 32.dp)) {
-        item { CommentRow(parent, links, channelName, reply = false) }
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 32.dp)) {
+        item { CommentRow(parent, links, channelAvatar, reply = false, startExpanded = true) }
         items(replies, key = { "r" + it.id }) { r ->
             Box(Modifier.drawBehind {
                 val x = 32.dp.toPx()
                 drawLine(lineColor, Offset(x, 0f), Offset(x, size.height), 1.dp.toPx())
-            }) { CommentRow(r, links, channelName, reply = true) }
+            }) { CommentRow(r, links, channelAvatar, reply = true) }
         }
-        if (busy) item { PanelSpinner() }
+        if (busy) items(if (replies.isEmpty()) 3 else 1) { CommentSkeleton(reply = true) }
         else if (!state.replies.containsKey(parent.id)) item { PanelNote("Couldn't load replies.") }
     }
-    LoadMoreEffect(listState, replies.size) { if (state.replyNext[parent.id] != null) state.loadReplies(parent) }
+    PrefetchEffect(listState, replies.size, ahead = 4) { if (state.replyNext[parent.id] != null) state.loadReplies(parent) }
 }
 
-/** A round letter in a colour picked from the name; the real picture covers it when there is one. */
+/** The author's picture over a coloured letter (the letter shows until the picture loads). */
 @Composable
 internal fun CommentAvatar(name: String, size: Int, url: String? = null) {
     val clean = name.removePrefix("@")
@@ -173,17 +257,19 @@ internal fun CommentAvatar(name: String, size: Int, url: String? = null) {
 }
 
 @Composable
-private fun CommentRow(c: Comment, links: LinkActions, channelName: String, reply: Boolean) {
+private fun CommentRow(c: Comment, links: LinkActions, channelAvatar: String?, reply: Boolean, startExpanded: Boolean = false) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    var expanded by remember(c.id) { mutableStateOf(startExpanded) }
+    var cut by remember(c.id) { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(start = if (reply) 52.dp else 16.dp, end = 12.dp, top = 12.dp, bottom = 8.dp)) {
-        CommentAvatar(c.author, if (reply) 24 else 32, c.avatar)
+        CommentAvatar(c.author, if (reply) 24 else 36, c.avatar)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            if (c.pinned) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 2.dp)) {
+            c.pinnedBy?.let { pinned ->
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
                     Icon(Icons.Rounded.PushPin, null, Modifier.size(12.dp), tint = muted)
                     Spacer(Modifier.width(4.dp))
-                    Text("Pinned by ${channelName.ifBlank { "the creator" }}", style = MaterialTheme.typography.labelSmall, color = muted)
+                    Text(pinned, style = MaterialTheme.typography.labelSmall, color = muted)
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -196,31 +282,66 @@ private fun CommentRow(c: Comment, links: LinkActions, channelName: String, repl
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false).then(
                         if (c.byCreator) Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 6.dp, vertical = 1.dp) else Modifier
+                            .padding(horizontal = 8.dp, vertical = 2.dp) else Modifier
                     )
                 )
+                if (c.verified) {
+                    Spacer(Modifier.width(4.dp))
+                    Icon(Icons.Rounded.CheckCircle, "Verified", Modifier.size(12.dp), tint = muted)
+                }
                 c.time?.let { Text("  ·  $it", style = MaterialTheme.typography.labelMedium, color = muted, maxLines = 1) }
             }
             Spacer(Modifier.height(4.dp))
-            LinkedText(c.text, html = c.html, onUrl = links.onUrl, onSeek = links.onSeek)
-            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.ThumbUp, null, Modifier.size(16.dp), tint = muted)
-                if (c.likes > 0) {
+            // Long comments fold to six lines, with Read more, as on YouTube.
+            LinkedText(
+                c.text, html = c.html, links = c.links,
+                onUrl = links.onUrl, onSeek = links.onSeek,
+                maxLines = if (expanded) Int.MAX_VALUE else 6,
+                onOverflow = { if (!expanded) cut = it },
+                modifier = Modifier.clickable(enabled = cut || expanded) { expanded = !expanded }
+            )
+            if (cut || (expanded && !startExpanded)) {
+                Text(
+                    if (expanded) "Show less" else "Read more",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = muted,
+                    modifier = Modifier.padding(top = 4.dp).clickable { expanded = !expanded }
+                )
+            }
+            Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.ThumbUp, null, Modifier.size(16.dp), tint = muted)
+                c.likesText?.let {
                     Spacer(Modifier.width(6.dp))
-                    Text(compact(c.likes.toLong()), style = MaterialTheme.typography.labelMedium, color = muted)
+                    Text(it, style = MaterialTheme.typography.labelMedium, color = muted)
                 }
                 if (c.hearted) {
-                    Spacer(Modifier.width(16.dp))
+                    Spacer(Modifier.width(18.dp))
                     Box {
-                        CommentAvatar(channelName, 18)
+                        CommentAvatar("creator", 18, c.heartAvatar ?: channelAvatar)
                         Icon(
                             Icons.Rounded.Favorite, "Hearted by the creator",
-                            Modifier.size(10.dp).align(Alignment.BottomEnd).offset(x = 3.dp, y = 3.dp),
+                            Modifier.size(11.dp).align(Alignment.BottomEnd).offset(x = 4.dp, y = 4.dp),
                             tint = Color(0xFFFF4E45)
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+/** Grey placeholder rows while comments load, instead of a lone spinner. */
+@Composable
+private fun CommentSkeleton(reply: Boolean = false) {
+    val tone = MaterialTheme.colorScheme.surfaceVariant
+    Row(Modifier.fillMaxWidth().padding(start = if (reply) 52.dp else 16.dp, end = 16.dp, top = 14.dp, bottom = 10.dp)) {
+        Box(Modifier.size(if (reply) 24.dp else 36.dp).clip(CircleShape).background(tone))
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(Modifier.width(140.dp).height(10.dp).clip(CircleShape).background(tone))
+            Box(Modifier.fillMaxWidth().height(12.dp).clip(CircleShape).background(tone))
+            Box(Modifier.fillMaxWidth(0.6f).height(12.dp).clip(CircleShape).background(tone))
         }
     }
 }

@@ -96,11 +96,18 @@ fun LinkedText(
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodyMedium,
-    maxLines: Int = Int.MAX_VALUE
+    maxLines: Int = Int.MAX_VALUE,
+    /** Exact link positions from the source (YouTube comments); bare links and times are still found. */
+    links: List<com.sourabh.jarvistube.data.TextLink> = emptyList(),
+    /** Whether the text was cut off at [maxLines]. */
+    onOverflow: (Boolean) -> Unit = {}
 ) {
     val styles = TextLinkStyles(SpanStyle(color = linkColor()))
-    val annotated = remember(text, html, styles, onUrl, onSeek) { linkify(text, html, styles, onUrl, onSeek) }
-    Text(annotated, modifier, style = style, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
+    val annotated = remember(text, html, links, styles, onUrl, onSeek) { linkify(text, html, links, styles, onUrl, onSeek) }
+    Text(
+        annotated, modifier, style = style, maxLines = maxLines, overflow = TextOverflow.Ellipsis,
+        onTextLayout = { onOverflow(it.hasVisualOverflow) }
+    )
 }
 
 /** Times look like small blue chips, as on YouTube ("0:41"). */
@@ -112,10 +119,21 @@ private fun timeStyles(styles: TextLinkStyles): TextLinkStyles {
 private fun linkify(
     text: String,
     html: Boolean,
+    known: List<com.sourabh.jarvistube.data.TextLink>,
     styles: TextLinkStyles,
     onUrl: (String) -> Unit,
     onSeek: (Long) -> Unit
 ): AnnotatedString {
+    if (known.isNotEmpty() && !html) {
+        // Positions are exact for the untouched text, so it isn't trimmed here.
+        return buildAnnotatedString {
+            append(text)
+            known.forEach { k -> addLink(clickable(k.url, k.seconds, styles, onUrl, onSeek), k.start, k.end) }
+            findLinks(text).filter { f -> known.none { f.start < it.end && f.end > it.start } }.forEach { f ->
+                addLink(clickable(f.url, f.seconds, styles, onUrl, onSeek), f.start, f.end)
+            }
+        }
+    }
     // HTML anchors (YouTube writes its own timestamps and links this way) keep their real address.
     val base = if (html) AnnotatedString.fromHtml(text, linkStyles = styles) { link ->
         (link as? LinkAnnotation.Url)?.url?.let(onUrl)
@@ -128,9 +146,11 @@ private fun linkify(
         append(trimmed)
         // Bare addresses and times that aren't already inside an anchor.
         findLinks(plain).filter { f -> taken.none { f.start < it.end && f.end > it.start } }.forEach { f ->
-            val link = if (f.url != null) LinkAnnotation.Clickable(f.url, styles) { onUrl(f.url) }
-            else LinkAnnotation.Clickable("t${f.seconds}", timeStyles(styles)) { onSeek(f.seconds ?: 0) }
-            addLink(link, f.start, f.end)
+            addLink(clickable(f.url, f.seconds, styles, onUrl, onSeek), f.start, f.end)
         }
     }
 }
+
+private fun clickable(url: String?, seconds: Long?, styles: TextLinkStyles, onUrl: (String) -> Unit, onSeek: (Long) -> Unit): LinkAnnotation.Clickable =
+    if (url != null) LinkAnnotation.Clickable(url, styles) { onUrl(url) }
+    else LinkAnnotation.Clickable("t$seconds", timeStyles(styles)) { onSeek(seconds ?: 0) }
