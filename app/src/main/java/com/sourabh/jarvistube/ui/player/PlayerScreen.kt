@@ -1,5 +1,9 @@
 package com.sourabh.jarvistube.ui.player
 
+import kotlinx.coroutines.launch
+
+import androidx.compose.ui.graphics.graphicsLayer
+
 import com.sourabh.jarvistube.ui.study.formatLeft
 import com.sourabh.jarvistube.ui.study.StudyLockDialogHost
 import android.app.Activity
@@ -117,7 +121,22 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
         onDispose { activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
     }
 
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    // YouTube's pull-to-minimise: the player follows the finger down and shrinks; let go past the
+    // threshold and it drops into the mini player, otherwise it springs back.
+    val pull = remember { androidx.compose.animation.core.Animatable(0f) }
+    val pullScope = androidx.compose.runtime.rememberCoroutineScope()
+    Column(
+        Modifier.fillMaxSize()
+            .graphicsLayer {
+                val p = (pull.value / (size.height * 0.6f)).coerceIn(0f, 1f)
+                translationY = pull.value
+                scaleX = 1f - 0.25f * p
+                scaleY = 1f - 0.25f * p
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)
+                alpha = 1f - 0.35f * p
+            }
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         StudyLockDialogHost(cur)
         PlayerMoreSheetHost(cur, ui)
         if (!fs) {
@@ -139,6 +158,10 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
             onToggleFullscreen = { if (!locked) { portraitFullscreen = false; fullscreen = !fullscreen } },
             onCollapse = { if (!locked) vm.playerExpanded = false },
             onPlay = vm::play,
+            onPull = { y -> if (!locked && !fs) pullScope.launch { pull.snapTo(y.coerceAtLeast(0f)) } },
+            onPullEnd = { minimising ->
+                if (!minimising || locked) pullScope.launch { pull.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = 0.8f)) }
+            },
             // Swipe up on the video = fullscreen; swipe down = leave fullscreen, or minimise to the mini-player.
             onSwipe = { dir -> if (!locked)
                 when {

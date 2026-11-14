@@ -80,12 +80,18 @@ internal fun VideoBox(
     onCollapse: () -> Unit,
     onSwipe: (Int) -> Unit,
     onPlay: (com.sourabh.jarvistube.data.VideoItem) -> Unit = {},
-    onComments: (() -> Unit)? = null
+    onComments: (() -> Unit)? = null,
+    /** Live downward pull (px) in the portrait player, so the whole player can follow the finger. */
+    onPull: (Float) -> Unit = {},
+    /** The pull ended; true when it went far enough to minimise. */
+    onPullEnd: (Boolean) -> Unit = {}
 ) {
     val player = Graph.player.player
     var controlsVisible by remember { mutableStateOf(true) }
     val synced = Graph.player.loadedUrl.collectAsStateWithLifecycle().value == now.video.url
     val currentOnSwipe by androidx.compose.runtime.rememberUpdatedState(onSwipe)
+    val currentOnPull by androidx.compose.runtime.rememberUpdatedState(onPull)
+    val currentOnPullEnd by androidx.compose.runtime.rememberUpdatedState(onPullEnd)
     var moreOpen by remember { mutableStateOf(false) }
     val moreAllowed = fullscreen && showControls && !Graph.study.active && !Graph.study.lockActive
     LaunchedEffect(moreAllowed) { if (!moreAllowed) moreOpen = false }
@@ -223,7 +229,7 @@ internal fun VideoBox(
                 // Fullscreen needs a long, deliberate pull (a quarter of the screen) to exit, and a
                 // drag that starts at the very top edge is the notification shade, not an exit.
                 val upThreshold = 56.dp.toPx()
-                val downThreshold = if (fullscreen) size.height * 0.25f else 56.dp.toPx()
+                val downThreshold = if (fullscreen) size.height * 0.25f else maxOf(56.dp.toPx(), size.height * 0.3f)
                 detectVerticalDragGestures(
                     onDragStart = { start ->
                         total = 0f
@@ -234,6 +240,7 @@ internal fun VideoBox(
                         if (zone == SwipeZone.Volume) adjusting = SwipeZone.Volume to volume.current()
                     },
                     onDragEnd = {
+                        if (!fullscreen && zone == SwipeZone.Exit) currentOnPullEnd(total > downThreshold)
                         if (!ignore && zone == SwipeZone.Exit) {
                             if (total < -upThreshold) {
                                 if (fullscreen && moreAllowed) { moreOpen = true; controlsVisible = false } else currentOnSwipe(-1)
@@ -244,10 +251,11 @@ internal fun VideoBox(
                         total = 0f
                         adjustDone++
                     },
-                    onDragCancel = { total = 0f; adjustDone++ },
+                    onDragCancel = { if (!fullscreen) currentOnPullEnd(false); total = 0f; adjustDone++ },
                     onVerticalDrag = { change, dy ->
                         change.consume()
                         total += dy
+                        if (!fullscreen && zone == SwipeZone.Exit) currentOnPull(total)
                         val (kind, level) = adjusting ?: return@detectVerticalDragGestures
                         if (zone == SwipeZone.Exit) return@detectVerticalDragGestures
                         val next = adjustLevel(level, dy, size.height.toFloat())
