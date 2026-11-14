@@ -130,7 +130,7 @@ private fun BlockScreen(onStudy: () -> Unit, onPhone: () -> Unit) {
 
 /** Once in 24 hours, 3 times in 7 days, and deliberately slow: type the phrase and wait. */
 @Composable
-private fun EmergencyExit(onEnd: () -> Unit, onCancel: () -> Unit) {
+internal fun EmergencyExit(onEnd: () -> Unit, onCancel: () -> Unit) {
     val study = Graph.study
     val wait = study.exitWaitMs
     if (study.exitNeedsRealTime || wait > 0L) {

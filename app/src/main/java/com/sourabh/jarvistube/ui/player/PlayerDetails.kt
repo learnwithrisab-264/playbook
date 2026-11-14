@@ -89,6 +89,12 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
     val links = rememberLinkActions(vm, now.video.url)
     val comments = rememberComments(now.video.url)
     var commentsOpen by remember(now.video.url) { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(com.sourabh.jarvistube.ui.study.PlayerPopups.openComments) {
+        if (com.sourabh.jarvistube.ui.study.PlayerPopups.openComments) {
+            commentsOpen = true
+            com.sourabh.jarvistube.ui.study.PlayerPopups.openComments = false
+        }
+    }
     // Comments take the place of the details under the video, as on YouTube; the video keeps playing.
     if (commentsOpen) {
         CommentsPanel(

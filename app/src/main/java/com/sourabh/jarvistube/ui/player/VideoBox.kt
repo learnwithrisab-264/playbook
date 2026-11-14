@@ -81,6 +81,8 @@ internal fun VideoBox(
     onSwipe: (Int) -> Unit,
     onPlay: (com.sourabh.jarvistube.data.VideoItem) -> Unit = {},
     onComments: (() -> Unit)? = null,
+    /** Upright full screen only: go to the normal page (details, comments, related). */
+    onDetails: (() -> Unit)? = null,
     /** Live downward pull (px) in the portrait player, so the whole player can follow the finger. */
     onPull: (Float) -> Unit = {},
     /** The pull ended; true when it went far enough to minimise. */
@@ -303,7 +305,12 @@ internal fun VideoBox(
         // The thumbnail fills the frame the moment you tap, until the first video frame is drawn.
         val firstFrame by Graph.player.firstFrameUrl.collectAsStateWithLifecycle()
         if (firstFrame != now.video.url && !Graph.player.audioOnly && now.video.thumb != null) {
-            Thumb(now.video.thumb, Modifier.matchParentSize())
+            // Full screen: fitted like the video will be, not cropped to the whole screen.
+            if (fullscreen) coil3.compose.AsyncImage(
+                model = now.video.thumb, contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                modifier = Modifier.matchParentSize()
+            ) else Thumb(now.video.thumb, Modifier.matchParentSize())
         }
 
         adjusting?.let { (kind, level) ->
@@ -453,7 +460,8 @@ internal fun VideoBox(
                     onCollapse = onCollapse,
                     onBottomHeight = { controlsBottomPx = it },
                     onMoreVideos = if (moreAllowed) ({ moreOpen = true; controlsVisible = false }) else null,
-                    onComments = onComments?.let { open -> { controlsVisible = false; open() } }
+                    onComments = onComments?.let { open -> { controlsVisible = false; open() } },
+                    onDetails = onDetails
                 )
             }
         }
@@ -496,14 +504,22 @@ internal fun VideoBox(
 
         // Fit / Fill for upright videos, and Reset while zoomed. On top, so the controls can't cover it.
         val zoomed = zoom > MIN_ZOOM
-        if (showControls && controlsVisible && (vertical || zoomed)) {
+        // Only in landscape: filling an upright screen would crop most of a wide video.
+        val canFill = fullscreen && fillZoom > 1.02f && frame.width > frame.height
+        if (showControls && controlsVisible && !PlayerPopups.touchLock && (vertical || zoomed || canFill)) {
             Row(
-                Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
+                Modifier.align(Alignment.TopCenter).padding(top = if (fullscreen) 64.dp else 12.dp),
                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
             ) {
                 val filled = fillZoom > 1.02f && zoom >= fillZoom - 0.02f
-                if (vertical) VideoPill(if (filled) "Fit" else "Fill") { settleZoom(if (filled) MIN_ZOOM else fillZoom) }
-                if (zoomed && !(vertical && filled)) VideoPill("Original") { settleZoom(MIN_ZOOM) }
+                when {
+                    // Fullscreen: YouTube's two states, one tap apart.
+                    canFill -> VideoPill(if (filled || zoomed) "Original" else "Zoom to fill") {
+                        settleZoom(if (filled || zoomed) MIN_ZOOM else fillZoom)
+                    }
+                    vertical -> VideoPill(if (filled) "Fit" else "Fill") { settleZoom(if (filled) MIN_ZOOM else fillZoom) }
+                    zoomed -> VideoPill("Original") { settleZoom(MIN_ZOOM) }
+                }
             }
         }
     }

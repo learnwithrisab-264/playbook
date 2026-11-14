@@ -135,7 +135,7 @@ class BankPauseService : Service() {
         override fun run() {
             front = latestForeground() ?: front
             val f = front
-            val done = !BankPause.isPaused(this@BankPauseService) || Graph.study.lockActive ||
+            val done = !BankPause.isPaused(this@BankPauseService) ||
                 (f != null && !isBankingApp(f) && f !in NEUTRAL)
             if (done) {
                 BankPause.resume(this@BankPauseService)

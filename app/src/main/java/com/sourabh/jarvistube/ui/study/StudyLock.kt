@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.study
 
+import androidx.compose.foundation.clickable
+
 import com.sourabh.jarvistube.R
 import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.OnVideo
@@ -72,8 +74,10 @@ fun StudyLockButton(now: NowPlaying) {
                 delay(1000)
             }
         }
+        // Tap the countdown for the lock's options: phone and the emergency exit.
         Row(
             Modifier.padding(end = 8.dp).clip(CircleShape).background(OnVideo.scrim)
+                .clickable { PlayerPopups.lockExit = true }
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -99,6 +103,10 @@ object PlayerPopups {
     var speedMenu by mutableStateOf(false)
     /** "Lock screen": the video ignores touches until held to unlock (TouchLockOverlay). */
     var touchLock by mutableStateOf(false)
+    /** Set from the upright full-screen view: open the comments panel on the normal page. */
+    var openComments by mutableStateOf(false)
+    /** The lock's options dialog (time left, phone, emergency exit), opened from the lock badge. */
+    var lockExit by mutableStateOf(false)
     val anyOpen: Boolean get() = lockMenu || lockPicker || ccMenu || qualityMenu || moreSheet || speedMenu
 }
 
@@ -229,4 +237,57 @@ private fun Stepper(label: String, value: Int, onMinus: () -> Unit, onPlus: () -
             FilledTonalIconButton(onClick = onPlus) { Icon(Icons.Rounded.Add, "More $label") }
         }
     }
+}
+
+
+/**
+ * Opened from the lock badge on the video: how long is left, the Phone app, and the emergency
+ * exit (same rules as before: type the phrase, wait, once a day and three times a week).
+ */
+@Composable
+fun LockExitDialogHost() {
+    if (!PlayerPopups.lockExit) return
+    val study = Graph.study
+    if (!study.lockActive) { PlayerPopups.lockExit = false; return }
+    val context = LocalContext.current
+    var exiting by remember { mutableStateOf(false) }
+    var left by remember { mutableLongStateOf(study.lockRemainingMs) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            left = study.lockRemainingMs
+            if (!study.lockActive) { PlayerPopups.lockExit = false; break }
+            delay(1000)
+        }
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { PlayerPopups.lockExit = false },
+        icon = { Icon(Icons.Rounded.Lock, null) },
+        title = { Text("Study session locked, ${com.sourabh.jarvistube.lock.minutesLeftText(left)}") },
+        text = {
+            androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (exiting) {
+                    com.sourabh.jarvistube.lock.EmergencyExit(
+                        onEnd = { if (study.useEmergencyExit()) PlayerPopups.lockExit = false },
+                        onCancel = { exiting = false }
+                    )
+                } else {
+                    Text(
+                        "Only this video, Phone, alarms and payments work until the timer ends.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(Modifier.size(16.dp))
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = {
+                            context.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Open the Phone app") }
+                    androidx.compose.material3.TextButton(onClick = { exiting = true }) { Text("Emergency exit") }
+                }
+            }
+        },
+        confirmButton = {
+            if (!exiting) androidx.compose.material3.TextButton(onClick = { PlayerPopups.lockExit = false }) { Text("Keep studying") }
+        }
+    )
 }

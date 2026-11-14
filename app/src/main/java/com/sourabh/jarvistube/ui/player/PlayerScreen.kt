@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.player
 
+import com.sourabh.jarvistube.ui.study.PlayerPopups
+
 import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.unit.dp
@@ -69,7 +71,7 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
     LaunchedEffect(locked) { if (locked) fullscreen = true }
     val lockContext = LocalContext.current
     BackHandler(enabled = locked) {
-        Toast.makeText(lockContext, "Study session locked: ${formatLeft(Graph.study.lockRemainingMs)} left", Toast.LENGTH_SHORT).show()
+        Toast.makeText(lockContext, "Study session locked: ${formatLeft(Graph.study.lockRemainingMs)} left. Tap the lock badge for options.", Toast.LENGTH_SHORT).show()
     }
 
     // Orientation, YouTube-style: turning the phone sideways enters fullscreen; leaving fullscreen
@@ -90,6 +92,15 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
         if (landscape && !holdPortrait && !inPip) fullscreen = true
     }
     LaunchedEffect(locked) { if (locked) portraitFullscreen = false }
+    // A new video opens in the upright full-screen view (once per video, so coming back from the
+    // mini player keeps the page you were on).
+    LaunchedEffect(cur.video.url) {
+        if (AppSettings.startUpright && !landscape && !locked && !inPip && UprightStart.lastUrl != cur.video.url) {
+            UprightStart.lastUrl = cur.video.url
+            portraitFullscreen = true
+            fullscreen = true
+        }
+    }
 
     DisposableEffect(fullscreen, portraitFullscreen) {
         val window = activity?.window
@@ -171,6 +182,7 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
             .then(if (ambientOn) Modifier else Modifier.background(MaterialTheme.colorScheme.background))
     ) {
         StudyLockDialogHost(cur)
+        com.sourabh.jarvistube.ui.study.LockExitDialogHost()
         PlayerMoreSheetHost(cur, ui)
         if (!fs) {
             Box(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(Color.Black))
@@ -183,7 +195,13 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
         androidx.compose.foundation.layout.Row(if (fs) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
         VideoBox(
             modifier = Modifier.weight(1f).fillMaxHeight(),
-            onComments = if (fullscreen && landscape && !inPip) ({ sideComments = true }) else null,
+            onComments = when {
+                inPip || !fullscreen -> null
+                landscape -> ({ sideComments = true })
+                // Upright full screen: comments open on the normal page.
+                else -> ({ PlayerPopups.openComments = true; fullscreen = false })
+            },
+            onDetails = if (fullscreen && portraitFullscreen && !landscape) ({ fullscreen = false }) else null,
             now = cur,
             ui = ui,
             fullscreen = fs,
@@ -220,3 +238,7 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
     }
     }
 }
+
+
+/** The last video that auto-opened in upright full screen (survives the player closing and reopening). */
+private object UprightStart { var lastUrl: String? = null }

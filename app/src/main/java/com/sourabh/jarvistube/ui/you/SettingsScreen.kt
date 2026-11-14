@@ -331,7 +331,7 @@ fun SettingsScreen(
                 )
                 Spacer(Modifier.size(12.dp))
                 Text(
-                    "Designed & built by Sourabh",
+                    "ClearVision.Co",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )

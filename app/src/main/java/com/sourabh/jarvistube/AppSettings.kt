@@ -85,6 +85,8 @@ object AppSettings {
     var haptics by mutableStateOf(true); private set
     /** The video's colours glow softly behind the player, as YouTube's Ambient mode. */
     var ambient by mutableStateOf(true); private set
+    /** Videos open in YouTube's upright full-screen view; "Details" goes to the normal page. */
+    var startUpright by mutableStateOf(true); private set
     /** "dark" (default), "light" or "system" (follow the phone). */
     var appearance by mutableStateOf("dark"); private set
     val appearances = listOf("dark" to "Dark", "light" to "Light", "system" to "Follow the phone")
@@ -116,6 +118,7 @@ object AppSettings {
         motionStyle = prefs.getString("motion", "leela") ?: "leela"
         haptics = prefs.getBoolean("haptics", true)
         ambient = prefs.getBoolean("ambient", true)
+        startUpright = prefs.getBoolean("startUpright", true)
         captionFont = prefs.getString("captionFont", "default") ?: "default"
         captionScale = prefs.getFloat("captionScale", 1f)
         captionColor = prefs.getLong("captionColor", 0xFFFFFFFF)
@@ -164,6 +167,7 @@ object AppSettings {
     fun updateMotion(key: String) { motionStyle = key; prefs.edit().putString("motion", key).apply() }
     fun updateHaptics(on: Boolean) { haptics = on; prefs.edit().putBoolean("haptics", on).apply() }
     fun updateAmbient(on: Boolean) { ambient = on; prefs.edit().putBoolean("ambient", on).apply() }
+    fun updateStartUpright(on: Boolean) { startUpright = on; prefs.edit().putBoolean("startUpright", on).apply() }
 
     fun updateAppearance(key: String) {
         appearance = key

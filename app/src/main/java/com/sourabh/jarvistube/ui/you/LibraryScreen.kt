@@ -13,7 +13,6 @@ import com.sourabh.jarvistube.ui.common.Thumb
 import com.sourabh.jarvistube.ui.common.TopicChip
 import com.sourabh.jarvistube.ui.common.VideoCard
 import com.sourabh.jarvistube.ui.common.VideoCardSkeleton
-import com.sourabh.jarvistube.ui.shorts.ShortsBlockCard
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -103,6 +102,8 @@ fun LibraryScreen(
     var newPlaylist by remember { mutableStateOf(false) }
     var historyQuery by remember { mutableStateOf("") }
     var clearHistory by remember { mutableStateOf(false) }
+    /** "YT History": only the YouTube account's history, without scrolling past PlayBook's own. */
+    var ytOnly by remember { mutableStateOf(false) }
     if (clearHistory) ClearHistoryDialog(onDismiss = { clearHistory = false })
     if (accountSheet) {
         AccountSheet(lib, onAddAccount = { lib.prepareAddAccount(); onSignIn() }, onDismiss = { accountSheet = false })
@@ -117,7 +118,6 @@ fun LibraryScreen(
         if (detail == null) {
             item { YouHeader(onOpenDownloads, onOpenSettings) }
             item { ProfileHeader(lib, onSwitch = { accountSheet = true }) }
-            item { ShortsBlockCard() }
             stickyHeader {
                 Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
                     LazyRow(
@@ -125,7 +125,14 @@ fun LibraryScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(tabs) { t ->
-                            TopicChip(t.label, t == lib.tab) { lib.selectTab(t) }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                TopicChip(t.label, t == lib.tab && !(t == LibTab.History && ytOnly)) { ytOnly = false; lib.selectTab(t) }
+                                // Right beside History: straight to the YouTube account's history.
+                                if (t == LibTab.History) TopicChip("YT History", lib.tab == LibTab.History && ytOnly) {
+                                    ytOnly = true
+                                    lib.selectTab(LibTab.History)
+                                }
+                            }
                         }
                     }
                 }
@@ -173,7 +180,7 @@ fun LibraryScreen(
                 }
             }
         }
-        if (detail == null && lib.tab == LibTab.History) {
+        if (detail == null && lib.tab == LibTab.History && !ytOnly) {
             historySection(vm, historyQuery, { historyQuery = it }, onClearAll = { clearHistory = true })
             if (state.items.isNotEmpty()) item(key = "youtube-history") {
                 Text(
@@ -393,7 +400,6 @@ private fun SignedOut(
         contentPadding = PaddingValues(bottom = bottomPadding + 16.dp)
     ) {
         item { YouHeader(onOpenDownloads, onOpenSettings) }
-        item { ShortsBlockCard() }
         item { SignedOutBody(onSignIn) }
         item {
             Text(

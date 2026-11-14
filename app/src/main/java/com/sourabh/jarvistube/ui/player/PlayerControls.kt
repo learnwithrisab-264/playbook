@@ -1,5 +1,10 @@
 package com.sourabh.jarvistube.ui.player
 
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+
+import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material.icons.rounded.SkipNext
+
 import androidx.compose.material.icons.automirrored.rounded.Comment
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.Share
@@ -80,7 +85,8 @@ internal fun Controls(
     onCollapse: () -> Unit,
     onBottomHeight: (Int) -> Unit,
     onMoreVideos: (() -> Unit)? = null,
-    onComments: (() -> Unit)? = null
+    onComments: (() -> Unit)? = null,
+    onDetails: (() -> Unit)? = null
 ) {
     val player = Graph.player.player
     var scrubMs by remember { mutableStateOf<Long?>(null) }
@@ -120,6 +126,15 @@ internal fun Controls(
                     )
                 }
             } else Spacer(Modifier.weight(1f))
+            // Quality first (left of CC), as asked: one tap to change it.
+            if (now.heights.isNotEmpty()) {
+                Box {
+                    IconButton(onClick = { PlayerPopups.qualityMenu = true }) {
+                        Icon(Icons.Rounded.HighQuality, "Quality", tint = Color.White)
+                    }
+                    QualityMenu(now, PlayerPopups.qualityMenu) { PlayerPopups.qualityMenu = false }
+                }
+            }
             // CC button only when YouTube actually offers captions for this video.
             if (now.subtitles.isNotEmpty()) {
                 Box {
@@ -159,11 +174,18 @@ internal fun Controls(
         // Center transport (hidden while scrubbing, so the preview has the screen).
         if (scrubMs == null) Row(
             Modifier.align(Alignment.Center),
-            horizontalArrangement = Arrangement.spacedBy(if (fullscreen) 120.dp else 56.dp),
+            horizontalArrangement = Arrangement.spacedBy(
+                // Wide spacing only when the screen is wide (landscape full screen).
+                if (fullscreen && androidx.compose.ui.platform.LocalConfiguration.current.let { it.screenWidthDp > it.screenHeightDp }) 120.dp else 56.dp
+            ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L)) }) {
-                Icon(Icons.Rounded.Replay10, "Back 10 seconds", tint = Color.White, modifier = Modifier.size(34.dp))
+            IconButton(onClick = { Graph.player.skipPrevious() }, enabled = !Graph.study.lockActive) {
+                Icon(
+                    Icons.Rounded.SkipPrevious, "Previous video",
+                    tint = Color.White.copy(alpha = if (Graph.study.lockActive) 0.35f else 1f),
+                    modifier = Modifier.size(38.dp)
+                )
             }
             Box(
                 Modifier.size(60.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.18f))
@@ -177,8 +199,12 @@ internal fun Controls(
                     modifier = Modifier.size(36.dp)
                 )
             }
-            IconButton(onClick = { player.seekTo(player.currentPosition + 10_000L) }) {
-                Icon(Icons.Rounded.Forward10, "Forward 10 seconds", tint = Color.White, modifier = Modifier.size(34.dp))
+            IconButton(onClick = { Graph.player.skipNext() }, enabled = !Graph.study.lockActive) {
+                Icon(
+                    Icons.Rounded.SkipNext, "Next video",
+                    tint = Color.White.copy(alpha = if (Graph.study.lockActive) 0.35f else 1f),
+                    modifier = Modifier.size(38.dp)
+                )
             }
         }
 
@@ -221,6 +247,20 @@ internal fun Controls(
                 onScrub = { scrubMs = it; onDragging(it != null) }
             )
             if (fullscreen) FullscreenActions(now, onComments, onMoreVideos)
+            // Upright full screen: the way to the normal page, like tapping "Related videos hidden".
+            if (fullscreen && onDetails != null) {
+                Row(
+                    Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp).clip(CircleShape)
+                        .clickable(onClick = onDetails)
+                        .background(Color.White.copy(alpha = 0.12f))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Rounded.KeyboardArrowUp, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Details, comments & related", color = Color.White, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                }
+            }
             Spacer(Modifier.height(if (fullscreen) 6.dp else 0.dp))
         }
     }
@@ -297,10 +337,14 @@ private fun FullscreenActions(now: NowPlaying, onComments: (() -> Unit)?, onMore
                 }
             }
         }
-        ActionIcon(
-            if (Graph.player.audioOnly) androidx.compose.material.icons.Icons.Rounded.Headphones else androidx.compose.material.icons.Icons.Rounded.HeadsetOff,
-            if (Graph.player.audioOnly) "Back to video" else "Listen (audio only)"
-        ) { Graph.player.updateAudioOnly(!Graph.player.audioOnly) }
+        IconButton(onClick = { Graph.player.updateAudioOnly(!Graph.player.audioOnly) }) {
+            Icon(
+                androidx.compose.material.icons.Icons.Rounded.Headphones,
+                if (Graph.player.audioOnly) "Back to video" else "Listen (audio only)",
+                tint = if (Graph.player.audioOnly) MaterialTheme.colorScheme.primary else Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+        }
         Spacer(Modifier.weight(1f))
         if (onMoreVideos != null) {
             val peek = remember(now.info) { relatedVideos(now).firstOrNull()?.thumb }
