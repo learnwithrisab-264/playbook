@@ -100,10 +100,11 @@ object IconSize {
     val large = 34.dp // big player buttons, empty-screen icons
 }
 
-/** Animation lengths in milliseconds. */
+/** Animation lengths in milliseconds, scaled by the Animation style in Settings (0 when off). */
 object Motion {
-    const val FAST = 150
-    const val NORMAL = 220
+    private val scale: Float get() = MotionStyle.of(com.sourabh.jarvistube.AppSettings.motionStyle).scale
+    val FAST: Int get() = (150 * scale).toInt()
+    val NORMAL: Int get() = (220 * scale).toInt()
 }
 
 /** PlayBook's own colours that don't change between light and dark mode. */
@@ -131,7 +132,11 @@ fun appIsDark(): Boolean = when (com.sourabh.jarvistube.AppSettings.appearance) 
 
 @Composable
 fun JarvisTubeTheme(dark: Boolean = appIsDark(), content: @Composable () -> Unit) {
-    val scheme = if (dark) Night else Day
+    val theme = EpicTheme.of(com.sourabh.jarvistube.AppSettings.themeKey)
+    val target = theme.scheme(dark, Night, Day)
+    // Switching themes glides between colours instead of flashing.
+    val scheme = animateScheme(target)
+    @Suppress("NAME_SHADOWING") val dark = dark && !theme.lightOnly
     // Status and navigation bars: dark bars get light icons, light bars get dark icons.
     val view = androidx.compose.ui.platform.LocalView.current
     if (!view.isInEditMode) {
@@ -148,4 +153,20 @@ fun JarvisTubeTheme(dark: Boolean = appIsDark(), content: @Composable () -> Unit
         // back to black text and icons. Give the whole app the theme's content colour.
         CompositionLocalProvider(LocalContentColor provides scheme.onBackground, content = content)
     }
+}
+
+
+@Composable
+private fun animateScheme(t: androidx.compose.material3.ColorScheme): androidx.compose.material3.ColorScheme {
+    val spec = androidx.compose.animation.core.tween<Color>(maxOf(Motion.NORMAL * 2, 1))
+    @Composable fun a(c: Color) = androidx.compose.animation.animateColorAsState(c, spec, label = "scheme").value
+    return t.copy(
+        primary = a(t.primary), onPrimary = a(t.onPrimary),
+        primaryContainer = a(t.primaryContainer), onPrimaryContainer = a(t.onPrimaryContainer),
+        secondary = a(t.secondary), background = a(t.background), onBackground = a(t.onBackground),
+        surface = a(t.surface), onSurface = a(t.onSurface), surfaceVariant = a(t.surfaceVariant),
+        onSurfaceVariant = a(t.onSurfaceVariant), outline = a(t.outline), outlineVariant = a(t.outlineVariant),
+        surfaceContainer = a(t.surfaceContainer), surfaceContainerHigh = a(t.surfaceContainerHigh),
+        surfaceContainerHighest = a(t.surfaceContainerHighest)
+    )
 }

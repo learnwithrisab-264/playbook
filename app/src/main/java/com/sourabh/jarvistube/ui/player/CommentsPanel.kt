@@ -385,7 +385,7 @@ private fun CommentSkeleton(reply: Boolean = false) {
 @Composable
 private fun PanelSpinner() {
     Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
+        com.sourabh.jarvistube.ui.theme.ChakraSpinner(30.dp)
     }
 }
 

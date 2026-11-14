@@ -184,7 +184,7 @@ fun ErrorBox(
 @Composable
 fun LoadingView(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth().padding(vertical = com.sourabh.jarvistube.ui.theme.Space.xl), contentAlignment = Alignment.Center) {
-        androidx.compose.material3.CircularProgressIndicator(Modifier.size(32.dp), strokeWidth = 3.dp)
+        com.sourabh.jarvistube.ui.theme.ChakraSpinner(36.dp)
     }
 }
 

@@ -137,6 +137,7 @@ private fun Modifier.notShown(): Modifier = this
 @Composable
 private fun BottomBar(tabs: List<Tab>, current: Tab, onSelect: (Tab) -> Unit) {
     val cs = MaterialTheme.colorScheme
+    val touch = com.sourabh.jarvistube.ui.theme.rememberTouch()
     Column(Modifier.fillMaxWidth().background(cs.background)) {
         Box(Modifier.fillMaxWidth().height(0.5.dp).background(cs.outlineVariant.copy(alpha = 0.35f)))
         Row(
@@ -148,14 +149,20 @@ private fun BottomBar(tabs: List<Tab>, current: Tab, onSelect: (Tab) -> Unit) {
                 val tint by animateColorAsState(
                     if (selected) cs.onSurface else cs.onSurfaceVariant, tween(Motion.FAST), label = "tab"
                 )
+                Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                // The diya: the tab you are on is lit by a small flickering flame.
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = selected,
+                    enter = androidx.compose.animation.fadeIn(tween(Motion.NORMAL)) + androidx.compose.animation.scaleIn(tween(Motion.NORMAL), 0.6f),
+                    exit = androidx.compose.animation.fadeOut(tween(Motion.FAST))
+                ) { com.sourabh.jarvistube.ui.theme.DiyaGlow(Modifier.size(64.dp, 52.dp)) }
                 Column(
                     Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
+                        .fillMaxSize()
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
-                        ) { onSelect(t) },
+                        ) { if (!selected) touch(); onSelect(t) },
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -168,6 +175,7 @@ private fun BottomBar(tabs: List<Tab>, current: Tab, onSelect: (Tab) -> Unit) {
                         t.label, fontSize = 10.sp, color = tint, maxLines = 1, softWrap = false,
                         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
                     )
+                }
                 }
             }
         }

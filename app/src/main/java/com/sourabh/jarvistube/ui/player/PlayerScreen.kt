@@ -1,5 +1,10 @@
 package com.sourabh.jarvistube.ui.player
 
+import androidx.compose.ui.draw.blur
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.unit.dp
+import com.sourabh.jarvistube.AppSettings
+
 import kotlinx.coroutines.launch
 
 import androidx.compose.ui.graphics.graphicsLayer
@@ -125,6 +130,29 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
     // threshold and it drops into the mini player, otherwise it springs back.
     val pull = remember { androidx.compose.animation.core.Animatable(0f) }
     val pullScope = androidx.compose.runtime.rememberCoroutineScope()
+    // Ambient mode: the video's colours glow softly behind the player, like YouTube's.
+    val ambientOn = AppSettings.ambient && !fs && android.os.Build.VERSION.SDK_INT >= 31
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    if (ambientOn) {
+        val thumb = cur.video.thumb ?: cur.info?.thumbnails?.let { it.bestUrl() }
+        coil3.compose.AsyncImage(
+            model = thumb,
+            contentDescription = null,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            modifier = Modifier.fillMaxWidth().height(520.dp)
+                .graphicsLayer { alpha = 0.75f }
+                .blur(90.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded)
+        )
+        Box(
+            Modifier.fillMaxWidth().height(540.dp).background(
+                androidx.compose.ui.graphics.Brush.verticalGradient(
+                    0f to MaterialTheme.colorScheme.background.copy(alpha = 0.2f),
+                    0.55f to MaterialTheme.colorScheme.background.copy(alpha = 0.55f),
+                    1f to MaterialTheme.colorScheme.background
+                )
+            )
+        )
+    }
     Column(
         Modifier.fillMaxSize()
             .graphicsLayer {
@@ -135,7 +163,7 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
                 transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)
                 alpha = 1f - 0.35f * p
             }
-            .background(MaterialTheme.colorScheme.background)
+            .then(if (ambientOn) Modifier else Modifier.background(MaterialTheme.colorScheme.background))
     ) {
         StudyLockDialogHost(cur)
         PlayerMoreSheetHost(cur, ui)
@@ -184,5 +212,6 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
         if (!fs) {
             Details(vm, cur, ui, Modifier.weight(1f))
         }
+    }
     }
 }

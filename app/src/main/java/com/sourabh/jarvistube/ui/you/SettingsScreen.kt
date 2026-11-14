@@ -26,6 +26,9 @@ import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.WbTwilight
+import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.PersonAdd
@@ -75,6 +78,7 @@ fun SettingsScreen(
     var regionDialog by remember { mutableStateOf(false) }
     var qualityDialog by remember { mutableStateOf(false) }
     var appearanceDialog by remember { mutableStateOf(false) }
+    var motionDialog by remember { mutableStateOf(false) }
     /** The account the ✕ was tapped on (asks before signing out of it). */
     var removeTarget by remember { mutableStateOf<com.sourabh.jarvistube.data.Account?>(null) }
     var speedDialog by remember { mutableStateOf(false) }
@@ -90,12 +94,37 @@ fun SettingsScreen(
     ) {
         item { SubPageHeader("Settings", onBack) }
 
-        item { SectionHeader("Appearance") }
+        item { SectionHeader("Look & feel") }
+        // Themes from the Ramayana and the Mahabharata, each with its meaning.
+        item { ThemeGallery() }
         item {
             SettingRow(
-                Icons.Rounded.DarkMode, "Appearance", AppSettings.appearanceName,
+                Icons.Rounded.DarkMode, "Appearance",
+                if (com.sourabh.jarvistube.ui.theme.EpicTheme.of(AppSettings.themeKey).lightOnly) "Ayodhya is always light"
+                else AppSettings.appearanceName,
                 onClick = { appearanceDialog = true }
             )
+        }
+        item {
+            val m = com.sourabh.jarvistube.ui.theme.MotionStyle.of(AppSettings.motionStyle)
+            SettingRow(
+                Icons.Rounded.AutoAwesome, "Animation style", "${m.title}: ${m.meaning}",
+                onClick = { motionDialog = true }
+            )
+        }
+        item {
+            SettingRow(
+                Icons.Rounded.Vibration, "Haptic touches",
+                "A light tap under your finger when you choose something.",
+                onClick = { AppSettings.updateHaptics(!AppSettings.haptics) }
+            ) { Switch(checked = AppSettings.haptics, onCheckedChange = { AppSettings.updateHaptics(it) }) }
+        }
+        item {
+            SettingRow(
+                Icons.Rounded.WbTwilight, "Ambient mode",
+                "The video's colours glow softly behind the player.",
+                onClick = { AppSettings.updateAmbient(!AppSettings.ambient) }
+            ) { Switch(checked = AppSettings.ambient, onCheckedChange = { AppSettings.updateAmbient(it) }) }
         }
 
         item { SectionHeader("Content") }
@@ -326,6 +355,15 @@ fun SettingsScreen(
                 vm.loadStudyFeed()
             },
             onDismiss = { regionDialog = false }
+        )
+    }
+    if (motionDialog) {
+        ChoiceDialog(
+            title = "Animation style",
+            options = com.sourabh.jarvistube.ui.theme.MotionStyle.entries.map { it.key to "${it.title}  ·  ${it.meaning}" },
+            selected = AppSettings.motionStyle,
+            onPick = { key -> motionDialog = false; AppSettings.updateMotion(key) },
+            onDismiss = { motionDialog = false }
         )
     }
     if (appearanceDialog) {

@@ -77,6 +77,14 @@ object AppSettings {
     var showShorts by mutableStateOf(true); private set
     /** The Study tab in the bottom bar. Hiding it never stops a session or lock: see [studyTabRequired]. */
     var showStudy by mutableStateOf(true); private set
+    /** Theme from the epics (ui/theme/Epic.kt); "agni" is PlayBook's original look. */
+    var themeKey by mutableStateOf("agni"); private set
+    /** How things move: "leela", "shanti", "vayu" or "off". */
+    var motionStyle by mutableStateOf("leela"); private set
+    /** A light tap under the finger for choices. */
+    var haptics by mutableStateOf(true); private set
+    /** The video's colours glow softly behind the player, as YouTube's Ambient mode. */
+    var ambient by mutableStateOf(true); private set
     /** "dark" (default), "light" or "system" (follow the phone). */
     var appearance by mutableStateOf("dark"); private set
     val appearances = listOf("dark" to "Dark", "light" to "Light", "system" to "Follow the phone")
@@ -104,6 +112,10 @@ object AppSettings {
         showShorts = prefs.getBoolean("showShorts", true)
         showStudy = prefs.getBoolean("showStudy", true)
         appearance = prefs.getString("appearance", "dark") ?: "dark"
+        themeKey = prefs.getString("theme", "agni") ?: "agni"
+        motionStyle = prefs.getString("motion", "leela") ?: "leela"
+        haptics = prefs.getBoolean("haptics", true)
+        ambient = prefs.getBoolean("ambient", true)
         captionFont = prefs.getString("captionFont", "default") ?: "default"
         captionScale = prefs.getFloat("captionScale", 1f)
         captionColor = prefs.getLong("captionColor", 0xFFFFFFFF)
@@ -147,6 +159,11 @@ object AppSettings {
         showRecommended = on
         prefs.edit().putBoolean("showRecommended", on).apply()
     }
+
+    fun updateTheme(key: String) { themeKey = key; prefs.edit().putString("theme", key).apply() }
+    fun updateMotion(key: String) { motionStyle = key; prefs.edit().putString("motion", key).apply() }
+    fun updateHaptics(on: Boolean) { haptics = on; prefs.edit().putBoolean("haptics", on).apply() }
+    fun updateAmbient(on: Boolean) { ambient = on; prefs.edit().putBoolean("ambient", on).apply() }
 
     fun updateAppearance(key: String) {
         appearance = key
