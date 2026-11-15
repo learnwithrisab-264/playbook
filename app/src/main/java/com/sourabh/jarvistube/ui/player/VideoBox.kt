@@ -508,7 +508,7 @@ internal fun VideoBox(
         val canFill = fullscreen && fillZoom > 1.02f && frame.width > frame.height
         if (showControls && controlsVisible && !PlayerPopups.touchLock && (vertical || zoomed || canFill)) {
             Row(
-                Modifier.align(Alignment.TopCenter).padding(top = if (fullscreen) 64.dp else 12.dp),
+                Modifier.align(Alignment.TopCenter).padding(top = if (fullscreen) 104.dp else 12.dp),
                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
             ) {
                 val filled = fillZoom > 1.02f && zoom >= fillZoom - 0.02f

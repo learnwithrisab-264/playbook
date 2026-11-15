@@ -99,33 +99,15 @@ internal fun Controls(
             )
         )
     ) {
-        // Top bar
+        // Top bar: ⌄ HQ CC on the left, speed and settings on the right; the title below.
+        Column(Modifier.align(Alignment.TopStart).fillMaxWidth()) {
         Row(
-            Modifier.align(Alignment.TopStart).fillMaxWidth().padding(horizontal = 4.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (!Graph.study.lockActive) IconButton(onClick = if (fullscreen) onToggleFullscreen else onCollapse) {
                 Icon(Icons.Rounded.KeyboardArrowDown, "Minimize", tint = Color.White, modifier = Modifier.size(30.dp))
             }
-            if (fullscreen) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        now.info?.name ?: now.video.title,
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        now.info?.uploaderName ?: now.video.channel,
-                        color = Color.White.copy(alpha = 0.75f),
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            } else Spacer(Modifier.weight(1f))
             // Quality first (left of CC), as asked: one tap to change it.
             if (now.heights.isNotEmpty()) {
                 Box {
@@ -147,6 +129,7 @@ internal fun Controls(
                     CaptionsMenu(now, PlayerPopups.ccMenu) { PlayerPopups.ccMenu = false }
                 }
             }
+            Spacer(Modifier.weight(1f))
             // Playback speed right next to CC, one tap away (quality lives in the gear sheet).
             Box {
                 Text(
@@ -169,6 +152,27 @@ internal fun Controls(
                 }
             }
             StudyLockButton(now)
+                }
+            // The title gets its own line under the buttons, with room for two lines.
+            if (fullscreen) {
+                Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 2.dp)) {
+                    Text(
+                        now.info?.name ?: now.video.title,
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        now.info?.uploaderName ?: now.video.channel,
+                        color = Color.White.copy(alpha = 0.75f),
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
 
         // Center transport (hidden while scrubbing, so the preview has the screen).
