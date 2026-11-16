@@ -1,5 +1,15 @@
 package com.sourabh.jarvistube.ui.shorts
 
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material.icons.automirrored.rounded.Comment
+import androidx.compose.material.icons.rounded.ClosedCaption
+import androidx.compose.material.icons.rounded.ClosedCaptionOff
+import androidx.compose.material.icons.rounded.Share
+
 import com.sourabh.jarvistube.ui.theme.Brand
 import com.sourabh.jarvistube.ui.theme.OnVideo
 import com.sourabh.jarvistube.ui.common.Thumb
@@ -105,9 +115,32 @@ fun ShortsViewerScreen(vm: TubeViewModel, viewer: ShortsViewer, ui: PlayerUi) {
         if (page >= items.size - 4) viewer.onMore()
     }
 
+    // Comments open over the reel (it keeps playing behind), as on Instagram.
+    var commentsFor by remember { mutableStateOf<VideoItem?>(null) }
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         VerticalPager(state = pager, modifier = Modifier.fillMaxSize(), key = { items[it].url }) { page ->
-            ShortPage(items[page], ui, playing = page == pager.settledPage)
+            ShortPage(
+                items[page], ui, playing = page == pager.settledPage,
+                onComments = { commentsFor = items[page] },
+                onChannel = { url, name -> vm.closeShorts(); vm.openChannel(url, name) }
+            )
+        }
+        commentsFor?.let { v ->
+            val state = com.sourabh.jarvistube.ui.player.rememberComments(v.url)
+            val links = com.sourabh.jarvistube.ui.player.rememberLinkActions(vm, v.url)
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)).clickable(
+                interactionSource = remember { MutableInteractionSource() }, indication = null
+            ) { commentsFor = null }) {
+                com.sourabh.jarvistube.ui.player.CommentsPanel(
+                    state, links,
+                    channelName = v.channel,
+                    channelAvatar = v.avatar,
+                    onClose = { commentsFor = null },
+                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.66f)
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                )
+            }
         }
         IconButton(
             onClick = vm::closeShorts,
@@ -118,19 +151,24 @@ fun ShortsViewerScreen(vm: TubeViewModel, viewer: ShortsViewer, ui: PlayerUi) {
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
-private fun ShortPage(video: VideoItem, ui: PlayerUi, playing: Boolean) {
+private fun ShortPage(
+    video: VideoItem,
+    ui: PlayerUi,
+    playing: Boolean,
+    onComments: () -> Unit = {},
+    onChannel: (String, String) -> Unit = { _, _ -> }
+) {
     val controller = Graph.player
     val now by controller.now.collectAsStateWithLifecycle()
     val firstFrame by controller.firstFrameUrl.collectAsStateWithLifecycle()
     val current = now?.takeIf { playing && it.video.url == video.url }
     val showVideo = current != null && !controller.audioOnly
 
+    // Double-tap to pause or play, as asked (a single tap does nothing, so scrolling stays calm).
     Box(
-        Modifier.fillMaxSize().background(Color.Black).clickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = null,
-            onClick = { if (current != null) controller.togglePlay() }
-        )
+        Modifier.fillMaxSize().background(Color.Black).pointerInput(current != null) {
+            detectTapGestures(onDoubleTap = { if (current != null) controller.togglePlay() })
+        }
     ) {
         if (showVideo) {
             // Only the Short on screen holds the video picture.
@@ -178,8 +216,16 @@ private fun ShortPage(video: VideoItem, ui: PlayerUi, playing: Boolean) {
                 .navigationBarsPadding().padding(start = 16.dp, end = 16.dp, top = 40.dp, bottom = 16.dp)
         ) {
             val channel = current?.info?.uploaderName ?: video.channel
+            val channelUrl = current?.info?.uploaderUrl?.takeIf { it.isNotBlank() } ?: video.channelUrl
             if (channel.isNotBlank()) {
-                Text(channel, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                // Tap the channel to open it.
+                Text(
+                    "@" + channel.removePrefix("@"),
+                    color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.clickable(enabled = channelUrl != null && !Graph.study.lockActive) {
+                        channelUrl?.let { onChannel(it, channel) }
+                    }
+                )
             }
             Text(
                 current?.info?.name ?: video.title,
@@ -187,6 +233,31 @@ private fun ShortPage(video: VideoItem, ui: PlayerUi, playing: Boolean) {
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2, overflow = TextOverflow.Ellipsis
             )
+        }
+        // Captions (English / Hindi, one clean line) when turned on with CC.
+        if (current != null) com.sourabh.jarvistube.ui.player.CaptionOverlay(bottomInset = 150.dp, modifier = Modifier.matchParentSize())
+        // Reels-style actions on the right: comments, captions, share.
+        Column(
+            Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 8.dp, bottom = 110.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp)
+        ) {
+            ReelAction(Icons.AutoMirrored.Rounded.Comment, "Comments", onComments)
+            val ccOn = current?.subtitleId != null
+            ReelAction(if (ccOn) Icons.Rounded.ClosedCaption else Icons.Rounded.ClosedCaptionOff, if (ccOn) "CC on" else "CC") {
+                current?.let { cur ->
+                    if (ccOn) controller.setSubtitle(null)
+                    else cur.subtitles.firstOrNull { it.id == "en" }?.let { controller.setSubtitle(it.id) }
+                        ?: cur.subtitles.firstOrNull()?.let { controller.setSubtitle(it.id) }
+                }
+            }
+            val context = LocalContext.current
+            ReelAction(Icons.Rounded.Share, "Share") {
+                val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "text/plain"; putExtra(android.content.Intent.EXTRA_TEXT, video.url)
+                }
+                context.startActivity(android.content.Intent.createChooser(send, "Share"))
+            }
         }
         if (current != null) ShortProgress(ui, Modifier.align(Alignment.BottomStart))
     }
@@ -197,4 +268,16 @@ private fun ShortPage(video: VideoItem, ui: PlayerUi, playing: Boolean) {
 private fun ShortProgress(ui: PlayerUi, modifier: Modifier) {
     val progress = if (ui.duration > 0) (ui.position.toFloat() / ui.duration).coerceIn(0f, 1f) else 0f
     Box(modifier.fillMaxWidth(progress).height(2.dp).background(Brand.orange))
+}
+
+
+@Composable
+private fun ReelAction(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+    Column(
+        Modifier.clip(CircleShape).clickable(onClick = onClick).padding(6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(icon, label, tint = Color.White, modifier = Modifier.size(30.dp))
+        Text(label, color = Color.White, style = MaterialTheme.typography.labelSmall)
+    }
 }

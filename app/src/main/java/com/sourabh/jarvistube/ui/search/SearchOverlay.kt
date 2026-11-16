@@ -1,5 +1,9 @@
 package com.sourabh.jarvistube.ui.search
 
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.rounded.PlayArrow
+
 import com.sourabh.jarvistube.R
 import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.common.feedItems
@@ -105,15 +109,21 @@ fun SearchOverlay(vm: TubeViewModel, bottomPadding: Dp = 0.dp) {
 
         if (showResults) {
             // Two sections, never mixed. No Shorts section during a study session or lock.
-            val shortsOpen = vm.searchShowsShorts && vm.shortsAllowed
+            var instagram by remember { mutableStateOf(false) }
+            val instaOpen = instagram && vm.shortsAllowed
+            val shortsOpen = vm.searchShowsShorts && vm.shortsAllowed && !instaOpen
             if (vm.shortsAllowed) Row(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                TopicChip("Videos", !shortsOpen) { vm.searchShowsShorts = false }
-                TopicChip("Shorts", shortsOpen) { vm.searchShowsShorts = true }
+                TopicChip("Videos", !shortsOpen && !instaOpen) { instagram = false; vm.searchShowsShorts = false }
+                TopicChip("Shorts", shortsOpen) { instagram = false; vm.searchShowsShorts = true }
+                // Instagram's own keyword search for the same words (its reels swipe in its viewer).
+                TopicChip("Instagram", instaOpen) { instagram = true }
             }
-            if (shortsOpen) {
+            if (instaOpen) {
+                InstagramSearch(submitted.orEmpty(), Modifier.fillMaxSize().padding(bottom = bottomPadding))
+            } else if (shortsOpen) {
                 val blockedFor = rememberShortsBlockLeft()
                 if (blockedFor > 0) ShortsLocked(blockedFor)
                 else ShortsGrid(
@@ -122,7 +132,22 @@ fun SearchOverlay(vm: TubeViewModel, bottomPadding: Dp = 0.dp) {
                     onPlay = { v -> vm.openShorts({ vm.shortsResults.items }, v, vm::loadMoreSearchShorts) },
                     onMore = vm::loadMoreSearchShorts,
                     emptyBody = "No Shorts matched this search.",
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    header = {
+                        // The whole search as a full-screen reels feed, from the first one.
+                        if (vm.shortsResults.items.isNotEmpty()) androidx.compose.material3.Button(
+                            onClick = {
+                                vm.shortsResults.items.firstOrNull()?.let { first ->
+                                    vm.openShorts({ vm.shortsResults.items }, first, vm::loadMoreSearchShorts)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
+                        ) {
+                            Icon(androidx.compose.material.icons.Icons.Rounded.PlayArrow, null)
+                            Spacer(Modifier.size(8.dp))
+                            Text("Play as reels")
+                        }
+                    }
                 )
             } else {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 4.dp, bottom = bottomPadding + 24.dp)) {
