@@ -267,7 +267,9 @@ internal fun VideoBox(
                 )
             }
             // ... and two-finger zoom innermost, so it claims two-finger touches before the others.
-            .pointerInput(Unit) {
+            // Restarted for each video and screen size: zoom state belongs to the current video
+            // (a handler kept from the first video would zoom that one, invisibly).
+            .pointerInput(now.video.url, fillZoom, maxZoom) {
                 detectVideoZoom(
                     onTransform = { z, p ->
                         if (PlayerPopups.touchLock) return@detectVideoZoom
@@ -508,7 +510,7 @@ internal fun VideoBox(
         val canFill = fullscreen && fillZoom > 1.02f && frame.width > frame.height
         if (showControls && controlsVisible && !PlayerPopups.touchLock && (vertical || zoomed || canFill)) {
             Row(
-                Modifier.align(Alignment.TopCenter).padding(top = if (fullscreen) 104.dp else 12.dp),
+                Modifier.align(Alignment.TopCenter).padding(top = if (fullscreen && frame.width > frame.height) 64.dp else if (fullscreen) 104.dp else 12.dp),
                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
             ) {
                 val filled = fillZoom > 1.02f && zoom >= fillZoom - 0.02f

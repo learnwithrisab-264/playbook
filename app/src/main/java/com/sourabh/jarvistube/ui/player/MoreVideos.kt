@@ -63,6 +63,7 @@ internal fun relatedVideos(now: NowPlaying): List<VideoItem> =
     now.info?.relatedItems.orEmpty()
         .filterIsInstance<StreamInfoItem>()
         .filter { it.duration !in 1L..60L }
+        .filter { it.contentAvailability != org.schabi.newpipe.extractor.stream.ContentAvailability.MEMBERSHIP && it.contentAvailability != org.schabi.newpipe.extractor.stream.ContentAvailability.PAID }
         .map { r ->
             VideoItem(
                 url = r.url, title = r.name, channel = r.uploaderName.orEmpty(),

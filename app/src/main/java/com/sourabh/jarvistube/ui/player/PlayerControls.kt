@@ -108,6 +108,8 @@ internal fun Controls(
             if (!Graph.study.lockActive) IconButton(onClick = if (fullscreen) onToggleFullscreen else onCollapse) {
                 Icon(Icons.Rounded.KeyboardArrowDown, "Minimize", tint = Color.White, modifier = Modifier.size(30.dp))
             }
+            val wide = androidx.compose.ui.platform.LocalConfiguration.current.let { it.screenWidthDp > it.screenHeightDp }
+            val qualityAndCaptions: @Composable () -> Unit = {
             // Quality first (left of CC), as asked: one tap to change it.
             if (now.heights.isNotEmpty()) {
                 Box {
@@ -129,7 +131,31 @@ internal fun Controls(
                     CaptionsMenu(now, PlayerPopups.ccMenu) { PlayerPopups.ccMenu = false }
                 }
             }
-            Spacer(Modifier.weight(1f))
+            }
+            if (fullscreen && wide) {
+                // Landscape: as before, the title sits in the bar, then HQ and CC.
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        now.info?.name ?: now.video.title,
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        now.info?.uploaderName ?: now.video.channel,
+                        color = Color.White.copy(alpha = 0.75f),
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                qualityAndCaptions()
+            } else {
+                qualityAndCaptions()
+                Spacer(Modifier.weight(1f))
+            }
             // Playback speed right next to CC, one tap away (quality lives in the gear sheet).
             Box {
                 Text(
@@ -153,8 +179,8 @@ internal fun Controls(
             }
             StudyLockButton(now)
                 }
-            // The title gets its own line under the buttons, with room for two lines.
-            if (fullscreen) {
+            // Upright full screen: the title gets its own line under the buttons, two lines long.
+            if (fullscreen && !androidx.compose.ui.platform.LocalConfiguration.current.let { it.screenWidthDp > it.screenHeightDp }) {
                 Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 2.dp)) {
                     Text(
                         now.info?.name ?: now.video.title,

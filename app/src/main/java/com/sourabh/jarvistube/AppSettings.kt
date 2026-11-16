@@ -86,7 +86,7 @@ object AppSettings {
     /** The video's colours glow softly behind the player, as YouTube's Ambient mode. */
     var ambient by mutableStateOf(true); private set
     /** Videos open in YouTube's upright full-screen view; "Details" goes to the normal page. */
-    var startUpright by mutableStateOf(true); private set
+    var startUpright by mutableStateOf(false); private set
     /** The home-screen icon takes the theme's colours (ui/theme/AppIcon). */
     var iconFollowsTheme by mutableStateOf(true); private set
     /** "dark" (default), "light" or "system" (follow the phone). */
@@ -120,7 +120,7 @@ object AppSettings {
         motionStyle = prefs.getString("motion", "leela") ?: "leela"
         haptics = prefs.getBoolean("haptics", true)
         ambient = prefs.getBoolean("ambient", true)
-        startUpright = prefs.getBoolean("startUpright", true)
+        startUpright = prefs.getBoolean("startUpright", false)
         iconFollowsTheme = prefs.getBoolean("iconFollowsTheme", true)
         captionFont = prefs.getString("captionFont", "default") ?: "default"
         captionScale = prefs.getFloat("captionScale", 1f)

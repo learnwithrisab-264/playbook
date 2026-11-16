@@ -107,8 +107,15 @@ object LibraryParser {
 
     // ---- classic renderers ----
 
+    /** YouTube's "Members only" badge (or a paid / members' item). */
+    private fun membersOnly(o: JSONObject): Boolean {
+        val s = o.toString()
+        return s.contains("BADGE_STYLE_TYPE_MEMBERS_ONLY") || s.contains("Members only") || s.contains("Members first")
+    }
+
     private fun video(o: JSONObject): LibItem? {
         val id = o.optString("videoId").ifEmpty { return null }
+        if (membersOnly(o)) return null
         val title = text(o.optJSONObject("title")).ifEmpty { return null }
         val dur = parseDuration(text(o.optJSONObject("lengthText")))
         if (dur in 1L..60L) return null // Shorts
@@ -162,6 +169,7 @@ object LibraryParser {
     // ---- new lockupViewModel ----
 
     private fun lockup(o: JSONObject): LibItem? {
+        if (membersOnly(o)) return null
         val type = o.optString("contentType")
         val id = o.optString("contentId").ifEmpty { return null }
         val meta = o.optJSONObject("metadata")?.optJSONObject("lockupMetadataViewModel")

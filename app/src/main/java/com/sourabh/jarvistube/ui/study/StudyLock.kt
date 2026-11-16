@@ -109,6 +109,8 @@ object PlayerPopups {
     var touchLock by mutableStateOf(false)
     /** Set from the upright full-screen view: open the comments panel on the normal page. */
     var openComments by mutableStateOf(false)
+    /** The "Vertical" chip under the video: switch to the upright full-screen view. */
+    var enterUpright by mutableStateOf(false)
     /** The lock's options dialog (time left, phone, emergency exit), opened from the lock badge. */
     var lockExit by mutableStateOf(false)
     val anyOpen: Boolean get() = lockMenu || lockPicker || ccMenu || qualityMenu || moreSheet || speedMenu

@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.player
 
+import androidx.compose.material.icons.rounded.StayCurrentPortrait
+
 import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Corners
 import com.sourabh.jarvistube.ui.common.Avatar
@@ -186,6 +188,13 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                 Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // Vertical: YouTube's upright full-screen view, one tap away (no longer automatic).
+                if (!Graph.study.lockActive) PillChip(
+                    selected = false,
+                    onClick = { com.sourabh.jarvistube.ui.study.PlayerPopups.enterUpright = true },
+                    label = { Text("Vertical") },
+                    leadingIcon = { Icon(androidx.compose.material.icons.Icons.Rounded.StayCurrentPortrait, null, Modifier.size(18.dp)) }
+                )
                 Box {
                     PillChip(
                         selected = ui.speed != 1f,
@@ -331,6 +340,7 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
         item {
             val related = info?.relatedItems.orEmpty()
                 .filterIsInstance<org.schabi.newpipe.extractor.stream.StreamInfoItem>()
+                .filter { it.contentAvailability != org.schabi.newpipe.extractor.stream.ContentAvailability.MEMBERSHIP && it.contentAvailability != org.schabi.newpipe.extractor.stream.ContentAvailability.PAID }
                 .filter { it.duration !in 1L..60L }
             val locked = Graph.study.active
             if (locked) {

@@ -109,6 +109,8 @@ object ContentFilter {
 
     /** True if the item should never be listed. */
     fun hides(video: VideoItem): Boolean {
+        // Members-only / paid videos can't be watched: always out, filter or not.
+        if (video.membersOnly) return true
         if (!enforcing() || trusted(video.channel)) return false
         // Suggestive/adult terms or blocked patterns MUST ALWAYS hide the video, even if title contains "study"
         if (suggestivePatterns.any { it.containsMatchIn(video.title) }) return true

@@ -37,7 +37,9 @@ data class VideoItem(
     /** Upload time (epoch ms) when YouTube gives a real date; used to sort the study feed. */
     val uploadedAt: Long? = null,
     /** A YouTube Short (vertical, short-form). */
-    val isShort: Boolean = false
+    val isShort: Boolean = false,
+    /** Members-only or paid: can't be watched without joining, so never listed. */
+    val membersOnly: Boolean = false
 )
 
 /** Shorts never belong in a normal video list: marked by YouTube, or a minute or less. */
@@ -233,7 +235,9 @@ fun StreamInfoItem.toVideoItem(
     avatar = runCatching { uploaderAvatars.bestUrl() }.getOrNull() ?: fallbackAvatar,
     channelUrl = uploaderUrl?.takeIf { it.isNotBlank() } ?: fallbackChannelUrl,
     uploadedAt = runCatching { uploadDate?.offsetDateTime()?.toInstant()?.toEpochMilli() }.getOrNull(),
-    isShort = isShortItem()
+    isShort = isShortItem(),
+    membersOnly = contentAvailability == org.schabi.newpipe.extractor.stream.ContentAvailability.MEMBERSHIP ||
+        contentAvailability == org.schabi.newpipe.extractor.stream.ContentAvailability.PAID
 )
 
 fun List<Image>.bestUrl(): String? = maxByOrNull { it.height }?.url

@@ -92,6 +92,13 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
         if (landscape && !holdPortrait && !inPip) fullscreen = true
     }
     LaunchedEffect(locked) { if (locked) portraitFullscreen = false }
+    // The "Vertical" chip under the video asks for the upright full-screen view.
+    LaunchedEffect(PlayerPopups.enterUpright) {
+        if (PlayerPopups.enterUpright) {
+            PlayerPopups.enterUpright = false
+            if (!locked && !landscape) { portraitFullscreen = true; fullscreen = true }
+        }
+    }
     // A new video opens in the upright full-screen view (once per video, so coming back from the
     // mini player keeps the page you were on).
     LaunchedEffect(cur.video.url) {
@@ -151,13 +158,20 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
     if (ambientOn) {
         val thumb = cur.video.thumb ?: cur.info?.thumbnails?.let { it.bestUrl() }
+        // A tiny 32-px copy of the thumbnail, stretched: already soft, so only a light (cheap)
+        // blur is needed, and scrolling the page stays smooth.
+        val ambientContext = androidx.compose.ui.platform.LocalContext.current
+        val tinyThumb = remember(thumb) {
+            coil3.request.ImageRequest.Builder(ambientContext).data(thumb).size(32, 18).build()
+        }
         coil3.compose.AsyncImage(
-            model = thumb,
+            model = tinyThumb,
             contentDescription = null,
-            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
+            filterQuality = androidx.compose.ui.graphics.FilterQuality.Low,
             modifier = Modifier.fillMaxWidth().height(520.dp)
                 .graphicsLayer { alpha = 0.75f }
-                .blur(90.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded)
+                .blur(24.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded)
         )
         Box(
             Modifier.fillMaxWidth().height(540.dp).background(
