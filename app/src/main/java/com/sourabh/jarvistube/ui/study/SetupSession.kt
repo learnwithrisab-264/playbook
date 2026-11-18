@@ -90,8 +90,8 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp, onPlay: (com
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 4.dp)) {
-                Text(stringResource(R.string.study), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)) {
+                Text(stringResource(R.string.study), style = MaterialTheme.typography.displaySmall)
                 Text(
                     "Lock yourself in. Only your channels play until the timer ends.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -127,11 +127,19 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp, onPlay: (com
                         }
                     },
                     shape = CircleShape,
+                    // The one big action on this page, lit in the theme's colours.
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.onSurface,
-                        contentColor = MaterialTheme.colorScheme.surface
+                        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
-                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.fillMaxWidth().height(54.dp)
+                        .clip(CircleShape)
+                        .background(
+                            androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                listOf(MaterialTheme.colorScheme.primary, androidx.compose.ui.graphics.lerp(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary, 0.55f))
+                            )
+                        )
                 ) {
                     Icon(Icons.Rounded.Lock, null, Modifier.size(18.dp))
                     Spacer(Modifier.size(8.dp))

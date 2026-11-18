@@ -73,7 +73,7 @@ internal fun ToggleRow(title: String, sub: String, checked: Boolean, enabled: Bo
 @Composable
 internal fun SectionCard(title: String, content: @Composable () -> Unit) {
     Card(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp),
         shape = Corners.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
