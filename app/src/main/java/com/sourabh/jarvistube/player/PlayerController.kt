@@ -489,8 +489,8 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         val default = com.sourabh.jarvistube.AppSettings.defaultQuality
         val auto = default <= 0
         preferredQuality = if (auto) autoHeight() else default
-        // A Short's "height" is its long side: 480 would pick a 240-wide stream, blurry full-screen.
-        if (video.isShort) preferredQuality = maxOf(preferredQuality, 1280)
+        // Shorts follow your quality too: qualityOf() reads "360p" as the short side, so an
+        // upright Short gets the same quality as any other video.
         _now.value = NowPlaying(video, quality = preferredQuality, autoQuality = auto)
         app.startService(Intent(app, PlaybackService::class.java))
         job = scope.launch { resolve(video, if (video.isShort) 0L else savedPosition(video.url)) }
@@ -654,7 +654,7 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         } else {
             val audio = pickAudio(info, _now.value?.audioTrackId)
             val video0 = pickVideo(info, quality)
-            playingHeight = video0?.height ?: 0
+            playingHeight = video0?.let { qualityOf(it) } ?: 0
             when {
                 video0 != null && video0.isVideoOnly && audio != null -> {
                     parts.add(progressive(video0.content, keyOf(video0.content, video0.itag)))
@@ -767,9 +767,19 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         info.videoOnlyStreams.filter { it.isUrl && it.content.isNotEmpty() && VideoCodecs.canPlay(it) }
 
     /** The real resolutions on offer for this video on this device, highest first. */
+    /**
+     * A stream's quality as YouTube names it ("360p"): the short side of the picture. For an
+     * upright Short a 360p stream is 360 x 640, so its height alone would read as 640p and the
+     * wrong stream got picked.
+     */
+    fun qualityOf(s: VideoStream): Int {
+        Regex("(\\d+)p").find(s.resolution.orEmpty())?.groupValues?.get(1)?.toIntOrNull()?.let { return it }
+        return if (s.width > 0 && s.height > 0) minOf(s.width, s.height) else s.height
+    }
+
     fun availableHeights(info: StreamInfo): List<Int> =
-        playableVideoOnly(info).map { it.height }
-            .ifEmpty { info.videoStreams.map { it.height } }
+        playableVideoOnly(info).map { qualityOf(it) }
+            .ifEmpty { info.videoStreams.map { qualityOf(it) } }
             .filter { it > 0 }
             .distinct()
             .sortedDescending()
@@ -783,9 +793,9 @@ class PlayerController(val app: Context, http: OkHttpClient) {
             .filter { !avcOnly || VideoCodecs.mimeOf(it) == VideoCodecs.AVC }
             .ifEmpty { info.videoStreams }
         if (pool.isEmpty()) return null
-        val height = pool.filter { it.height <= quality }.maxOfOrNull { it.height }
-            ?: pool.minOf { it.height }
-        return pool.filter { it.height == height }
+        val height = pool.filter { qualityOf(it) <= quality }.maxOfOrNull { qualityOf(it) }
+            ?: pool.minOf { qualityOf(it) }
+        return pool.filter { qualityOf(it) == height }
             .minWithOrNull(compareBy<VideoStream>({ VideoCodecs.rank(it) }, { -it.fps }, { -it.bitrate }))
     }
 

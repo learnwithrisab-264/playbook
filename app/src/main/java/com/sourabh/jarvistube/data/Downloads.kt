@@ -235,7 +235,7 @@ object Downloads {
             .filter { it.isUrl && it.height > 0 && com.sourabh.jarvistube.player.VideoCodecs.mimeOf(it) == com.sourabh.jarvistube.player.VideoCodecs.AVC }
             .map { it.height }.distinct().sortedDescending()
         val videos = heights.mapNotNull { h ->
-            val v = player.pickVideo(info, h, avcOnly = true)?.takeIf { it.height == h } ?: return@mapNotNull null
+            val v = player.pickVideo(info, h, avcOnly = true)?.takeIf { player.qualityOf(it) == h } ?: return@mapNotNull null
             if (v.isVideoOnly && audio == null) return@mapNotNull null
             DlOption("${h}p", h, false, clen(v.content) + if (v.isVideoOnly) aBytes else 0L)
         }

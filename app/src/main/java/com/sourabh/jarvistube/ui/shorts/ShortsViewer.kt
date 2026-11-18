@@ -176,11 +176,11 @@ private fun ShortPage(
                 factory = { ctx ->
                     (LayoutInflater.from(ctx).inflate(R.layout.view_player_short, null) as PlayerView).also { view ->
                         view.player = controller.player
-                        // Tall videos fill the screen; a wide clip is shown whole instead of cropped.
+                        // Every Short in its own shape: nothing is cropped to fill the screen.
+                        view.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                         val fit = object : Player.Listener {
                             override fun onVideoSizeChanged(size: VideoSize) {
-                                view.resizeMode = if (size.width > size.height) AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                else AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                                view.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                             }
                         }
                         view.tag = fit

@@ -476,8 +476,7 @@ internal fun VideoBox(
                     onBottomHeight = { controlsBottomPx = it },
                     onMoreVideos = if (moreAllowed) ({ moreOpen = true; controlsVisible = false }) else null,
                     onComments = onComments?.let { open -> { controlsVisible = false; open() } },
-                    onDetails = onDetails,
-                    videoBottomPx = videoBottomPx
+                    onDetails = onDetails
                 )
             }
         }

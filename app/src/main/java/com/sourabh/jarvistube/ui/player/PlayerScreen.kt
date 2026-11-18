@@ -103,30 +103,35 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
     // A new video opens in the upright full-screen view (once per video, so coming back from the
     // mini player keeps the page you were on).
     LaunchedEffect(cur.video.url) {
-        if ((AppSettings.startUpright || cur.video.isShort) && !landscape && !locked && !inPip && UprightStart.lastUrl != cur.video.url) {
+        if (AppSettings.startUpright && !landscape && !locked && !inPip && UprightStart.lastUrl != cur.video.url) {
             UprightStart.lastUrl = cur.video.url
             portraitFullscreen = true
             fullscreen = true
         }
     }
-    // Shorts (any upright video) always open in the Vertical view, even when the link didn't say
-    // it was a Short: decided as soon as the picture's shape is known.
-    DisposableEffect(cur.video.url, landscape, locked, inPip) {
+    // Shorts and other upright videos keep their own shape on the normal page: the player box
+    // grows taller to match (up to most of the screen) instead of a small strip in a wide box.
+    var videoShape by remember { androidx.compose.runtime.mutableFloatStateOf(16f / 9f) }
+    DisposableEffect(Unit) {
+        fun shapeOf(v: androidx.media3.common.VideoSize) =
+            if (v.width > 0 && v.height > 0) v.width * v.pixelWidthHeightRatio / v.height else 0f
+        shapeOf(Graph.player.player.videoSize).takeIf { it > 0f }?.let { videoShape = it }
         val listener = object : androidx.media3.common.Player.Listener {
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
-                val upright = videoSize.height > videoSize.width && videoSize.width > 0
-                if (upright && !landscape && !locked && !inPip && UprightStart.lastUrl != cur.video.url &&
-                    Graph.player.loadedUrl.value == cur.video.url
-                ) {
-                    UprightStart.lastUrl = cur.video.url
-                    portraitFullscreen = true
-                    fullscreen = true
-                }
+                shapeOf(videoSize).takeIf { it > 0f }?.let { videoShape = it }
             }
         }
         Graph.player.player.addListener(listener)
         onDispose { Graph.player.player.removeListener(listener) }
     }
+    val screen = androidx.compose.ui.platform.LocalConfiguration.current
+    // Tallest the box may get: about 62% of the screen, so title and controls stay in view.
+    val tallest = screen.screenWidthDp / (screen.screenHeightDp * 0.62f)
+    val boxShape by androidx.compose.animation.core.animateFloatAsState(
+        if (videoShape < 1f) maxOf(videoShape, tallest) else 16f / 9f,
+        androidx.compose.animation.core.tween(com.sourabh.jarvistube.ui.theme.Motion.NORMAL * 2),
+        label = "boxShape"
+    )
 
     DisposableEffect(fullscreen, portraitFullscreen) {
         val window = activity?.window
@@ -241,7 +246,7 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
         LaunchedEffect(fullscreen, landscape) { if (!fullscreen || !landscape) sideComments = false }
         androidx.compose.foundation.layout.Row(
             if (fs) Modifier.fillMaxSize()
-            else Modifier.offset { androidx.compose.ui.unit.IntOffset(0, shift) }.fillMaxWidth().aspectRatio(16f / 9f)
+            else Modifier.offset { androidx.compose.ui.unit.IntOffset(0, shift) }.fillMaxWidth().aspectRatio(boxShape)
         ) {
         VideoBox(
             modifier = Modifier.weight(1f).fillMaxHeight(),
