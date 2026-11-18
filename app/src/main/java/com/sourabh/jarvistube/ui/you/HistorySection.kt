@@ -73,7 +73,15 @@ fun LazyListScope.historySection(
                 value = query, onValueChange = onQuery, singleLine = true,
                 placeholder = { Text(stringResource(R.string.search_history)) },
                 leadingIcon = { Icon(Icons.Rounded.Search, null) },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                // A soft filled pill instead of a boxed outline.
+                shape = androidx.compose.foundation.shape.CircleShape,
+                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                    focusedBorderColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                    unfocusedContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+                    focusedContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
+                )
             )
             if (all.isNotEmpty()) TextButton(onClick = onClearAll) { Text(stringResource(R.string.clear_all)) }
         }

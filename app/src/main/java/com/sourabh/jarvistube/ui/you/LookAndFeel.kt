@@ -52,7 +52,7 @@ import kotlin.math.sin
 internal fun ThemeGallery() {
     val touch = rememberTouch()
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(EpicTheme.entries, key = { it.key }) { t ->

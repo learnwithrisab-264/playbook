@@ -119,39 +119,57 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.clickable { expanded = !expanded }
                 )
-                Spacer(Modifier.height(12.dp))
-                // YouTube's grey description card: views + date, a preview, "…more".
+                Spacer(Modifier.height(6.dp))
+                // One quiet line under the title: views, date and "…more", like YouTube.
                 val meta = listOfNotNull(
-                    (info?.viewCount ?: now.video.views).takeIf { it >= 0 }?.let { "${String.format(java.util.Locale.US, "%,d", it)} views" },
+                    (info?.viewCount ?: now.video.views).takeIf { it >= 0 }?.let { "${compact(it)} views" },
                     prettyDate(info?.textualUploadDate ?: now.video.uploaded)
-                ).joinToString("  ")
-                Column(
-                    Modifier.fillMaxWidth()
-                        .clip(Corners.medium)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { expanded = !expanded }
-                        .padding(12.dp)
+                ).joinToString("  ·  ")
+                Row(Modifier.clip(Corners.small).clickable { expanded = !expanded }, verticalAlignment = Alignment.CenterVertically) {
+                    Text(meta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (desc.isNotBlank()) Text(
+                        if (expanded) "   Show less" else "   …more",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                // The full description opens in a soft card right under it.
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = expanded && desc.isNotBlank(),
+                    enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                    exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
                 ) {
-                    Text(meta, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                    if (desc.isNotBlank()) {
-                        Spacer(Modifier.height(4.dp))
-                        // Blue links open; times jump; a tap anywhere else expands or collapses.
+                    Column(
+                        Modifier.padding(top = 12.dp).fillMaxWidth()
+                            .clip(Corners.medium)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(14.dp)
+                    ) {
+                        Text(
+                            listOfNotNull(
+                                (info?.viewCount ?: now.video.views).takeIf { it >= 0 }?.let { "${String.format(java.util.Locale.US, "%,d", it)} views" },
+                                prettyDate(info?.textualUploadDate ?: now.video.uploaded)
+                            ).joinToString("  "),
+                            style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        // Blue links open; times jump.
                         com.sourabh.jarvistube.ui.common.LinkedText(
                             info?.description?.content.orEmpty(),
                             html = info?.description?.type == org.schabi.newpipe.extractor.stream.Description.HTML,
                             onUrl = links.onUrl,
                             onSeek = links.onSeek,
-                            maxLines = if (expanded) Int.MAX_VALUE else 2
+                            maxLines = Int.MAX_VALUE
                         )
                         Text(
-                            if (expanded) "Show less" else "…more",
+                            "Show less",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(top = 4.dp)
+                            modifier = Modifier.padding(top = 8.dp).clickable { expanded = false }
                         )
                     }
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(14.dp))
                 val channelUrl = info?.uploaderUrl?.takeIf { it.isNotBlank() } ?: now.video.channelUrl
                 Row(
                     // Tap the channel to open its page (the player drops to the mini-player).
@@ -179,13 +197,12 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                     }
                     if (!Graph.study.lockActive) SubscribeButton(channelUrl, info?.uploaderName ?: now.video.channel)
                 }
-                Spacer(Modifier.height(16.dp))
-                CommentsCard(comments) { commentsOpen = true }
+                Spacer(Modifier.height(12.dp))
             }
         }
         item {
             Row(
-                Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Vertical: YouTube's upright full-screen view, one tap away (no longer automatic).
@@ -338,6 +355,11 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
             }
         }
         item {
+            Box(Modifier.padding(horizontal = 12.dp).padding(top = 16.dp, bottom = 4.dp)) {
+                CommentsCard(comments) { commentsOpen = true }
+            }
+        }
+        item {
             val related = info?.relatedItems.orEmpty()
                 .filterIsInstance<org.schabi.newpipe.extractor.stream.StreamInfoItem>()
                 .filter { it.contentAvailability != org.schabi.newpipe.extractor.stream.ContentAvailability.MEMBERSHIP && it.contentAvailability != org.schabi.newpipe.extractor.stream.ContentAvailability.PAID }
@@ -352,7 +374,7 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                 )
             } else if (!vm.showRelated) {
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
                         .clip(Corners.large)
                         .background(MaterialTheme.colorScheme.surfaceContainer)
                         .clickable { vm.showRelated = true }
@@ -373,7 +395,7 @@ internal fun Details(vm: TubeViewModel, now: NowPlaying, ui: PlayerUi, modifier:
                 Column {
                     // Same control, now a real ON/OFF: tap to hide the feed again.
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
                             .clip(Corners.large)
                             .background(MaterialTheme.colorScheme.surfaceContainer)
                             .clickable { vm.showRelated = false }

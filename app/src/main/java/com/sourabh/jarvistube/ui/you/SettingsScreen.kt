@@ -100,7 +100,7 @@ fun SettingsScreen(
         Modifier.fillMaxSize().statusBarsPadding(),
         contentPadding = PaddingValues(bottom = bottomPadding + 16.dp)
     ) {
-        item { SubPageHeader("Settings", onBack) }
+        item { SubPageHeader("Settings", onBack, large = true) }
 
         // ---- Account: who you are, first.
         item { SectionHeader("Account") }
@@ -115,7 +115,7 @@ fun SettingsScreen(
                                 lib.switchAccount(a.id)
                                 Toast.makeText(context, "Switched to ${a.name ?: a.email ?: "account"}", Toast.LENGTH_SHORT).show()
                             }
-                            .padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+                            .padding(start = 14.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Avatar(a.name ?: a.email ?: "?", 40, a.photo)
@@ -424,13 +424,18 @@ internal fun SettingRow(
     trailing: (@Composable () -> Unit)? = null
 ) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(start = 14.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.size(24.dp))
+        // Each setting's icon sits on a small tile tinted with the theme, like a phone's own settings.
+        androidx.compose.foundation.layout.Box(
+            Modifier.size(38.dp).clip(com.sourabh.jarvistube.ui.theme.Corners.medium)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f)),
+            contentAlignment = Alignment.Center
+        ) { Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(21.dp)) }
+        Spacer(Modifier.size(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (trailing != null) {
@@ -445,8 +450,9 @@ internal fun SettingRow(
 @Composable
 internal fun SettingsGroup(content: @Composable () -> Unit) {
     androidx.compose.foundation.layout.Column(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
             .clip(com.sourabh.jarvistube.ui.theme.Corners.large)
             .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(vertical = 4.dp)
     ) { content() }
 }

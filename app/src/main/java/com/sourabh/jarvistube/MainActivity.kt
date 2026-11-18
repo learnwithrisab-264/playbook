@@ -44,6 +44,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.zIndex
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.clip
 import com.sourabh.jarvistube.ui.home.RecommendedScreen
 import com.sourabh.jarvistube.ui.shorts.ShortsScreen
 import androidx.compose.material.icons.outlined.PlayCircle
@@ -131,56 +133,83 @@ private fun Modifier.notShown(): Modifier = this
     }
 
 /**
- * YouTube's own bottom bar: equal items, outlined icon when idle and filled when active,
- * a small label, no pills or tints. Just a hairline on top to separate it from the content.
+ * The bottom bar: a soft lamp-lit pill glides under the tab you are on (the diya's glow, now a
+ * light that travels with you), the icon fills in and lifts slightly, and its label firms up.
  */
 @Composable
 private fun BottomBar(tabs: List<Tab>, current: Tab, onSelect: (Tab) -> Unit) {
     val cs = MaterialTheme.colorScheme
     val touch = com.sourabh.jarvistube.ui.theme.rememberTouch()
+    val index = tabs.indexOf(current).coerceAtLeast(0)
     Column(Modifier.fillMaxWidth().background(cs.background)) {
-        Box(Modifier.fillMaxWidth().height(0.5.dp).background(cs.outlineVariant.copy(alpha = 0.35f)))
-        Row(
-            Modifier.fillMaxWidth().navigationBarsPadding().height(52.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Box(Modifier.fillMaxWidth().height(0.5.dp).background(cs.outlineVariant.copy(alpha = 0.5f)))
+        androidx.compose.foundation.layout.BoxWithConstraints(
+            Modifier.fillMaxWidth().navigationBarsPadding().height(BAR_HEIGHT)
         ) {
-            tabs.forEach { t ->
-                val selected = t == current
-                val tint by animateColorAsState(
-                    if (selected) cs.onSurface else cs.onSurfaceVariant, tween(Motion.FAST), label = "tab"
-                )
-                Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                // The diya: the tab you are on is lit by a small flickering flame.
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = selected,
-                    enter = androidx.compose.animation.fadeIn(tween(Motion.NORMAL)) + androidx.compose.animation.scaleIn(tween(Motion.NORMAL), 0.6f),
-                    exit = androidx.compose.animation.fadeOut(tween(Motion.FAST))
-                ) { com.sourabh.jarvistube.ui.theme.DiyaGlow(Modifier.size(64.dp, 52.dp)) }
-                Column(
-                    Modifier
-                        .fillMaxSize()
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { if (!selected) touch(); onSelect(t) },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        if (selected) t.selectedIcon else t.unselectedIcon, t.label,
-                        tint = tint, modifier = Modifier.size(24.dp)
+            val cell = maxWidth / tabs.size.coerceAtLeast(1)
+            val pillW = 60.dp
+            val x by androidx.compose.animation.core.animateDpAsState(
+                cell * index + (cell - pillW) / 2,
+                if (Motion.NORMAL == 0) androidx.compose.animation.core.snap()
+                else androidx.compose.animation.core.spring(dampingRatio = 0.72f, stiffness = 520f),
+                label = "pill"
+            )
+            // The travelling lamp: a tinted pill with a warm glow at its heart.
+            Box(
+                Modifier.padding(top = 7.dp).offset(x = x).size(pillW, 32.dp)
+                    .clip(com.sourabh.jarvistube.ui.theme.Corners.pill)
+                    .background(
+                        androidx.compose.ui.graphics.Brush.radialGradient(
+                            listOf(cs.primary.copy(alpha = 0.30f), cs.primary.copy(alpha = 0.14f))
+                        )
                     )
-                    Spacer(Modifier.height(3.dp))
-                    Text(
-                        t.label, fontSize = 10.sp, color = tint, maxLines = 1, softWrap = false,
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+            )
+            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) {
+                tabs.forEach { t ->
+                    val selected = t == current
+                    val tint by animateColorAsState(
+                        if (selected) cs.primary else cs.onSurfaceVariant, tween(Motion.FAST), label = "tab"
                     )
-                }
+                    val labelTint by animateColorAsState(
+                        if (selected) cs.onSurface else cs.onSurfaceVariant, tween(Motion.FAST), label = "tabLabel"
+                    )
+                    val lift by androidx.compose.animation.core.animateFloatAsState(
+                        if (selected) 1.08f else 1f,
+                        androidx.compose.animation.core.spring(dampingRatio = 0.5f, stiffness = 600f),
+                        label = "lift"
+                    )
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { if (!selected) touch(); onSelect(t) },
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(Modifier.padding(top = 7.dp).size(60.dp, 32.dp), contentAlignment = Alignment.Center) {
+                            Icon(
+                                if (selected) t.selectedIcon else t.unselectedIcon, t.label,
+                                tint = tint,
+                                modifier = Modifier.size(24.dp).graphicsLayer { scaleX = lift; scaleY = lift }
+                            )
+                        }
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            t.label, fontSize = 11.sp, color = labelTint, maxLines = 1, softWrap = false,
+                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                            letterSpacing = 0.1.sp
+                        )
+                    }
                 }
             }
         }
     }
 }
+
+/** The bar's own height, above the navigation inset. */
+private val BAR_HEIGHT = 64.dp
 
 private const val PIP_ACTION = "com.sourabh.jarvistube.PIP_BUTTON"
 
@@ -330,6 +359,7 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
         else -> tab
     }
     val recommendedState = rememberLazyListState()
+    val barScope = androidx.compose.runtime.rememberCoroutineScope()
     val shortsState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     // Don't jump back to Recommended when a lock ends: the user lands on Home instead.
     LaunchedEffect(tabs) { if (tab !in tabs) tab = Tab.Home }
@@ -369,7 +399,7 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
     val collapsed = now != null && !expanded && !inPip && !study.lockActive && vm.shortsViewer == null
     val showFloating = collapsed && !controller.audioOnly
     val showMini = collapsed && controller.audioOnly
-    val barHeight = if (study.active) 0.dp else 56.5.dp
+    val barHeight = if (study.active) 0.dp else BAR_HEIGHT + 0.5.dp
     val miniPad = if (showMini) 72.dp else 0.dp
     val statusInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
@@ -387,7 +417,18 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
                     if (study.active) {
                         Spacer(Modifier.navigationBarsPadding())
                     } else {
-                        BottomBar(tabs, current = shownTab, onSelect = { tab = it })
+                        BottomBar(tabs, current = shownTab, onSelect = { t ->
+                            // Tapping the tab you're on takes its feed back to the top.
+                            if (t == shownTab) barScope.launch {
+                                when (t) {
+                                    Tab.Home -> homeState.animateScrollToItem(0)
+                                    Tab.Recommended -> recommendedState.animateScrollToItem(0)
+                                    Tab.Shorts -> shortsState.animateScrollToItem(0)
+                                    else -> Unit
+                                }
+                            }
+                            tab = t
+                        })
                     }
                 }
             ) { padding ->

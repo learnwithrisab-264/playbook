@@ -38,22 +38,24 @@ import androidx.compose.ui.unit.dp
 import com.sourabh.jarvistube.FeedState
 import com.sourabh.jarvistube.data.VideoItem
 
-/** YouTube-style chip: grey when idle, inverted when selected. */
+/** A pill chip: soft surface when idle, filled with the theme's colour when chosen. */
 @Composable
 internal fun TopicChip(label: String, selected: Boolean, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
-    val bg by animateColorAsState(if (selected) cs.onSurface else cs.surfaceVariant, label = "chipBg")
-    val fg by animateColorAsState(if (selected) cs.surface else cs.onSurfaceVariant, label = "chipFg")
+    val touch = com.sourabh.jarvistube.ui.theme.rememberTouch()
+    val bg by animateColorAsState(if (selected) cs.primary else cs.surfaceVariant, label = "chipBg")
+    val fg by animateColorAsState(if (selected) cs.onPrimary else cs.onSurface, label = "chipFg")
     Text(
         label,
         color = fg,
         style = MaterialTheme.typography.labelLarge,
-        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+        maxLines = 1,
         modifier = Modifier
-            .clip(Corners.medium)
+            .clip(Corners.pill)
             .background(bg)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 7.dp)
+            .clickable { if (!selected) touch(); onClick() }
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     )
 }
 

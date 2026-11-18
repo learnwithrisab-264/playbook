@@ -81,9 +81,13 @@ fun VideoCard(
                 Graph.player.enqueue(video)
                 toast("Added to queue")
             })
-            .padding(bottom = 16.dp)
+            .padding(top = 4.dp, bottom = 18.dp)
     ) {
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
+        // Inset, softly rounded thumbnail: calmer than edge-to-edge and matches the app's cards.
+        Box(
+            Modifier.padding(horizontal = 12.dp).fillMaxWidth().aspectRatio(16f / 9f)
+                .clip(Corners.large)
+        ) {
             Thumb(video.thumb, Modifier.matchParentSize())
             val badge = if (video.isLive) "LIVE" else formatDuration(video.durationSec)
             if (badge.isNotEmpty()) {
@@ -94,15 +98,29 @@ fun VideoCard(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(8.dp)
-                        .clip(Corners.tiny)
-                        .background(if (video.isLive) Brand.live else OnVideo.scrimStrong)
-                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                        .padding(10.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (video.isLive) Brand.live else Color.Black.copy(alpha = 0.72f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
+            }
+            // How far you got: a thin bar in the theme's colour, like YouTube's red line.
+            val resume = remember(video.url) { Graph.player.resumePositionMs(video.url) }
+            val total = video.durationSec * 1000L
+            if (resume > 0 && total > 0) {
+                Box(
+                    Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp)
+                        .background(Color.White.copy(alpha = 0.35f))
+                ) {
+                    Box(
+                        Modifier.fillMaxWidth((resume.toFloat() / total).coerceIn(0.03f, 1f)).height(3.dp)
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                }
             }
         }
         Row(
-            Modifier.padding(start = 12.dp, end = 0.dp, top = 12.dp),
+            Modifier.padding(start = 14.dp, end = 2.dp, top = 10.dp),
             verticalAlignment = Alignment.Top
         ) {
             val openChannel = LocalOpenChannel.current
@@ -203,10 +221,10 @@ fun VideoCard(
 @Composable
 fun VideoCardSkeleton() {
     val brush = shimmerBrush()
-    Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(brush))
+    Column(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 18.dp)) {
+        Box(Modifier.padding(horizontal = 12.dp).fillMaxWidth().aspectRatio(16f / 9f).clip(Corners.large).background(brush))
         Spacer(Modifier.height(12.dp))
-        Row(Modifier.padding(horizontal = 12.dp)) {
+        Row(Modifier.padding(horizontal = 14.dp)) {
             Box(Modifier.size(36.dp).clip(CircleShape).background(brush))
             Spacer(Modifier.size(12.dp))
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -204,13 +204,12 @@ fun EmptyLine(text: String) {
 @Composable
 fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     Text(
-        text,
-        style = MaterialTheme.typography.labelLarge,
+        text.uppercase(),
+        style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(
-            start = com.sourabh.jarvistube.ui.theme.Space.l, end = com.sourabh.jarvistube.ui.theme.Space.l,
-            top = com.sourabh.jarvistube.ui.theme.Space.l, bottom = com.sourabh.jarvistube.ui.theme.Space.xs
-        )
+        letterSpacing = 1.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = modifier.padding(start = 26.dp, end = 26.dp, top = 22.dp, bottom = 8.dp)
     )
 }
 
@@ -294,15 +293,15 @@ fun PillChip(
         label = label,
         modifier = modifier,
         leadingIcon = leadingIcon,
-        shape = Corners.large,
+        shape = Corners.pill,
         border = null,
         colors = FilterChipDefaults.filterChipColors(
             containerColor = cs.surfaceVariant,
             labelColor = cs.onSurface,
             iconColor = cs.onSurface,
-            selectedContainerColor = cs.onSurface,
-            selectedLabelColor = cs.surface,
-            selectedLeadingIconColor = cs.surface
+            selectedContainerColor = cs.primary,
+            selectedLabelColor = cs.onPrimary,
+            selectedLeadingIconColor = cs.onPrimary
         )
     )
 }
@@ -325,15 +324,22 @@ fun LogoMark() {
 
 /** Header for pages opened from another tab (Downloads, Settings): back arrow + title. */
 @Composable
-fun SubPageHeader(title: String, onBack: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 4.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
+fun SubPageHeader(title: String, onBack: () -> Unit, large: Boolean = false) {
+    Column(Modifier.fillMaxWidth().statusBarsPadding()) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
+            }
+            if (!large) Text(title, style = MaterialTheme.typography.titleLarge)
         }
-        Text(title, style = MaterialTheme.typography.titleLarge)
+        // A big page title under the back arrow, for top-level pages like Settings.
+        if (large) Text(
+            title, style = MaterialTheme.typography.displaySmall,
+            modifier = Modifier.padding(start = 20.dp, top = 2.dp, bottom = 4.dp)
+        )
     }
 }
 

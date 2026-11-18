@@ -73,6 +73,8 @@ import com.sourabh.jarvistube.data.LibChannel
 import com.sourabh.jarvistube.data.LibPlaylist
 import com.sourabh.jarvistube.data.LibVideo
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.fillMaxHeight
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -119,20 +121,21 @@ fun LibraryScreen(
             item { YouHeader(onOpenDownloads, onOpenSettings) }
             item { ProfileHeader(lib, onSwitch = { accountSheet = true }) }
             stickyHeader {
-                Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(tabs) { t ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                TopicChip(t.label, t == lib.tab && !(t == LibTab.History && ytOnly)) { ytOnly = false; lib.selectTab(t) }
-                                // Right beside History: straight to the YouTube account's history.
-                                if (t == LibTab.History) TopicChip("YT History", lib.tab == LibTab.History && ytOnly) {
-                                    ytOnly = true
-                                    lib.selectTab(LibTab.History)
-                                }
-                            }
+                Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background).padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    // History, YT History, Playlists, Subscriptions: all visible, no sideways scrolling.
+                    val segments = listOf("History", "YT History", "Playlists", "Subscriptions")
+                    val chosen = when {
+                        lib.tab == LibTab.History && ytOnly -> 1
+                        lib.tab == LibTab.History -> 0
+                        lib.tab == LibTab.Playlists -> 2
+                        else -> 3
+                    }
+                    Segmented(segments, chosen) { i ->
+                        when (i) {
+                            0 -> { ytOnly = false; lib.selectTab(LibTab.History) }
+                            1 -> { ytOnly = true; lib.selectTab(LibTab.History) }
+                            2 -> { ytOnly = false; lib.selectTab(LibTab.Playlists) }
+                            else -> { ytOnly = false; lib.selectTab(LibTab.Channels) }
                         }
                     }
                 }
@@ -322,33 +325,116 @@ private fun RowCard(
 @Composable
 private fun ProfileHeader(lib: LibraryViewModel, onSwitch: () -> Unit) {
     val a = lib.account
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onSwitch).padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Avatar(a?.name ?: a?.email ?: "?", 64, a?.photo)
-        Spacer(Modifier.size(16.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                a?.name ?: "Your account",
-                style = MaterialTheme.typography.titleLarge,
-                maxLines = 1, overflow = TextOverflow.Ellipsis
+    val cs = MaterialTheme.colorScheme
+    val dayStart = remember {
+        java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    }
+    val history = com.sourabh.jarvistube.data.WatchHistory.items
+    val today = history.count { it.watchedAt >= dayStart }
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+            .clip(com.sourabh.jarvistube.ui.theme.Corners.xl)
+            .background(
+                androidx.compose.ui.graphics.Brush.linearGradient(
+                    listOf(cs.primary.copy(alpha = 0.22f), cs.secondary.copy(alpha = 0.08f), cs.surfaceContainer)
+                )
             )
-            // The Gmail address stays private here; Settings › Account shows it.
-            a?.handle?.let {
+            .clickable(onClick = onSwitch)
+            .padding(18.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // The photo sits in a ring of the theme's two colours.
+            Box(
+                Modifier.size(76.dp).clip(CircleShape)
+                    .background(androidx.compose.ui.graphics.Brush.sweepGradient(listOf(cs.primary, cs.secondary, cs.primary))),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(Modifier.size(70.dp).clip(CircleShape).background(cs.background), contentAlignment = Alignment.Center) {
+                    Avatar(a?.name ?: a?.email ?: "?", 64, a?.photo)
+                }
+            }
+            Spacer(Modifier.size(16.dp))
+            Column(Modifier.weight(1f)) {
                 Text(
-                    it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    a?.name ?: "Your account",
+                    style = MaterialTheme.typography.headlineSmall,
                     maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
+                // The Gmail address stays private here; Settings shows it.
+                a?.handle?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = cs.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    if (lib.accounts.size > 1) "Switch account (${lib.accounts.size})" else "Switch or add account",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = cs.onPrimary,
+                    modifier = Modifier.clip(CircleShape).background(cs.primary).padding(horizontal = 12.dp, vertical = 5.dp)
+                )
             }
-            Spacer(Modifier.height(2.dp))
-            Text(
-                if (lib.accounts.size > 1) "Switch account (${lib.accounts.size}) ›" else "Switch or add account ›",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatTile("$today", "today", Modifier.weight(1f))
+            StatTile("${history.size}", "watched", Modifier.weight(1f))
+            StatTile("${com.sourabh.jarvistube.data.StudyChannels.list.size}", "channels", Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun StatTile(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier.clip(com.sourabh.jarvistube.ui.theme.Corners.medium)
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.55f))
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+    ) {
+        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** A row of equal segments with a pill that glides to the chosen one. */
+@Composable
+internal fun Segmented(labels: List<String>, selected: Int, onSelect: (Int) -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val touch = com.sourabh.jarvistube.ui.theme.rememberTouch()
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        Modifier.fillMaxWidth().height(44.dp).clip(CircleShape).background(cs.surfaceVariant).padding(4.dp)
+    ) {
+        val w = maxWidth / labels.size
+        val x by androidx.compose.animation.core.animateDpAsState(
+            w * selected,
+            if (com.sourabh.jarvistube.ui.theme.Motion.NORMAL == 0) androidx.compose.animation.core.snap()
+            else androidx.compose.animation.core.spring(dampingRatio = 0.75f, stiffness = 500f),
+            label = "segment"
+        )
+        Box(Modifier.offset(x = x).width(w).fillMaxHeight().clip(CircleShape).background(cs.primary))
+        Row(Modifier.fillMaxSize()) {
+            labels.forEachIndexed { i, label ->
+                val on = i == selected
+                val fg by androidx.compose.animation.animateColorAsState(if (on) cs.onPrimary else cs.onSurfaceVariant, label = "segFg")
+                Box(
+                    Modifier.weight(1f).fillMaxHeight().clip(CircleShape)
+                        .clickable { if (!on) { touch(); onSelect(i) } },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        label, color = fg, maxLines = 1, softWrap = false,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (on) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
     }
 }
@@ -378,7 +464,7 @@ private fun YouHeader(onOpenDownloads: () -> Unit, onOpenSettings: () -> Unit) {
         Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(stringResource(R.string.you), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.you), style = MaterialTheme.typography.displaySmall, modifier = Modifier.weight(1f))
         IconButton(onClick = onOpenDownloads) { Icon(Icons.Rounded.Download, "Downloads") }
         IconButton(onClick = onOpenSettings) { Icon(Icons.Rounded.Settings, "Settings") }
     }

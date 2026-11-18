@@ -77,22 +77,45 @@ private val Day = lightColorScheme(
     onTertiaryContainer = Color(0xFF0F0F0F)
 )
 
+/**
+ * One type scale for the whole app: big, tight page titles; calm, readable body text; and
+ * labels that never shout. Negative tracking on large sizes keeps headings crisp.
+ */
 private val AppTypography = Typography(
+    displaySmall = TextStyle(
+        fontWeight = FontWeight.Bold, fontSize = 32.sp, lineHeight = 38.sp, letterSpacing = (-1).sp
+    ),
     headlineMedium = TextStyle(
-        fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 34.sp, letterSpacing = (-0.5).sp
+        fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 34.sp, letterSpacing = (-0.7).sp
+    ),
+    headlineSmall = TextStyle(
+        fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 30.sp, letterSpacing = (-0.5).sp
     ),
     titleLarge = TextStyle(
-        fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 26.sp, letterSpacing = (-0.2).sp
+        fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 26.sp, letterSpacing = (-0.35).sp
     ),
     titleMedium = TextStyle(
-        fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 21.sp
+        fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 21.sp, letterSpacing = (-0.1).sp
     ),
+    titleSmall = TextStyle(
+        fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 19.sp
+    ),
+    bodyLarge = TextStyle(fontSize = 16.sp, lineHeight = 22.sp, letterSpacing = (-0.1).sp),
     bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
-    bodySmall = TextStyle(fontSize = 12.sp, lineHeight = 16.sp),
+    bodySmall = TextStyle(fontSize = 12.5.sp, lineHeight = 17.sp, letterSpacing = 0.1.sp),
     labelLarge = TextStyle(fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp),
     // Small labels on top of video and in badges (time, speed, duration, notices).
     labelMedium = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 18.sp),
     labelSmall = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 12.sp, lineHeight = 16.sp)
+)
+
+/** Menus, cards, sheets and dialogs share these softer corners. */
+private val AppShapes = androidx.compose.material3.Shapes(
+    extraSmall = RoundedCornerShape(10.dp), // dropdown menus
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(28.dp) // dialogs, sheets
 )
 
 /** The only spacing sizes screens use. */
@@ -109,8 +132,9 @@ object Space {
 object Corners {
     val tiny = RoundedCornerShape(4.dp) // duration and LIVE badges
     val small = RoundedCornerShape(8.dp)
-    val medium = RoundedCornerShape(12.dp) // thumbnails, cards
-    val large = RoundedCornerShape(16.dp) // sheets, big cards, mini player
+    val medium = RoundedCornerShape(14.dp) // thumbnails, cards
+    val large = RoundedCornerShape(20.dp) // sheets, big cards, mini player
+    val xl = RoundedCornerShape(26.dp) // hero cards
     val pill = CircleShape // chips, round buttons, avatars
 }
 
@@ -171,7 +195,7 @@ fun JarvisTubeTheme(dark: Boolean = appIsDark(), content: @Composable () -> Unit
             }
         }
     }
-    MaterialTheme(colorScheme = scheme, typography = AppTypography) {
+    MaterialTheme(colorScheme = scheme, typography = AppTypography, shapes = AppShapes) {
         // Screens drawn outside a Scaffold/Surface (player, search, login) would otherwise fall
         // back to black text and icons. Give the whole app the theme's content colour.
         CompositionLocalProvider(LocalContentColor provides scheme.onBackground, content = content)
