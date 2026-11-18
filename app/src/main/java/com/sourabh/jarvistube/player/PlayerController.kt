@@ -116,6 +116,9 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         .setLoadControl(
             androidx.media3.exoplayer.DefaultLoadControl.Builder()
                 .setBufferDurationsMs(30_000, 90_000, 1_000, 3_000)
+                // Keep the last minute in memory: "back 10 s" (and any short jump back) plays at
+                // once instead of downloading what was just watched again.
+                .setBackBuffer(60_000, true)
                 .setPrioritizeTimeOverSizeThresholds(true)
                 .build()
         )

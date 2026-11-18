@@ -119,7 +119,8 @@ class ChannelPage(
     val banner: String?,
     val subscribers: Long,
     val description: String,
-    val tabs: List<ChannelTab>
+    val tabs: List<ChannelTab>,
+    val verified: Boolean = false
 )
 
 class PlaylistPage(val title: String, val owner: String, val count: Long, val thumb: String?, val first: EntryPage)
@@ -174,7 +175,8 @@ object ChannelRepo {
             banner = info.banners.bestUrl(),
             subscribers = info.subscriberCount,
             description = info.description.orEmpty(),
-            tabs = tabs
+            tabs = tabs,
+            verified = info.isVerified
         )
     }
 

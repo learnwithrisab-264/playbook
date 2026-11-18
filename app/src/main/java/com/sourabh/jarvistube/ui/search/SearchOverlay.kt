@@ -109,20 +109,15 @@ fun SearchOverlay(vm: TubeViewModel, bottomPadding: Dp = 0.dp) {
 
         if (showResults) {
             // Two sections, never mixed. No Shorts section during a study session or lock.
-            val instaOpen = InstagramMode.on && vm.shortsAllowed
-            val shortsOpen = vm.searchShowsShorts && vm.shortsAllowed && !instaOpen
+            val shortsOpen = vm.searchShowsShorts && vm.shortsAllowed
             if (vm.shortsAllowed) Row(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                TopicChip("Videos", !shortsOpen && !instaOpen) { InstagramMode.on = false; vm.searchShowsShorts = false }
-                TopicChip("Shorts", shortsOpen) { InstagramMode.on = false; vm.searchShowsShorts = true }
-                // Instagram's own keyword search for the same words (its reels swipe in its viewer).
-                TopicChip("Instagram", instaOpen) { InstagramMode.on = true }
+                TopicChip("Videos", !shortsOpen) { vm.searchShowsShorts = false }
+                TopicChip("Shorts", shortsOpen) { vm.searchShowsShorts = true }
             }
-            if (instaOpen) {
-                InstagramSearch(submitted.orEmpty(), Modifier.fillMaxSize().padding(bottom = bottomPadding))
-            } else if (shortsOpen) {
+            if (shortsOpen) {
                 val blockedFor = rememberShortsBlockLeft()
                 if (blockedFor > 0) ShortsLocked(blockedFor)
                 else ShortsGrid(

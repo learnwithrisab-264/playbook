@@ -115,7 +115,7 @@ fun ShortsViewerScreen(vm: TubeViewModel, viewer: ShortsViewer, ui: PlayerUi) {
         if (page >= items.size - 4) viewer.onMore()
     }
 
-    // Comments open over the reel (it keeps playing behind), as on Instagram.
+    // Comments open over the reel, which keeps playing behind.
     var commentsFor by remember { mutableStateOf<VideoItem?>(null) }
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         VerticalPager(state = pager, modifier = Modifier.fillMaxSize(), key = { items[it].url }) { page ->
