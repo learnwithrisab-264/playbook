@@ -192,6 +192,12 @@ fun SettingsScreen(
                     onClick = { AppSettings.updateStartUpright(!AppSettings.startUpright) }
                 ) { Switch(checked = AppSettings.startUpright, onCheckedChange = { AppSettings.updateStartUpright(it) }) }
                 SettingRow(
+                    Icons.Rounded.WbTwilight, "Glow above the video",
+                    if (AppSettings.ambient) "When the page is short, the empty space moves above the video and the ambient glow fills it."
+                    else "Needs Ambient mode (Look & feel).",
+                    onClick = { AppSettings.updateGlowAbove(!AppSettings.glowAbove) }
+                ) { Switch(checked = AppSettings.glowAbove, onCheckedChange = { AppSettings.updateGlowAbove(it) }, enabled = AppSettings.ambient) }
+                SettingRow(
                     Icons.Rounded.HighQuality, "Default quality", AppSettings.qualityLabel(AppSettings.defaultQuality),
                     onClick = { qualityDialog = true }
                 )

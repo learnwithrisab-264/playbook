@@ -103,11 +103,29 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
     // A new video opens in the upright full-screen view (once per video, so coming back from the
     // mini player keeps the page you were on).
     LaunchedEffect(cur.video.url) {
-        if (AppSettings.startUpright && !landscape && !locked && !inPip && UprightStart.lastUrl != cur.video.url) {
+        if ((AppSettings.startUpright || cur.video.isShort) && !landscape && !locked && !inPip && UprightStart.lastUrl != cur.video.url) {
             UprightStart.lastUrl = cur.video.url
             portraitFullscreen = true
             fullscreen = true
         }
+    }
+    // Shorts (any upright video) always open in the Vertical view, even when the link didn't say
+    // it was a Short: decided as soon as the picture's shape is known.
+    DisposableEffect(cur.video.url, landscape, locked, inPip) {
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                val upright = videoSize.height > videoSize.width && videoSize.width > 0
+                if (upright && !landscape && !locked && !inPip && UprightStart.lastUrl != cur.video.url &&
+                    Graph.player.loadedUrl.value == cur.video.url
+                ) {
+                    UprightStart.lastUrl = cur.video.url
+                    portraitFullscreen = true
+                    fullscreen = true
+                }
+            }
+        }
+        Graph.player.player.addListener(listener)
+        onDispose { Graph.player.player.removeListener(listener) }
     }
 
     DisposableEffect(fullscreen, portraitFullscreen) {
@@ -148,7 +166,7 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
     // Ambient mode: when the details don't fill the page, the blank space goes above the video
     // instead of below it, so the video's glow fills the top of the screen.
     var freeSpace by remember(cur.video.url) { androidx.compose.runtime.mutableIntStateOf(0) }
-    val lift = AppSettings.ambient && !fs && android.os.Build.VERSION.SDK_INT >= 31 && !inPip
+    val lift = AppSettings.ambient && AppSettings.glowAbove && !fs && android.os.Build.VERSION.SDK_INT >= 31 && !inPip
     val shift by androidx.compose.animation.core.animateIntAsState(
         if (lift) freeSpace else 0,
         androidx.compose.animation.core.tween(com.sourabh.jarvistube.ui.theme.Motion.NORMAL * 2),

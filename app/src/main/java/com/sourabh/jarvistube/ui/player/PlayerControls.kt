@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.player
 
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 
 import androidx.compose.material.icons.rounded.SkipPrevious
@@ -86,9 +87,12 @@ internal fun Controls(
     onBottomHeight: (Int) -> Unit,
     onMoreVideos: (() -> Unit)? = null,
     onComments: (() -> Unit)? = null,
-    onDetails: (() -> Unit)? = null
+    onDetails: (() -> Unit)? = null,
+    /** Vertical view of a wide video: the picture's bottom edge, where the seek bar should sit. */
+    videoBottomPx: Int? = null
 ) {
     val player = Graph.player.player
+    var timeRowPx by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     var scrubMs by remember { mutableStateOf<Long?>(null) }
     val synced = Graph.player.loadedUrl.collectAsStateWithLifecycle().value == now.video.url
 
@@ -239,19 +243,25 @@ internal fun Controls(
         }
 
         // Bottom: "2:14 / 17:04" + fullscreen, then the seek bar hugging the video's bottom edge.
-        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().onSizeChanged { onBottomHeight(it.height) }) {
+        Column(
+            (if (videoBottomPx != null) Modifier.align(Alignment.TopStart).offset {
+                // Seek bar centred on the picture's bottom edge; time above it, actions below.
+                androidx.compose.ui.unit.IntOffset(0, videoBottomPx - timeRowPx - 14.dp.roundToPx())
+            } else Modifier.align(Alignment.BottomStart))
+                .fillMaxWidth().onSizeChanged { onBottomHeight(it.height) }
+        ) {
             // While dragging, the frame preview replaces the time row and sits right on top of the
             // seek bar; it grows upward over the video without moving the bar.
             val ms = scrubMs
             if (ms != null) {
-                Box(Modifier.fillMaxWidth().height(48.dp)) {
+                Box(Modifier.fillMaxWidth().height(48.dp).onSizeChanged { timeRowPx = it.height }) {
                     Box(
                         Modifier.align(Alignment.BottomStart)
                             .wrapContentHeight(align = Alignment.Bottom, unbounded = true)
                     ) { SeekPreview(now.info, ms, if (synced) ui.duration else 0L, small = !fullscreen) }
                 }
             } else Row(
-                Modifier.padding(start = 12.dp, end = 4.dp),
+                Modifier.padding(start = 12.dp, end = 4.dp).onSizeChanged { timeRowPx = it.height },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val shown = scrubMs ?: if (synced) ui.position else 0L

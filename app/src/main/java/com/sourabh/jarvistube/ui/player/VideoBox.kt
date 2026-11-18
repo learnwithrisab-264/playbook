@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.player
 
+import androidx.compose.foundation.layout.offset
 import kotlinx.coroutines.launch
 
 import androidx.compose.runtime.mutableLongStateOf
@@ -137,6 +138,14 @@ internal fun VideoBox(
     var videoAspect by remember { mutableFloatStateOf(aspectOf(player.videoSize)) }
     var frame by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     val fillZoom = fillScale(frame.width.toFloat(), frame.height.toFloat(), videoAspect)
+    /**
+     * Upright full screen with a wide video: where the picture ends (px from the top), so the
+     * seek line can sit right under it instead of at the bottom of the screen.
+     */
+    val videoBottomPx: Int? = if (fullscreen && frame.height > frame.width && frame.width > 0) {
+        val shown = minOf(frame.height.toFloat(), frame.width / videoAspect * zoom)
+        ((frame.height + shown) / 2f).toInt().takeIf { it < frame.height - 4 }
+    } else null
     val maxZoom = maxOf(MAX_ZOOM, fillZoom * 1.6f)
     /** "Original" / "Zoomed to fill" / "2.4x", shown briefly over the video while pinching. */
     var zoomLabel by remember { mutableStateOf<String?>(null) }
@@ -438,12 +447,16 @@ internal fun VideoBox(
 
         // With the controls hidden, a slim progress line (with the buffered part) stays at the bottom.
         if (!controlsVisible || !showControls) {
+            val anchor = videoBottomPx
             YtSeekBar(
                 position = if (synced) ui.position else 0L,
                 duration = if (synced) ui.duration else 0L,
                 buffered = if (synced) ui.buffered else 0L,
                 interactive = false,
-                modifier = Modifier.align(Alignment.BottomCenter)
+                // Vertical view: the line touches the bottom edge of the picture.
+                modifier = if (anchor != null) Modifier.align(Alignment.TopCenter)
+                    .offset { androidx.compose.ui.unit.IntOffset(0, anchor - 6.dp.roundToPx()) }
+                else Modifier.align(Alignment.BottomCenter)
             )
         }
 
@@ -463,7 +476,8 @@ internal fun VideoBox(
                     onBottomHeight = { controlsBottomPx = it },
                     onMoreVideos = if (moreAllowed) ({ moreOpen = true; controlsVisible = false }) else null,
                     onComments = onComments?.let { open -> { controlsVisible = false; open() } },
-                    onDetails = onDetails
+                    onDetails = onDetails,
+                    videoBottomPx = videoBottomPx
                 )
             }
         }

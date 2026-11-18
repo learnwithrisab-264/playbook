@@ -132,6 +132,27 @@ class PlayerController(val app: Context, http: OkHttpClient) {
     private val chunkedFactory = androidx.media3.datasource.DataSource.Factory {
         ChunkedHttpDataSource(dataSource.createDataSource())
     }
+
+    /**
+     * What you have watched stays on disk (up to 400 MB, oldest dropped first). ExoPlayer can only
+     * jump inside its memory buffer while it is still downloading; once that buffer is full it
+     * pauses, and a jump back (back 10 s) restarts the stream. With this cache the restart reads
+     * from the phone instead of the network, so it is instant. Same for switching back to a
+     * quality you already watched.
+     */
+    private val mediaCache by lazy {
+        androidx.media3.datasource.cache.SimpleCache(
+            java.io.File(app.cacheDir, "media"),
+            androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor(400L * 1024 * 1024),
+            androidx.media3.database.StandaloneDatabaseProvider(app)
+        )
+    }
+    private val cachedFactory by lazy {
+        androidx.media3.datasource.cache.CacheDataSource.Factory()
+            .setCache(mediaCache)
+            .setUpstreamDataSourceFactory(chunkedFactory)
+            .setFlags(androidx.media3.datasource.cache.CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+    }
     private var job: Job? = null
 
     private val _now = MutableStateFlow<NowPlaying?>(null)
@@ -610,9 +631,16 @@ class PlayerController(val app: Context, http: OkHttpClient) {
             .setArtworkUri((video.thumb ?: runCatching { info.thumbnails.bestUrl() }.getOrNull())?.toUri())
             .build()
 
-        fun item(url: String) = MediaItem.Builder().setUri(url).setMediaMetadata(meta).build()
-        fun progressive(url: String): MediaSource =
-            ProgressiveMediaSource.Factory(chunkedFactory).createMediaSource(item(url))
+        fun item(url: String, key: String? = null) =
+            MediaItem.Builder().setUri(url).setMediaMetadata(meta).setCustomCacheKey(key).build()
+        // Stream links change every time they are fetched; the cache key (video, format, size)
+        // doesn't, so a part already watched is found again on disk.
+        fun progressive(url: String, key: String): MediaSource =
+            ProgressiveMediaSource.Factory(cachedFactory).createMediaSource(item(url, key))
+        fun keyOf(url: String, itag: Int, extra: String = ""): String {
+            val clen = runCatching { url.toUri().getQueryParameter("clen") }.getOrNull().orEmpty()
+            return "${video.url}|$itag|$clen|$extra"
+        }
 
         // Only the caption track the user picked is attached (loading every language up front
         // would slow every video start). It is a side-loaded WebVTT or TTML file from YouTube.
@@ -629,11 +657,11 @@ class PlayerController(val app: Context, http: OkHttpClient) {
             playingHeight = video0?.height ?: 0
             when {
                 video0 != null && video0.isVideoOnly && audio != null -> {
-                    parts.add(progressive(video0.content))
-                    parts.add(progressive(audio.content))
+                    parts.add(progressive(video0.content, keyOf(video0.content, video0.itag)))
+                    parts.add(progressive(audio.content, keyOf(audio.content, audio.itag, audio.audioTrackId.orEmpty())))
                 }
-                video0 != null -> parts.add(progressive(video0.content))
-                audio != null -> parts.add(progressive(audio.content))
+                video0 != null -> parts.add(progressive(video0.content, keyOf(video0.content, video0.itag)))
+                audio != null -> parts.add(progressive(audio.content, keyOf(audio.content, audio.itag, audio.audioTrackId.orEmpty())))
                 else -> throw IllegalStateException("No playable streams found")
             }
         }
