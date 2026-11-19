@@ -306,7 +306,7 @@ fun PillChip(
     )
 }
 
-/** App wordmark for the top bar: the orange badge + "PlayBook" in the brand orange. */
+/** App wordmark for the top bar: the red play badge + the app name. */
 @Composable
 fun LogoMark() {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -316,8 +316,8 @@ fun LogoMark() {
         )
         Spacer(Modifier.size(7.dp))
         Text(
-            "PlayBook", fontWeight = FontWeight.Bold, fontSize = 20.sp, letterSpacing = (-0.6).sp,
-            color = Brand.orange
+            "YouTube", fontWeight = FontWeight.Bold, fontSize = 21.sp, letterSpacing = (-0.8).sp,
+            color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground
         )
     }
 }

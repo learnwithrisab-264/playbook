@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.study
 
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import com.sourabh.jarvistube.R
 import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.common.Avatar
@@ -70,7 +71,7 @@ import com.sourabh.jarvistube.data.LibChannel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp, onPlay: (com.sourabh.jarvistube.data.VideoItem) -> Unit = {}) {
+internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp, onPlay: (com.sourabh.jarvistube.data.VideoItem) -> Unit = {}, onBack: (() -> Unit)? = null) {
     val study = Graph.study
     val context = androidx.compose.ui.platform.LocalContext.current
     var newChannel by remember { mutableStateOf("") }
@@ -91,6 +92,10 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp, onPlay: (com
     ) {
         item {
             Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)) {
+                // Opened from Settings: a way back.
+                if (onBack != null) androidx.compose.material3.IconButton(onClick = onBack, modifier = Modifier.padding(start = 0.dp)) {
+                    androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.AutoMirrored.Rounded.ArrowBack, "Back")
+                }
                 Text(stringResource(R.string.study), style = MaterialTheme.typography.displaySmall)
                 Text(
                     "Lock yourself in. Only your channels play until the timer ends.",

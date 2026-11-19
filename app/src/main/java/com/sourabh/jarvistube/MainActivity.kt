@@ -110,7 +110,6 @@ private enum class Tab(
 ) {
     Home("Home", Icons.Rounded.Home, Icons.Outlined.Home),
     Study("Study", Icons.Rounded.School, Icons.Outlined.School),
-    Recommended("Recommended", Icons.Rounded.Explore, Icons.Outlined.Explore),
     Shorts("Shorts", Icons.Rounded.PlayCircle, Icons.Outlined.PlayCircle),
     You("You", Icons.Rounded.AccountCircle, Icons.Outlined.AccountCircle)
 }
@@ -364,7 +363,11 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
     val study = Graph.study
     // Recommended is gone while the setting is off and during any session, multi-day lock,
     // scheduled window or timed video lock (the bar stays visible during a video lock).
-    val tabs = Tab.entries.filter { (it != Tab.Recommended || vm.recommendedAllowed) && (it != Tab.Shorts || (vm.shortsAllowed && AppSettings.showShorts)) && (it != Tab.Study || AppSettings.studyTabShown) }
+    // Home (recommendations or your channels), Shorts and You. Study lives in Settings; it takes
+    // the whole screen only while a focus session runs.
+    val tabs = Tab.entries.filter { (it != Tab.Shorts || (vm.shortsAllowed && AppSettings.showShorts)) && it != Tab.Study }
+    /** Home shows recommendations (the default) unless turned off, or during any session or lock. */
+    val homeRecommends = AppSettings.showRecommended && vm.recommendedAllowed
     val shownTab = when {
         study.active -> Tab.Study
         tab !in tabs -> Tab.Home
@@ -433,8 +436,7 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
                             // Tapping the tab you're on takes its feed back to the top.
                             if (t == shownTab) barScope.launch {
                                 when (t) {
-                                    Tab.Home -> homeState.animateScrollToItem(0)
-                                    Tab.Recommended -> recommendedState.animateScrollToItem(0)
+                                    Tab.Home -> (if (homeRecommends) recommendedState else homeState).animateScrollToItem(0)
                                     Tab.Shorts -> shortsState.animateScrollToItem(0)
                                     else -> Unit
                                 }
@@ -459,9 +461,9 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
                             Box(Modifier.fillMaxSize().then(if (active) Modifier.zIndex(1f) else Modifier.notShown())) {
                                 CompositionLocalProvider(LocalTabActive provides active) {
                                     when (t) {
-                                        Tab.Home -> HomeScreen(vm, homeState, bottom, onProfile = { tab = Tab.You })
+                                        Tab.Home -> if (homeRecommends) RecommendedScreen(vm, recommendedState, bottom, onProfile = { tab = Tab.You })
+                                            else HomeScreen(vm, homeState, bottom, onProfile = { tab = Tab.You })
                                         Tab.Study -> StudyScreen(vm, lib, bottom)
-                                        Tab.Recommended -> RecommendedScreen(vm, recommendedState, bottom, onProfile = { tab = Tab.You })
                                         Tab.Shorts -> ShortsScreen(vm, shortsState, bottom, onProfile = { tab = Tab.You })
                                         Tab.You -> YouScreen(vm, lib, bottom, onSignIn = { showLogin = true })
                                     }

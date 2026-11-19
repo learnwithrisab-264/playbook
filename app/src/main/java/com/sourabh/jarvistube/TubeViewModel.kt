@@ -272,8 +272,27 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Subjects plus your own channels, each with a changing angle, so searches differ every time. */
     private fun rotatedTerms(count: Int): List<String> {
+        val mine = AppSettings.userTopics.toList()
+        if (mine.isNotEmpty()) {
+            // Your topics only: each one comes round in turn, sometimes as it is, sometimes with an
+            // angle ("explained", "for beginners"), so the feed stays varied but on topic.
+            val picks = (mine.shuffled() + mine.shuffled() + mine.shuffled()).take(maxOf(count, 1))
+            return picks.map { if (kotlin.random.Random.nextBoolean()) it else "$it ${searchAngles.random()}" }
+        }
         val pool = topics + com.sourabh.jarvistube.data.StudyChannels.list.map { it.name }
         return pool.shuffled().take(count).map { "$it ${searchAngles.random()}" }
+    }
+
+    /** Your topics changed: recommendations and Shorts start again from the new ones. */
+    fun topicsChanged() {
+        recommendedKey = null
+        homeToken = null
+        trending = null
+        if (recommendedAllowed) loadRecommended()
+        shortsJob?.cancel()
+        shortsSessions = emptyList()
+        shorts = FeedState()
+        if (shortsAllowed) loadShorts()
     }
 
     private val searchAngles = listOf(
@@ -295,7 +314,8 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     val recommendedAllowed: Boolean
         get() = AppSettings.showRecommended && !Graph.study.active && !Graph.study.lockActive
 
-    private fun recommendedKeyNow() = "${com.sourabh.jarvistube.data.Session.dataKey}|${AppSettings.region}"
+    private fun recommendedKeyNow() =
+        "${com.sourabh.jarvistube.data.Session.dataKey}|${AppSettings.region}|${AppSettings.userTopics.joinToString(",")}"
     /** A saved list came back: the next Load more starts from the top of YouTube's home feed. */
     private var resumeHome = false
 
@@ -311,7 +331,10 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     fun ensureRecommended() {
         val key = recommendedKeyNow()
         if (recommendedKey == key || !recommendedAllowed) return
-        val saved = FeedStore.load(Feed.Recommended, AppSettings.region) ?: return loadRecommended()
+        // A list saved before your topics changed doesn't match them any more.
+        val saved = FeedStore.load(Feed.Recommended, AppSettings.region)
+            ?.takeIf { AppSettings.userTopics.isEmpty() || it.note.startsWith("Based on your topics") }
+            ?: return loadRecommended()
         recommendedJob?.cancel()
         recommendedKey = key
         recommended = FeedState(items = saved.items)
@@ -371,6 +394,15 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Signed in: the account's home feed. Signed out, or if that fails: Trending for the region. */
     private suspend fun firstRecommendedPage(): List<VideoItem> {
+        // Your topics come first: then everything here is about what you chose to watch.
+        if (AppSettings.userTopics.isNotEmpty()) {
+            homeToken = null
+            trending = null
+            val mixed = subjectMix()
+            recommendedSource = "Based on your topics: " + AppSettings.userTopics.take(4).joinToString(", ") +
+                (if (AppSettings.userTopics.size > 4) " and more" else "")
+            return mixed
+        }
         if (com.sourabh.jarvistube.data.Session.isSignedIn) {
             try {
                 val items = homeFeed(null)

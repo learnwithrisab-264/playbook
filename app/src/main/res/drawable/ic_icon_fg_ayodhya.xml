@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The play mark: rounded, white, with a soft shadow. Same on every theme's icon. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <group android:pivotX="54" android:pivotY="57" android:scaleX="0.8" android:scaleY="0.8" android:translateY="-3">
-    <path android:fillColor="#FFFFFFFF" android:pathData="M54,34C43,26 29,25 18,28V82C29,79 43,80 54,88C65,80 79,79 90,82V28C79,25 65,26 54,34Z" />
-    <path android:fillColor="#FF8B1E3F" android:pathData="M45,44L66,57L45,70Z" />
-    </group>
+    <path android:fillColor="#33000000" android:pathData="M45.5,41.2Q45.5,36.6 49.4,38.9L73.4,52.9Q77,55 77,56Q77,57 73.4,59.1L49.4,73.1Q45.5,75.4 45.5,70.8Z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M44.5,39.2Q44.5,34.6 48.4,36.9L72.4,50.9Q76,53 76,54Q76,55 72.4,57.1L48.4,71.1Q44.5,73.4 44.5,68.8Z" />
 </vector>

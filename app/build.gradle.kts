@@ -16,7 +16,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1"
-        manifestPlaceholders["appLabel"] = "PlayBook"
+        manifestPlaceholders["appLabel"] = "YouTube"
     }
 
     buildTypes {
@@ -32,7 +32,7 @@ android {
         create("preview") {
             initWith(getByName("release"))
             applicationIdSuffix = ".preview"
-            manifestPlaceholders["appLabel"] = "PlayBook"
+            manifestPlaceholders["appLabel"] = "YouTube"
             matchingFallbacks += "release"
         }
     }

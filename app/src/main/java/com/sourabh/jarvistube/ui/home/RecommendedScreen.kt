@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.home
 
+import androidx.compose.runtime.setValue
 import com.sourabh.jarvistube.ui.common.feedItems
 import com.sourabh.jarvistube.ui.common.HomeTopBar
 import com.sourabh.jarvistube.ui.common.TrackSeen
@@ -42,6 +43,8 @@ fun RecommendedScreen(
         vm.ensureRecommended()
     }
     val feed = vm.recommended
+    var pickTopics by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    if (pickTopics) com.sourabh.jarvistube.ui.you.TopicsDialog(vm, onDismiss = { pickTopics = false })
     // Re-applied on screen so turning the filter on (or a lock forcing it) hides items already loaded.
     val filterOn = Graph.study.entertainmentBlocked
     // Last check before the list is drawn: no Shorts here, whichever source the videos came from.
@@ -60,6 +63,10 @@ fun RecommendedScreen(
             contentPadding = PaddingValues(bottom = bottomPadding + 16.dp)
         ) {
             item { HomeTopBar(onSearch = vm::openSearch, onProfile = onProfile) }
+            item { ContinueWatching(vm) }
+            if (com.sourabh.jarvistube.AppSettings.userTopics.isEmpty()) item {
+                com.sourabh.jarvistube.ui.you.TopicsPrompt(onPick = { pickTopics = true })
+            }
             vm.recommendedSource?.takeIf { !feed.loading || feed.items.isNotEmpty() }?.let { source ->
                 item {
                     Text(

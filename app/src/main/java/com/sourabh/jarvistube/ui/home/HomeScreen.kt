@@ -274,7 +274,7 @@ private fun FilterBanner(name: String, onOpen: () -> Unit, onClear: () -> Unit) 
  * stopped. Hidden when nothing is unfinished, or when that video is already playing.
  */
 @Composable
-private fun ContinueWatching(vm: TubeViewModel) {
+internal fun ContinueWatching(vm: TubeViewModel) {
     val playingUrl = com.sourabh.jarvistube.Graph.player.now.collectAsState().value?.video?.url
     val pick = androidx.compose.runtime.remember(com.sourabh.jarvistube.data.WatchHistory.items.firstOrNull(), playingUrl) {
         com.sourabh.jarvistube.data.WatchHistory.items.asSequence().take(8)

@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.you
 
+import androidx.compose.material.icons.rounded.Interests
 import androidx.compose.material.icons.rounded.FormatColorFill
 
 import androidx.compose.material.icons.rounded.Tune
@@ -80,9 +81,12 @@ fun SettingsScreen(
     lib: LibraryViewModel,
     bottomPadding: Dp,
     onBack: () -> Unit,
-    onSignIn: () -> Unit
+    onSignIn: () -> Unit,
+    onOpenStudy: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    var topicsDialog by remember { mutableStateOf(false) }
+    if (topicsDialog) TopicsDialog(vm, onDismiss = { topicsDialog = false })
     var regionDialog by remember { mutableStateOf(false) }
     var qualityDialog by remember { mutableStateOf(false) }
     var appearanceDialog by remember { mutableStateOf(false) }
@@ -265,23 +269,34 @@ fun SettingsScreen(
             SettingsGroup {
                 SettingRow(Icons.Rounded.Public, "Region", AppSettings.regionName, onClick = { regionDialog = true })
                 SettingRow(
-                    Icons.Rounded.Explore, "Show Recommended tab",
-                    "Your YouTube home feed, or Trending when signed out. Hidden during study sessions and locks.",
+                    Icons.Rounded.Explore, "Recommendations on Home",
+                    if (AppSettings.showRecommended) "On: recommended videos from your topics. Off: only My Channels. Always My Channels during study."
+                    else "Off: Home shows only videos from My Channels.",
                     onClick = { AppSettings.updateShowRecommended(!AppSettings.showRecommended) }
                 ) { Switch(checked = AppSettings.showRecommended, onCheckedChange = { AppSettings.updateShowRecommended(it) }) }
                 SettingRow(
+                    Icons.Rounded.Interests, "Your topics",
+                    if (AppSettings.userTopics.isEmpty()) "None yet: recommendations come from your YouTube account. Tap to pick."
+                    else AppSettings.userTopics.joinToString(", "),
+                    onClick = { topicsDialog = true }
+                )
+                SettingRow(
                     Icons.Rounded.PlayCircle, "Show Shorts tab",
-                    "The Shorts tab in the bottom bar. Shorts in search results still show.",
+                    "Shorts from your topics. Off hides the tab; Shorts in search still show.",
                     onClick = { AppSettings.updateShowShorts(!AppSettings.showShorts) }
                 ) { Switch(checked = AppSettings.showShorts, onCheckedChange = { AppSettings.updateShowShorts(it) }) }
-                // During a session or any study lock the tab has to stay, so the switch is greyed out.
-                val required = AppSettings.studyTabRequired
+            }
+        }
+
+        // ---- Study: sessions, locks, plan and limits, all in one page.
+        item { SectionHeader("Study") }
+        item {
+            SettingsGroup {
                 SettingRow(
-                    Icons.Rounded.School, "Show Study tab",
-                    if (required) "Stays on while a study session or lock is running."
-                    else "The Study tab in the bottom bar. Sessions and locks still work when it is hidden.",
-                    onClick = { if (!required) AppSettings.updateShowStudy(!AppSettings.showStudy) }
-                ) { Switch(checked = AppSettings.studyTabShown, enabled = !required, onCheckedChange = { AppSettings.updateShowStudy(it) }) }
+                    Icons.Rounded.School, "Study and focus",
+                    "Your plan, focus sessions, Lock Study Session, daily limit and study channels.",
+                    onClick = onOpenStudy
+                )
             }
         }
 
@@ -314,7 +329,7 @@ fun SettingsScreen(
                     Modifier.size(44.dp).clip(Corners.medium)
                 )
                 Spacer(Modifier.size(12.dp))
-                Text("PlayBook 0.1", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                Text("YouTube 0.1", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                 Text(
                     "Ad-free, distraction-free YouTube for learning",
                     style = MaterialTheme.typography.bodySmall,

@@ -94,7 +94,7 @@ fun LibraryScreen(
     val detail = lib.detail
     // Player collapses first; and only while the You tab is on screen.
     BackHandler(enabled = detail != null && !vm.playerExpanded && LocalTabActive.current) { lib.closeDetail() }
-    LaunchedEffect(lib.tab, lib.signedIn) { lib.ensure(lib.tab) }
+    LaunchedEffect(lib.tab, lib.signedIn) { if (lib.tab != LibTab.History) lib.ensure(lib.tab) }
 
     val loader = if (detail != null) lib.detailLoader else lib.loader(lib.tab)
     val state = loader?.state ?: LibFeed(loading = true)
@@ -104,8 +104,6 @@ fun LibraryScreen(
     var newPlaylist by remember { mutableStateOf(false) }
     var historyQuery by remember { mutableStateOf("") }
     var clearHistory by remember { mutableStateOf(false) }
-    /** "YT History": only the YouTube account's history, without scrolling past PlayBook's own. */
-    var ytOnly by remember { mutableStateOf(false) }
     if (clearHistory) ClearHistoryDialog(onDismiss = { clearHistory = false })
     if (accountSheet) {
         AccountSheet(lib, onAddAccount = { lib.prepareAddAccount(); onSignIn() }, onDismiss = { accountSheet = false })
@@ -118,25 +116,17 @@ fun LibraryScreen(
         contentPadding = PaddingValues(bottom = bottomPadding + 16.dp)
     ) {
         if (detail == null) {
-            item { YouHeader(onOpenDownloads, onOpenSettings) }
-            item { ProfileHeader(lib, onSwitch = { accountSheet = true }) }
+            item { YouTopBar(lib, onSwitch = { accountSheet = true }, onOpenDownloads, onOpenSettings) }
             stickyHeader {
                 Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background).padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    // History, YT History, Playlists, Subscriptions: all visible, no sideways scrolling.
-                    val segments = listOf("History", "YT History", "Playlists", "Subscriptions")
-                    val chosen = when {
-                        lib.tab == LibTab.History && ytOnly -> 1
-                        lib.tab == LibTab.History -> 0
-                        lib.tab == LibTab.Playlists -> 2
-                        else -> 3
+                    val segments = listOf("History", "Playlists", "Subscriptions")
+                    val chosen = when (lib.tab) {
+                        LibTab.History -> 0
+                        LibTab.Playlists -> 1
+                        else -> 2
                     }
                     Segmented(segments, chosen) { i ->
-                        when (i) {
-                            0 -> { ytOnly = false; lib.selectTab(LibTab.History) }
-                            1 -> { ytOnly = true; lib.selectTab(LibTab.History) }
-                            2 -> { ytOnly = false; lib.selectTab(LibTab.Playlists) }
-                            else -> { ytOnly = false; lib.selectTab(LibTab.Channels) }
-                        }
+                        lib.selectTab(listOf(LibTab.History, LibTab.Playlists, LibTab.Channels)[i])
                     }
                 }
             }
@@ -183,19 +173,12 @@ fun LibraryScreen(
                 }
             }
         }
-        if (detail == null && lib.tab == LibTab.History && !ytOnly) {
-            historySection(vm, historyQuery, { historyQuery = it }, onClearAll = { clearHistory = true })
-            if (state.items.isNotEmpty()) item(key = "youtube-history") {
-                Text(
-                    "From your YouTube account",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
-                )
-            }
-        }
-        libItems(state, vm, lib, inHistory = detail == null && lib.tab == LibTab.History, inPlaylist = detail != null, onRetry = { loader?.refresh() })
+        val historyShown = detail == null && lib.tab == LibTab.History
+        // History: what you watched in this app, one list (nothing pulled from the YouTube account).
+        if (historyShown) historySection(vm, historyQuery, { historyQuery = it }, onClearAll = { clearHistory = true })
+        else libItems(state, vm, lib, inHistory = false, inPlaylist = detail != null, onRetry = { loader?.refresh() })
     }
-    LoadMoreEffect(listState, state.items.size) { loader?.more() }
+    if (detail != null || lib.tab != LibTab.History) LoadMoreEffect(listState, state.items.size) { loader?.more() }
 }
 
 private fun LazyListScope.libItems(
@@ -322,83 +305,49 @@ private fun RowCard(
  * Who is signed in, like YouTube's You page: photo, name and @handle, with a
  * "Switch account" link to the account sheet (add, switch, sign out).
  */
+/**
+ * The top of the You tab in one row: your photo and name (tap to switch account), then Downloads
+ * and Settings. Signed out, it just says "You".
+ */
 @Composable
-private fun ProfileHeader(lib: LibraryViewModel, onSwitch: () -> Unit) {
-    val a = lib.account
+private fun YouTopBar(lib: LibraryViewModel?, onSwitch: () -> Unit, onOpenDownloads: () -> Unit, onOpenSettings: () -> Unit) {
+    val a = lib?.account
     val cs = MaterialTheme.colorScheme
-    val dayStart = remember {
-        java.util.Calendar.getInstance().apply {
-            set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
-            set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
-        }.timeInMillis
-    }
-    val history = com.sourabh.jarvistube.data.WatchHistory.items
-    val today = history.count { it.watchedAt >= dayStart }
-    Column(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
-            .clip(com.sourabh.jarvistube.ui.theme.Corners.xl)
-            .background(
-                androidx.compose.ui.graphics.Brush.linearGradient(
-                    listOf(cs.primary.copy(alpha = 0.22f), cs.secondary.copy(alpha = 0.08f), cs.surfaceContainer)
-                )
-            )
-            .clickable(onClick = onSwitch)
-            .padding(18.dp)
+    Row(
+        Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // The photo sits in a ring of the theme's two colours.
-            Box(
-                Modifier.size(76.dp).clip(CircleShape)
-                    .background(androidx.compose.ui.graphics.Brush.sweepGradient(listOf(cs.primary, cs.secondary, cs.primary))),
-                contentAlignment = Alignment.Center
+        if (a != null) {
+            Row(
+                Modifier.weight(1f).clip(com.sourabh.jarvistube.ui.theme.Corners.pill).clickable(onClick = onSwitch)
+                    .padding(end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(Modifier.size(70.dp).clip(CircleShape).background(cs.background), contentAlignment = Alignment.Center) {
-                    Avatar(a?.name ?: a?.email ?: "?", 64, a?.photo)
+                Box(
+                    Modifier.size(48.dp).clip(CircleShape)
+                        .background(androidx.compose.ui.graphics.Brush.sweepGradient(listOf(cs.primary, cs.secondary, cs.primary))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(Modifier.size(44.dp).clip(CircleShape).background(cs.background), contentAlignment = Alignment.Center) {
+                        Avatar(a.name ?: a.email ?: "?", 40, a.photo)
+                    }
                 }
-            }
-            Spacer(Modifier.size(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    a?.name ?: "Your account",
-                    style = MaterialTheme.typography.headlineSmall,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis
-                )
-                // The Gmail address stays private here; Settings shows it.
-                a?.handle?.let {
+                Spacer(Modifier.size(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(a.name ?: "Your account", style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    // The Gmail address stays private here; Settings shows it.
                     Text(
-                        it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = cs.onSurfaceVariant,
+                        (a.handle?.let { "$it · " } ?: "") + "Switch account",
+                        style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
                         maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                 }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    if (lib.accounts.size > 1) "Switch account (${lib.accounts.size})" else "Switch or add account",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = cs.onPrimary,
-                    modifier = Modifier.clip(CircleShape).background(cs.primary).padding(horizontal = 12.dp, vertical = 5.dp)
-                )
             }
+        } else {
+            Text(stringResource(R.string.you), style = MaterialTheme.typography.displaySmall, modifier = Modifier.weight(1f))
         }
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatTile("$today", "today", Modifier.weight(1f))
-            StatTile("${history.size}", "watched", Modifier.weight(1f))
-            StatTile("${com.sourabh.jarvistube.data.StudyChannels.list.size}", "channels", Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun StatTile(value: String, label: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier.clip(com.sourabh.jarvistube.ui.theme.Corners.medium)
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.55f))
-            .padding(horizontal = 12.dp, vertical = 10.dp)
-    ) {
-        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        IconButton(onClick = onOpenDownloads) { Icon(Icons.Rounded.Download, "Downloads") }
+        IconButton(onClick = onOpenSettings) { Icon(Icons.Rounded.Settings, "Settings") }
     }
 }
 
@@ -459,18 +408,6 @@ private fun NewPlaylistDialog(onCreate: (String) -> Unit, onDismiss: () -> Unit)
 }
 
 @Composable
-private fun YouHeader(onOpenDownloads: () -> Unit, onOpenSettings: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(stringResource(R.string.you), style = MaterialTheme.typography.displaySmall, modifier = Modifier.weight(1f))
-        IconButton(onClick = onOpenDownloads) { Icon(Icons.Rounded.Download, "Downloads") }
-        IconButton(onClick = onOpenSettings) { Icon(Icons.Rounded.Settings, "Settings") }
-    }
-}
-
-@Composable
 private fun SignedOut(
     vm: TubeViewModel,
     bottomPadding: Dp,
@@ -485,12 +422,12 @@ private fun SignedOut(
         Modifier.fillMaxSize().statusBarsPadding().imePadding(),
         contentPadding = PaddingValues(bottom = bottomPadding + 16.dp)
     ) {
-        item { YouHeader(onOpenDownloads, onOpenSettings) }
+        item { YouTopBar(null, onSwitch = {}, onOpenDownloads, onOpenSettings) }
         item { SignedOutBody(onSignIn) }
         item {
             Text(
                 "History", style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 4.dp)
+                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp)
             )
         }
         historySection(vm, query, { query = it }, onClearAll = { clearHistory = true })
@@ -499,24 +436,22 @@ private fun SignedOut(
 
 @Composable
 private fun SignedOutBody(onSignIn: () -> Unit) {
-    Column(
-        Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+    val cs = MaterialTheme.colorScheme
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+            .clip(Corners.large).background(cs.surfaceContainer).padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        EmptyState(
-            Icons.Rounded.VideoLibrary,
-            "Your library",
-            "Sign in to see your subscription, watch history and playlists, without the recommendations."
-        )
-        Button(onClick = onSignIn) { Text(stringResource(R.string.sign_in_with_google)) }
-        Spacer(Modifier.height(12.dp))
-        Text(
-            "Unofficial sign-in. A secondary Google account is safest.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 32.dp)
-        )
+        Icon(Icons.Rounded.VideoLibrary, null, tint = cs.primary, modifier = Modifier.size(28.dp))
+        Spacer(Modifier.size(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Your playlists and subscriptions", style = MaterialTheme.typography.titleSmall)
+            Text(
+                "Unofficial sign-in. A secondary Google account is safest.",
+                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant
+            )
+        }
+        Spacer(Modifier.size(8.dp))
+        Button(onClick = onSignIn) { Text("Sign in") }
     }
 }

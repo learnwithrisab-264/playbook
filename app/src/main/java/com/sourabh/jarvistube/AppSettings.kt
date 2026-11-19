@@ -71,8 +71,13 @@ object AppSettings {
 
     var region by mutableStateOf("IN"); private set
     var defaultQuality by mutableIntStateOf(0); private set
-    /** The Recommended tab (YouTube home feed / Trending). Never reachable during a session or lock. */
+    /**
+     * What Home shows: recommendations (on, the default) or only your own channels (off).
+     * Recommendations are never shown during a session or lock: Home then shows your channels.
+     */
     var showRecommended by mutableStateOf(true); private set
+    /** Topics you want to watch. When set, recommendations and Shorts come only from these. */
+    val userTopics = androidx.compose.runtime.mutableStateListOf<String>()
     /** The Shorts tab in the bottom bar. Off only hides the tab; Shorts in search stay. */
     var showShorts by mutableStateOf(true); private set
     /** The Study tab in the bottom bar. Hiding it never stops a session or lock: see [studyTabRequired]. */
@@ -115,6 +120,8 @@ object AppSettings {
         region = prefs.getString("region", "IN") ?: "IN"
         defaultQuality = prefs.getInt("quality", 0)
         showRecommended = prefs.getBoolean("showRecommended", true)
+        userTopics.clear()
+        userTopics.addAll(prefs.getString("userTopics", "").orEmpty().split("\n").map { it.trim() }.filter { it.isNotEmpty() })
         showShorts = prefs.getBoolean("showShorts", true)
         showStudy = prefs.getBoolean("showStudy", true)
         appearance = prefs.getString("appearance", "dark") ?: "dark"
@@ -167,6 +174,13 @@ object AppSettings {
     fun updateShowRecommended(on: Boolean) {
         showRecommended = on
         prefs.edit().putBoolean("showRecommended", on).apply()
+    }
+
+    fun updateUserTopics(topics: List<String>) {
+        val clean = topics.map { it.trim() }.filter { it.isNotEmpty() }.distinctBy { it.lowercase() }
+        userTopics.clear()
+        userTopics.addAll(clean)
+        prefs.edit().putString("userTopics", clean.joinToString("\n")).apply()
     }
 
     fun updateTheme(key: String) { themeKey = key; prefs.edit().putString("theme", key).apply() }

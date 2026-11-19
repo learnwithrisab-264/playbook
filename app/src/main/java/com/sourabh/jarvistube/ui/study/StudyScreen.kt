@@ -35,7 +35,7 @@ import com.sourabh.jarvistube.LibraryViewModel
 import com.sourabh.jarvistube.TubeViewModel
 
 @Composable
-fun StudyScreen(vm: TubeViewModel, lib: LibraryViewModel, bottomPadding: Dp) {
+fun StudyScreen(vm: TubeViewModel, lib: LibraryViewModel, bottomPadding: Dp, onBack: (() -> Unit)? = null) {
     val study = Graph.study
     if (study.justCompleted > 0) {
         AlertDialog(
@@ -45,7 +45,7 @@ fun StudyScreen(vm: TubeViewModel, lib: LibraryViewModel, bottomPadding: Dp) {
             confirmButton = { TextButton(onClick = { study.justCompleted = 0 }) { Text(stringResource(R.string.done)) } }
         )
     }
-    if (study.active) ActiveSession(vm, bottomPadding) else SetupSession(lib, bottomPadding, onPlay = vm::play)
+    if (study.active) ActiveSession(vm, bottomPadding) else SetupSession(lib, bottomPadding, onPlay = vm::play, onBack = onBack)
 }
 
 // ---------------------------------------------------------------- setup

@@ -14,7 +14,7 @@ import com.sourabh.jarvistube.TubeViewModel
 
 /**
  * The "You" tab: library (history, playlists, subscription) plus Downloads and
- * Settings as sub-pages, so the bottom bar only needs Home / Study / You.
+ * Settings (and Study, from Settings) as sub-pages, so the bottom bar only needs Home / Shorts / You.
  */
 @Composable
 fun YouScreen(vm: TubeViewModel, lib: LibraryViewModel, bottomPadding: Dp, onSignIn: () -> Unit) {
@@ -25,7 +25,12 @@ fun YouScreen(vm: TubeViewModel, lib: LibraryViewModel, bottomPadding: Dp, onSig
 
     when (route) {
         "downloads" -> SavedScreen(vm, bottomPadding, onBack = { route = "main" })
-        "settings" -> SettingsScreen(vm, lib, bottomPadding, onBack = { route = "main" }, onSignIn = onSignIn)
+        "settings" -> SettingsScreen(vm, lib, bottomPadding, onBack = { route = "main" }, onSignIn = onSignIn, onOpenStudy = { route = "study" })
+        "study" -> {
+            // Back from Study returns to Settings, where it was opened.
+            BackHandler(enabled = !vm.playerExpanded && LocalTabActive.current) { route = "settings" }
+            com.sourabh.jarvistube.ui.study.StudyScreen(vm, lib, bottomPadding, onBack = { route = "settings" })
+        }
         else -> LibraryScreen(
             vm, lib, bottomPadding, onSignIn,
             onOpenDownloads = { route = "downloads" },
