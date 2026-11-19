@@ -74,12 +74,23 @@ object AppGuard {
 /**
  * Which app is in front, from Android's usage log. Reads only new events each time (a cursor),
  * so checking several times a second costs next to nothing.
+ *
+ * It follows apps leaving the front as well as arriving: a quick swipe towards Home or Recents
+ * shows the launcher for a moment and pauses it again while PlayBook never leaves the screen.
+ * Counting only arrivals would then think the launcher is still in front.
  */
 internal class ForegroundWatcher(context: Context) {
     private val usm = context.getSystemService(UsageStatsManager::class.java)
     private var cursor = 0L
+    /** Activities resumed and not paused since ("package/class" to when it resumed). */
+    private val resumed = LinkedHashMap<String, Long>()
     private var lastAt = 0L
+
+    /** The app most recently brought in front that is still there, or null if unknown. */
     var front: String? = null
+        private set
+    /** When [front] came in front (usage-log time, wall clock). */
+    var frontAt = 0L
         private set
 
     fun poll(): String? {
@@ -92,12 +103,19 @@ internal class ForegroundWatcher(context: Context) {
         val e = UsageEvents.Event()
         while (events.hasNextEvent()) {
             events.getNextEvent(e)
-            if (e.eventType == UsageEvents.Event.ACTIVITY_RESUMED && e.timeStamp >= lastAt) {
-                front = e.packageName
-                lastAt = e.timeStamp
+            if (e.timeStamp < lastAt) continue // already seen (the one-second overlap)
+            val key = e.packageName + "/" + e.className
+            when (e.eventType) {
+                UsageEvents.Event.ACTIVITY_RESUMED -> { resumed.remove(key); resumed[key] = e.timeStamp }
+                UsageEvents.Event.ACTIVITY_PAUSED, UsageEvents.Event.ACTIVITY_STOPPED -> resumed.remove(key)
+                else -> continue
             }
+            lastAt = e.timeStamp
         }
         cursor = now
+        val top = resumed.entries.maxByOrNull { it.value }
+        front = top?.key?.substringBefore('/')
+        frontAt = top?.value ?: 0L
         return front
     }
 }
@@ -199,38 +217,67 @@ private class ShieldOwner : SavedStateRegistryOwner {
 }
 
 /**
+ * Whether PlayBook's own screen is showing, straight from MainActivity (more exact than the usage
+ * log, which never reports an app staying in front).
+ */
+object OwnScreen {
+    @Volatile var resumed = false
+        private set
+    /** Wall-clock time of the last resume, comparable with usage-log times. */
+    @Volatile var resumedAt = 0L
+        private set
+
+    fun onResume() { resumed = true; resumedAt = System.currentTimeMillis() }
+    fun onPause() { resumed = false }
+}
+
+/**
  * The guard loop, run by [StudyLockService] while a lock is on: several times a second it checks
- * the app in front and, if it isn't allowed, covers it and brings PlayBook back.
+ * the app in front and, if it isn't allowed, covers it and brings PlayBook back on the video.
+ *
+ * It can never leave the screen black: the cover lifts the moment PlayBook is showing, and each
+ * blocked app gets a few quick tries (about 1.5 s); after that the cover lifts anyway until
+ * something new comes in front.
  */
 internal class LockGuard(private val context: Context) {
     private val watcher = ForegroundWatcher(context)
     private val shield = BlockShield(context)
     private var lastBounceAt = 0L
     private var lastToastAt = 0L
+    /** The blocked arrival being handled ([ForegroundWatcher.frontAt]) and tries spent on it. */
+    private var handlingAt = -1L
+    private var tries = 0
 
     fun check() {
         if (!Graph.study.lockActive) return stop()
         // With the phone locked nothing can be used anyway; the check resumes after unlocking.
-        if (context.getSystemService(KeyguardManager::class.java).isKeyguardLocked) return
-        val front = watcher.poll() ?: return
-        if (allowed(front)) {
-            if (shield.showing) shield.hide()
-            return
+        if (context.getSystemService(KeyguardManager::class.java).isKeyguardLocked) return stop()
+        val front = watcher.poll()
+        val ownOnTop = OwnScreen.resumed && OwnScreen.resumedAt >= watcher.frontAt - 50
+        if (front == null || ownOnTop || allowed(front)) return stop()
+        if (watcher.frontAt != handlingAt) {
+            handlingAt = watcher.frontAt
+            tries = 0
         }
+        if (tries >= MAX_TRIES) return shield.hide()
         shield.show()
-        bounce()
+        if (bounce()) tries++
     }
 
-    fun stop() = shield.hide()
+    fun stop() {
+        shield.hide()
+        tries = 0
+    }
 
     private fun allowed(pkg: String): Boolean =
         lockAllows(pkg, context.packageName, dialer(), keyboards()) ||
             // Payments always come first.
             isBankingApp(pkg)
 
-    private fun bounce() {
+    /** Brings PlayBook forward; false if it was too soon after the last try. */
+    private fun bounce(): Boolean {
         val now = SystemClock.elapsedRealtime()
-        if (now - lastBounceAt < 400) return
+        if (now - lastBounceAt < 400) return false
         lastBounceAt = now
         // Straight back to the locked video (it reopens full screen). Ending early is only possible
         // there: tap the lock timer, then Emergency exit.
@@ -243,6 +290,7 @@ internal class LockGuard(private val context: Context) {
                 android.widget.Toast.LENGTH_SHORT
             ).show()
         }
+        return true
     }
 
     private fun dialer(): String? = runCatching {
@@ -252,6 +300,10 @@ internal class LockGuard(private val context: Context) {
     private fun keyboards(): Set<String> = runCatching {
         context.getSystemService(InputMethodManager::class.java).enabledInputMethodList.mapTo(HashSet()) { it.packageName }
     }.getOrDefault(emptySet())
+
+    private companion object {
+        const val MAX_TRIES = 4
+    }
 }
 
 /** Banking and payment apps: package names, plus any app whose name says "bank" or "upi". */

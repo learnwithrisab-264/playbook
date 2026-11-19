@@ -214,6 +214,17 @@ private val BAR_HEIGHT = 64.dp
 private const val PIP_ACTION = "com.sourabh.jarvistube.PIP_BUTTON"
 
 class MainActivity : ComponentActivity() {
+    override fun onResume() {
+        super.onResume()
+        // The study lock's guard trusts this over the usage log.
+        com.sourabh.jarvistube.lock.OwnScreen.onResume()
+    }
+
+    override fun onPause() {
+        com.sourabh.jarvistube.lock.OwnScreen.onPause()
+        super.onPause()
+    }
+
     override fun onStop() {
         super.onStop()
         // The home-screen icon follows the theme; switched only while PlayBook is in the background.
