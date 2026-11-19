@@ -254,7 +254,7 @@ private fun LazyListScope.libItems(
             if (state.loadingMore) {
                 item {
                     Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
+                        com.sourabh.jarvistube.ui.theme.ChakraSpinner(30.dp)
                     }
                 }
             }

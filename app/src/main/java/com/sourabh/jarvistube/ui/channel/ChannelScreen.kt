@@ -219,7 +219,7 @@ internal fun ChannelScreen(vm: TubeViewModel, page: Page.Channel, bottomPadding:
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 indicator = { positions ->
                     if (index < positions.size) TabRowDefaults.SecondaryIndicator(
-                        Modifier.tabIndicatorOffset(positions[index]), height = 2.dp, color = MaterialTheme.colorScheme.onSurface
+                        Modifier.tabIndicatorOffset(positions[index]), height = 3.dp, color = MaterialTheme.colorScheme.primary
                     )
                 },
                 divider = { Box(Modifier.fillMaxWidth().height(0.5.dp).background(MaterialTheme.colorScheme.outlineVariant)) }

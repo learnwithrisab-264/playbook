@@ -271,7 +271,7 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp, onPlay: (com
                         Avatar(c.name, 32, c.avatar)
                         Spacer(Modifier.size(12.dp))
                         Text(c.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                        Icon(Icons.Rounded.CheckCircle, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Rounded.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     }
                 }
                 study.allowed.toList().filterNot { StudyChannels.containsName(it) }.forEach { ch ->
@@ -362,7 +362,7 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp, onPlay: (com
             )
             if (names.isEmpty()) {
                 Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                    if (feed.loading) CircularProgressIndicator() else Text(stringResource(R.string.no_subscriptions_found))
+                    if (feed.loading) com.sourabh.jarvistube.ui.theme.ChakraSpinner(32.dp) else Text(stringResource(R.string.no_subscriptions_found))
                 }
             } else {
                 LazyColumn(Modifier.height(420.dp)) {

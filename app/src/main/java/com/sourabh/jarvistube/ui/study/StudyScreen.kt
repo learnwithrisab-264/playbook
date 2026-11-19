@@ -51,8 +51,6 @@ fun StudyScreen(vm: TubeViewModel, lib: LibraryViewModel, bottomPadding: Dp) {
 // ---------------------------------------------------------------- setup
 
 // PlayBook palette: yellow -> orange -> deep orange.
-internal val JarvisViolet = Brand.orange
-
 internal val JarvisCyan = Color(0xFFFFC107)
 
 @Composable
@@ -65,7 +63,7 @@ internal fun ToggleRow(title: String, sub: String, checked: Boolean, enabled: Bo
         Spacer(Modifier.size(12.dp))
         Switch(
             checked = checked, onCheckedChange = onChange, enabled = enabled,
-            colors = SwitchDefaults.colors(checkedTrackColor = JarvisViolet, checkedThumbColor = Color.White)
+            colors = SwitchDefaults.colors(checkedTrackColor = androidx.compose.material3.MaterialTheme.colorScheme.primary, checkedThumbColor = Color.White)
         )
     }
 }

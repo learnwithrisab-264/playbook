@@ -98,8 +98,8 @@ fun SubscribeButton(channelUrl: String?, channelName: String, modifier: Modifier
         false -> Button(
             onClick = { set(true) }, enabled = !busy, modifier = modifier,
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.onSurface,
-                contentColor = MaterialTheme.colorScheme.surface
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) { Text(stringResource(R.string.subscribe)) }
     }
@@ -170,7 +170,7 @@ fun SaveToPlaylistHost() {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 12.dp)) {
             Text(stringResource(R.string.save_video_to), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
             if (loading) {
-                CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally).padding(24.dp))
+                com.sourabh.jarvistube.ui.theme.ChakraSpinner(36.dp, Modifier.align(Alignment.CenterHorizontally).padding(24.dp))
             }
             choices.forEachIndexed { i, p ->
                 Row(

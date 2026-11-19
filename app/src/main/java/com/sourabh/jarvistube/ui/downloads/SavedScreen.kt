@@ -50,7 +50,7 @@ fun SavedScreen(vm: TubeViewModel, bottomPadding: Dp, onBack: () -> Unit) {
         Modifier.fillMaxSize().statusBarsPadding(), // rows never scroll under the status bar
         contentPadding = PaddingValues(bottom = bottomPadding + 16.dp)
     ) {
-        item { SubPageHeader("Downloads", onBack) }
+        item { SubPageHeader("Downloads", onBack, large = true) }
         // Storage at a glance: what downloads take and what is left on the phone.
         item {
             Text(

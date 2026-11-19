@@ -104,7 +104,7 @@ fun ShortsGrid(
         when {
             feed.loading && feed.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }) {
                 Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(Modifier.size(32.dp), strokeWidth = 3.dp)
+                    com.sourabh.jarvistube.ui.theme.ChakraSpinner(32.dp)
                 }
             }
             feed.error != null && feed.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }) {
@@ -117,7 +117,7 @@ fun ShortsGrid(
                 items(feed.items, key = { it.url }) { v -> ShortCard(v, onClick = { onPlay(v) }) }
                 if (feed.loadingMore) item(span = { GridItemSpan(maxLineSpan) }) {
                     Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
+                        com.sourabh.jarvistube.ui.theme.ChakraSpinner(30.dp)
                     }
                 }
             }

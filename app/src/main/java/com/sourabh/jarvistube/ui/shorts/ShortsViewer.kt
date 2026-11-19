@@ -267,7 +267,7 @@ private fun ShortPage(
 @Composable
 private fun ShortProgress(ui: PlayerUi, modifier: Modifier) {
     val progress = if (ui.duration > 0) (ui.position.toFloat() / ui.duration).coerceIn(0f, 1f) else 0f
-    Box(modifier.fillMaxWidth(progress).height(2.dp).background(Brand.orange))
+    Box(modifier.fillMaxWidth(progress).height(2.dp).background(androidx.compose.material3.MaterialTheme.colorScheme.primary))
 }
 
 

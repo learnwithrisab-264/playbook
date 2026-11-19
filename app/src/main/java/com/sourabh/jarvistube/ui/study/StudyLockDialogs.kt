@@ -95,7 +95,7 @@ internal fun LongLockDialog(
         confirmButton = {
             Button(
                 onClick = { onConfirm(until) }, enabled = valid,
-                colors = ButtonDefaults.buttonColors(containerColor = JarvisViolet, contentColor = Color.White)
+                colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.primary, contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary)
             ) { Text(confirmLabel) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
@@ -143,7 +143,7 @@ internal fun DaysWheelDialog(title: String, from: Long, onConfirm: (Int) -> Unit
         confirmButton = {
             Button(
                 onClick = { onConfirm(days) },
-                colors = ButtonDefaults.buttonColors(containerColor = JarvisViolet, contentColor = Color.White)
+                colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.primary, contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary)
             ) { Text(stringResource(R.string.lock)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }

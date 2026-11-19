@@ -197,7 +197,8 @@ private fun BottomBar(tabs: List<Tab>, current: Tab, onSelect: (Tab) -> Unit) {
                         }
                         Spacer(Modifier.height(3.dp))
                         Text(
-                            t.label, fontSize = 11.sp, color = labelTint, maxLines = 1, softWrap = false,
+                            // Five tabs: slightly smaller labels so "Recommended" fits whole.
+                            t.label, fontSize = if (tabs.size >= 5) 10.sp else 11.sp, color = labelTint, maxLines = 1, softWrap = false,
                             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                             letterSpacing = 0.1.sp
                         )

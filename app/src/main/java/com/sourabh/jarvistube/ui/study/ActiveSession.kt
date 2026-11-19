@@ -152,7 +152,7 @@ internal fun ActiveSession(vm: TubeViewModel, bottomPadding: Dp) {
                 val done = (1f - remaining / total).coerceIn(0f, 1f)
                 // Plain YouTube-style progress line: grey track, red fill, no gaps or end dots.
                 Box(Modifier.fillMaxWidth().height(3.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)) {
-                    Box(Modifier.fillMaxWidth(done).fillMaxHeight().background(Brand.orange))
+                    Box(Modifier.fillMaxWidth(done).fillMaxHeight().background(androidx.compose.material3.MaterialTheme.colorScheme.primary))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(40.dp)) {
                     Text(

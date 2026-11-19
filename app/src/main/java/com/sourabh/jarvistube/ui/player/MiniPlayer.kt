@@ -92,7 +92,7 @@ fun MiniPlayer(now: NowPlaying, ui: PlayerUi, onExpand: () -> Unit, modifier: Mo
                 LinearProgressIndicator(
                     progress = { progress },
                     modifier = Modifier.fillMaxWidth(),
-                    color = Brand.orange, // PlayBook orange, like the seek bar
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.primary, // the theme's colour, like the seek bar
                     trackColor = MaterialTheme.colorScheme.outlineVariant
                 )
             }

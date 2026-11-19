@@ -293,6 +293,6 @@ private fun FloatProgress(ui: PlayerUi, modifier: Modifier) {
     val progress = if (ui.duration > 0) (ui.position.toFloat() / ui.duration).coerceIn(0f, 1f) else 0f
     Box(
         modifier.fillMaxWidth(progress).height(2.dp)
-            .background(Brand.orange) // PlayBook orange, like the seek bar
+            .background(androidx.compose.material3.MaterialTheme.colorScheme.primary) // the theme's colour, like the seek bar
     )
 }

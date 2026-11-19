@@ -81,7 +81,7 @@ fun DownloadSheetHost() {
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
             )
             when {
-                info == null && !failed -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally).padding(24.dp))
+                info == null && !failed -> com.sourabh.jarvistube.ui.theme.ChakraSpinner(36.dp, Modifier.align(Alignment.CenterHorizontally).padding(24.dp))
                 options.isEmpty() -> Text(
                     "Nothing downloadable for this video.",
                     modifier = Modifier.padding(24.dp),

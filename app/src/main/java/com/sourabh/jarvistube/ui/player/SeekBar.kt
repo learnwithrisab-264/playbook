@@ -51,7 +51,7 @@ fun YtSeekBar(
     onSeek: (Long) -> Unit = {},
     onScrub: (Long?) -> Unit = {}
 ) {
-    val accent = Brand.orange // PlayBook orange
+    val accent = androidx.compose.material3.MaterialTheme.colorScheme.primary // the theme's colour
     var dragFraction by remember { mutableFloatStateOf(-1f) } // -1 = not dragging
     val dragging = dragFraction >= 0f
     // Until the player knows the duration it reports 0; treat that as "no progress yet" instead of
