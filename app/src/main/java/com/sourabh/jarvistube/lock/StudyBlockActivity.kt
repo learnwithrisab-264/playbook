@@ -46,60 +46,6 @@ import com.sourabh.jarvistube.data.timeLeftText
 import com.sourabh.jarvistube.ui.theme.JarvisTubeTheme
 import kotlinx.coroutines.delay
 
-/** The lock screen shown over a blocked app: time left, back to study, Phone, emergency exit. */
-@Composable
-internal fun BlockScreen(onStudy: () -> Unit, onPhone: () -> Unit) {
-    val study = Graph.study
-    var left by remember { mutableLongStateOf(study.lockRemainingMs) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            study.tick()
-            left = study.lockRemainingMs
-            if (!study.lockActive) onStudy()
-            delay(1000)
-        }
-    }
-    var exiting by remember { mutableStateOf(false) }
-    LaunchedEffect(exiting) {
-        if (!exiting) {
-            delay(5000)
-            onStudy()
-        }
-    }
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(
-            Modifier.fillMaxSize().imePadding().padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(Icons.Rounded.Lock, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(24.dp))
-            Text(
-                "Study session locked, ${minutesLeftText(left)}",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Only PlayBook and Phone work until the timer ends.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(24.dp))
-            if (exiting) {
-                EmergencyExit(onEnd = { if (study.useEmergencyExit()) onStudy() }, onCancel = { exiting = false })
-            } else {
-                Button(onClick = onStudy, Modifier.fillMaxWidth()) { Text(stringResource(R.string.back_to_study_video)) }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = onPhone, Modifier.fillMaxWidth()) { Text(stringResource(R.string.open_the_phone_app)) }
-                Spacer(Modifier.height(8.dp))
-                TextButton(onClick = { exiting = true }) { Text(stringResource(R.string.emergency_exit)) }
-            }        }
-    }
-}
-
 /** Once in 24 hours, 3 times in 7 days, and deliberately slow: type the phrase and wait. */
 @Composable
 internal fun EmergencyExit(onEnd: () -> Unit, onCancel: () -> Unit) {

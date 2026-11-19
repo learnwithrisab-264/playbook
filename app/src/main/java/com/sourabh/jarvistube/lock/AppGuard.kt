@@ -27,7 +27,9 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.sourabh.jarvistube.Graph
 import com.sourabh.jarvistube.MainActivity
-import com.sourabh.jarvistube.ui.theme.JarvisTubeTheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxSize
 
 /**
  * The Study Lock's guard, without any Accessibility service.
@@ -101,8 +103,10 @@ internal class ForegroundWatcher(context: Context) {
 }
 
 /**
- * Covers a blocked app instantly with the lock screen, as a window over every app. It goes away by
- * itself as soon as PlayBook (or another allowed app) is in front again.
+ * Covers a blocked app instantly (plain black, like the video player) so it can't be used, while
+ * PlayBook comes back on the locked video. It goes away by itself as soon as PlayBook (or another
+ * allowed app) is in front again. The window also lets Android bring PlayBook forward from the
+ * background.
  */
 internal class BlockShield(private val context: Context) {
     private val wm = context.getSystemService(WindowManager::class.java)
@@ -130,17 +134,17 @@ internal class BlockShield(private val context: Context) {
             setViewTreeLifecycleOwner(owner)
             setViewTreeSavedStateRegistryOwner(owner)
             setContent {
-                JarvisTubeTheme {
-                    BlockScreen(
-                        onStudy = ::backToStudy,
-                        onPhone = {
-                            runCatching {
-                                context.startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                            }
-                            hide()
-                        }
-                    )
-                }
+                // No page, no buttons: just the video player's black, for the instant it takes
+                // PlayBook to come back on the locked video. A tap also takes you straight there.
+                androidx.compose.foundation.layout.Box(
+                    androidx.compose.ui.Modifier.fillMaxSize()
+                        .background(androidx.compose.ui.graphics.Color.Black)
+                        .clickable(
+                            interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            onClick = ::backToStudy
+                        )
+                )
             }
         }
         frame.addView(compose, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
@@ -226,10 +230,10 @@ internal class LockGuard(private val context: Context) {
 
     private fun bounce() {
         val now = SystemClock.elapsedRealtime()
-        if (now - lastBounceAt < 700) return
+        if (now - lastBounceAt < 400) return
         lastBounceAt = now
-        // Straight back to the locked video (it reopens full screen); the emergency exit lives
-        // there under the lock badge, and on the shield.
+        // Straight back to the locked video (it reopens full screen). Ending early is only possible
+        // there: tap the lock timer, then Emergency exit.
         runCatching { context.startActivity(studyIntent(context)) }
         if (now - lastToastAt > 5000) {
             lastToastAt = now
