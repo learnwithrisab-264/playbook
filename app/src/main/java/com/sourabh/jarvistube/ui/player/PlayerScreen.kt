@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.player
 
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.offset
 import com.sourabh.jarvistube.ui.study.PlayerPopups
 
@@ -192,7 +193,17 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
     val pullScope = androidx.compose.runtime.rememberCoroutineScope()
     // Ambient mode: the video's colours glow softly behind the player, like YouTube's.
     val ambientOn = AppSettings.ambient && !fs && android.os.Build.VERSION.SDK_INT >= 31
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    // The player page catches every touch, including the empty glow space above the video:
+    // without this a tap there fell through to the feed underneath and opened another video.
+    Box(
+        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+            .pointerInput(Unit) {
+                // Being a touch target is enough: Compose then stops at this page and never hands
+                // the touch to the screens below. Nothing is consumed, so the player's own buttons
+                // and gestures work exactly as before.
+                awaitPointerEventScope { while (true) awaitPointerEvent() }
+            }
+    ) {
     if (ambientOn) {
         val thumb = cur.video.thumb ?: cur.info?.thumbnails?.let { it.bestUrl() }
         // A tiny 32-px copy of the thumbnail, stretched: already soft, so only a light (cheap)
