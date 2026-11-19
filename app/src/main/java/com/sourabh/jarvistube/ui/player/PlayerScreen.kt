@@ -268,7 +268,9 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
             // Swipe up on the video = fullscreen; swipe down = leave fullscreen, or minimise to the mini-player.
             onSwipe = { dir -> if (!locked)
                 when {
-                    dir < 0 && !fullscreen -> { portraitFullscreen = !landscape; fullscreen = true }
+                    // Swipe up = full screen like YouTube: landscape for normal videos, upright only for
+                    // upright videos (Shorts). The "Vertical" chip still opens the upright view on purpose.
+                    dir < 0 && !fullscreen -> { portraitFullscreen = videoShape < 1f; fullscreen = true }
                     dir > 0 && fullscreen -> fullscreen = false
                     dir > 0 -> vm.playerExpanded = false
                 }

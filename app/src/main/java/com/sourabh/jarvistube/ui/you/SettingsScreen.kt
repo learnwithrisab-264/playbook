@@ -281,6 +281,11 @@ fun SettingsScreen(
         item {
             SettingsGroup {
                 SettingRow(
+                    Icons.Rounded.Tune, "Brightness and volume swipes",
+                    "In full screen, swipe on the left for brightness and on the right for volume.",
+                    onClick = { AppSettings.updateSwipeAdjust(!AppSettings.swipeAdjust) }
+                ) { Switch(checked = AppSettings.swipeAdjust, onCheckedChange = { AppSettings.updateSwipeAdjust(it) }) }
+                SettingRow(
                     Icons.Rounded.Fullscreen, "Open videos full screen",
                     "Upright, like YouTube. \"Details, comments & related\" takes you to the normal page.",
                     onClick = { AppSettings.updateStartUpright(!AppSettings.startUpright) }

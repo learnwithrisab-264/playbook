@@ -246,7 +246,8 @@ internal fun VideoBox(
                         total = 0f
                         ignore = fullscreen && start.y < size.height * 0.15f
                         // In fullscreen the sides change brightness and sound; the middle still exits.
-                        zone = if (fullscreen && !ignore) swipeZoneAt(start.x, size.width.toFloat()) else SwipeZone.Exit
+                        // Off in Settings > Playback: every swipe is just exit / full screen.
+                        zone = if (fullscreen && !ignore && com.sourabh.jarvistube.AppSettings.swipeAdjust) swipeZoneAt(start.x, size.width.toFloat()) else SwipeZone.Exit
                         if (zone == SwipeZone.Brightness) adjusting = SwipeZone.Brightness to brightness.current()
                         if (zone == SwipeZone.Volume) adjusting = SwipeZone.Volume to volume.current()
                     },

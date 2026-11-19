@@ -92,6 +92,8 @@ object AppSettings {
     var ambient by mutableStateOf(true); private set
     /** Videos open in YouTube's upright full-screen view; "Details" goes to the normal page. */
     var startUpright by mutableStateOf(false); private set
+    /** Full screen: swipe up/down on the left for brightness, on the right for volume. */
+    var swipeAdjust by mutableStateOf(true); private set
     /** The home-screen icon takes the theme's colours (ui/theme/AppIcon). */
     var iconFollowsTheme by mutableStateOf(true); private set
     /** "dark" (default), "light" or "system" (follow the phone). */
@@ -128,6 +130,7 @@ object AppSettings {
         haptics = prefs.getBoolean("haptics", true)
         ambient = prefs.getBoolean("ambient", true)
         startUpright = prefs.getBoolean("startUpright", false)
+        swipeAdjust = prefs.getBoolean("swipeAdjust", true)
         iconFollowsTheme = prefs.getBoolean("iconFollowsTheme", true)
         captionFont = prefs.getString("captionFont", "default") ?: "default"
         captionScale = prefs.getFloat("captionScale", 1f)
@@ -186,6 +189,7 @@ object AppSettings {
     fun updateAmbient(on: Boolean) { ambient = on; prefs.edit().putBoolean("ambient", on).apply() }
     fun updateIconFollowsTheme(on: Boolean) { iconFollowsTheme = on; prefs.edit().putBoolean("iconFollowsTheme", on).apply() }
     fun updateStartUpright(on: Boolean) { startUpright = on; prefs.edit().putBoolean("startUpright", on).apply() }
+    fun updateSwipeAdjust(on: Boolean) { swipeAdjust = on; prefs.edit().putBoolean("swipeAdjust", on).apply() }
 
     fun updateAppearance(key: String) {
         appearance = key
