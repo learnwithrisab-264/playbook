@@ -3,6 +3,7 @@ package com.sourabh.jarvistube.ui.you
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -120,10 +121,12 @@ fun TopicsDialog(vm: TubeViewModel, onDismiss: () -> Unit) {
 @Composable
 private fun TopicToggle(label: String, on: Boolean, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
-    val bg by animateColorAsState(if (on) cs.primary else cs.surfaceVariant, label = "topicBg")
+    // Unpicked topics: the page colour with a thin outline, so they stand out on the dialog.
+    val bg by animateColorAsState(if (on) cs.primary else cs.background, label = "topicBg")
+    val edge by animateColorAsState(if (on) cs.primary else cs.outline.copy(alpha = 0.6f), label = "topicEdge")
     val fg by animateColorAsState(if (on) cs.onPrimary else cs.onSurface, label = "topicFg")
     Row(
-        Modifier.clip(Corners.pill).background(bg).clickable(onClick = onClick)
+        Modifier.clip(Corners.pill).background(bg).border(1.dp, edge, Corners.pill).clickable(onClick = onClick)
             .padding(start = if (on) 10.dp else 14.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
