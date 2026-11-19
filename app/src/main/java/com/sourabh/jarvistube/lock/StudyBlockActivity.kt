@@ -46,37 +46,9 @@ import com.sourabh.jarvistube.data.timeLeftText
 import com.sourabh.jarvistube.ui.theme.JarvisTubeTheme
 import kotlinx.coroutines.delay
 
-/** Shown over blocked apps: says how long is left, then sends you back to PlayBook. */
-class StudyBlockActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            JarvisTubeTheme {
-                BackHandler { backToStudy() }
-                BlockScreen(
-                    onStudy = ::backToStudy,
-                    onPhone = {
-                        startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                        finish()
-                    }
-                )
-            }
-        }
-    }
-
-    private fun backToStudy() {
-        startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        finish()
-    }
-
-    companion object {
-        fun intent(context: Context) = Intent(context, StudyBlockActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
-}
-
+/** The lock screen shown over a blocked app: time left, back to study, Phone, emergency exit. */
 @Composable
-private fun BlockScreen(onStudy: () -> Unit, onPhone: () -> Unit) {
+internal fun BlockScreen(onStudy: () -> Unit, onPhone: () -> Unit) {
     val study = Graph.study
     var left by remember { mutableLongStateOf(study.lockRemainingMs) }
     LaunchedEffect(Unit) {

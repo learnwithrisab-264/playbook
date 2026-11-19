@@ -1,4 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="study_guard_description">During a Lock Study Session this sees which app comes to the front, and sends you back to PlayBook if it is not allowed. It does nothing outside a session.</string>
 </resources>

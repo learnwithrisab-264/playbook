@@ -52,7 +52,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import com.sourabh.jarvistube.Graph
 import com.sourabh.jarvistube.lock.MAX_LOCK_MINUTES
-import com.sourabh.jarvistube.lock.StudyGuardService
+import com.sourabh.jarvistube.lock.AppGuard
 import com.sourabh.jarvistube.lock.StudyLockService
 import com.sourabh.jarvistube.player.NowPlaying
 import kotlinx.coroutines.delay
@@ -134,13 +134,13 @@ fun StudyLockDialogHost(now: NowPlaying) {
 @Composable
 private fun LockDurationDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    var guardOn by remember { mutableStateOf(StudyGuardService.isEnabled(context)) }
-    var overAppsOn by remember { mutableStateOf(StudyGuardService.canShowOverApps(context)) }
+    var guardOn by remember { mutableStateOf(AppGuard.hasUsageAccess(context)) }
+    var overAppsOn by remember { mutableStateOf(AppGuard.canShowOverApps(context)) }
     // Coming back from Settings updates this by itself.
     LaunchedEffect(Unit) {
         while (true) {
-            guardOn = StudyGuardService.isEnabled(context)
-            overAppsOn = StudyGuardService.canShowOverApps(context)
+            guardOn = AppGuard.hasUsageAccess(context)
+            overAppsOn = AppGuard.canShowOverApps(context)
             delay(1000)
         }
     }
@@ -163,13 +163,19 @@ private fun LockDurationDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) 
                         "Settings and Shorts are blocked. Calls and alarms still work.",
                     style = MaterialTheme.typography.bodyMedium
                 )
+                if (!guardOn || !overAppsOn) {
+                    Text(
+                        "Two one-time permissions, no Accessibility needed:",
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
                 if (!guardOn) {
-                    TextButton(onClick = {
-                        context.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                    }) { Text(stringResource(R.string.step_1_turn_on_playbook_study_lock)) }
+                    TextButton(onClick = { AppGuard.open(context, AppGuard.usageAccessSettings(context)) }) {
+                        Text(stringResource(R.string.step_1_turn_on_playbook_study_lock))
+                    }
                 }
                 if (!overAppsOn) {
-                    TextButton(onClick = { context.startActivity(StudyGuardService.overlaySettings(context)) }) {
+                    TextButton(onClick = { AppGuard.open(context, AppGuard.overlaySettings(context)) }) {
                         Text(stringResource(R.string.step_2_allow_display_over_other_apps))
                     }
                 }

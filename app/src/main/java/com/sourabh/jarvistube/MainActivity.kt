@@ -228,7 +228,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         handlePlayExtra(intent)
         // App pinning is no longer used for the study lock: it also blocked alarms, calls, the
-        // dialer and quick settings. StudyGuardService enforces the lock instead and leaves those alone.
+        // dialer and quick settings. StudyLockService (lock/AppGuard) enforces the lock instead and leaves those alone.
         // Unpin in case an older build left the app pinned.
         unpinIfPinned()
         val filter = android.content.IntentFilter(PIP_ACTION)

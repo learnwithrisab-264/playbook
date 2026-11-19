@@ -46,8 +46,8 @@
     <string name="pick_from_my_subscriptions">Pick from my subscriptions</string>
     <string name="while_locked_you_can_lower_the_limit_but">While locked you can lower the limit, but not raise it or turn it off.</string>
     <string name="no_subscriptions_found">No subscriptions found.</string>
-    <string name="step_1_turn_on_playbook_study_lock">Step 1: turn on PlayBook Study Lock</string>
-    <string name="step_2_allow_display_over_other_apps">Step 2: allow Display over other apps</string>
+    <string name="step_1_turn_on_playbook_study_lock">Step 1: allow Usage access (to see which app is open)</string>
+    <string name="step_2_allow_display_over_other_apps">Step 2: allow Display over other apps (to cover blocked apps)</string>
     <string name="lock_now">Lock now</string>
     <string name="go_back">Go back</string>
     <string name="lock">Lock</string>

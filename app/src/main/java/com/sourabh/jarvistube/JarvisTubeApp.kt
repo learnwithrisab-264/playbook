@@ -40,7 +40,5 @@ class JarvisTubeApp : Application() {
         com.sourabh.jarvistube.data.FeedStore.init(this)
         com.sourabh.jarvistube.data.UploadAlerts.init(this)
         if (Graph.study.lockActive) com.sourabh.jarvistube.lock.StudyLockService.start(this)
-        // The guard was paused for a banking app when the app last stopped: keep watching to switch it back on.
-        com.sourabh.jarvistube.lock.BankPause.recover(this)
     }
 }

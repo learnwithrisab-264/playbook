@@ -23,15 +23,24 @@ private const val NOTIFICATION = 2001
 class StudyLockService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var seconds = 0
+    private var guard: LockGuard? = null
+    /** The guard looks at the app in front four times a second, so a blocked app barely shows. */
+    private val watch = object : Runnable {
+        override fun run() {
+            if (!Graph.study.lockActive) return
+            guard?.check()
+            handler.postDelayed(this, 250)
+        }
+    }
     private val tick = object : Runnable {
         override fun run() {
             Graph.study.tick()
             if (!Graph.study.lockActive) {
+                guard?.stop()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 return
             }
-            StudyGuardService.instance?.check()
             // Keeps "X min left" current, and brings the notification back if it was swiped away.
             if (++seconds % 15 == 0) {
                 getSystemService(NotificationManager::class.java).notify(NOTIFICATION, notification())
@@ -54,7 +63,16 @@ class StudyLockService : Service() {
         }
         handler.removeCallbacks(tick)
         tick.run()
+        if (guard == null) guard = LockGuard(this)
+        handler.removeCallbacks(watch)
+        watch.run()
         return START_STICKY
+    }
+
+    /** PlayBook swiped away from Recents during a lock: open it straight back on the video. */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        if (Graph.study.lockActive) runCatching { startActivity(studyIntent(this)) }
+        super.onTaskRemoved(rootIntent)
     }
 
     private fun notification(): Notification {
@@ -77,6 +95,8 @@ class StudyLockService : Service() {
     override fun onDestroy() {
         running = false
         handler.removeCallbacks(tick)
+        handler.removeCallbacks(watch)
+        guard?.stop()
         super.onDestroy()
     }
 
@@ -86,7 +106,7 @@ class StudyLockService : Service() {
             private set
 
         fun start(context: Context) {
-            // Refused only when the app is in the background; the guard or next launch starts it then.
+            // Allowed from the background too: "Display over other apps" exempts PlayBook.
             runCatching { context.startForegroundService(Intent(context, StudyLockService::class.java)) }
         }
     }
@@ -96,7 +116,6 @@ class StudyLockService : Service() {
 class LockBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
-        BankPause.recover(context)
         if (Graph.study.lockActive) StudyLockService.start(context)
     }
 }
