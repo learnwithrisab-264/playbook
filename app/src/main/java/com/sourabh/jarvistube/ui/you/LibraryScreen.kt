@@ -94,7 +94,7 @@ fun LibraryScreen(
     val detail = lib.detail
     // Player collapses first; and only while the You tab is on screen.
     BackHandler(enabled = detail != null && !vm.playerExpanded && LocalTabActive.current) { lib.closeDetail() }
-    LaunchedEffect(lib.tab, lib.signedIn) { if (lib.tab != LibTab.History) lib.ensure(lib.tab) }
+    LaunchedEffect(lib.tab, lib.signedIn) { lib.ensure(lib.tab) }
 
     val loader = if (detail != null) lib.detailLoader else lib.loader(lib.tab)
     val state = loader?.state ?: LibFeed(loading = true)
@@ -174,11 +174,15 @@ fun LibraryScreen(
             }
         }
         val historyShown = detail == null && lib.tab == LibTab.History
-        // History: what you watched in this app, one list (nothing pulled from the YouTube account).
-        if (historyShown) historySection(vm, historyQuery, { historyQuery = it }, onClearAll = { clearHistory = true })
+        // History: this app's and your YouTube account's, merged into one list.
+        if (historyShown) historySection(
+            vm, historyQuery, { historyQuery = it }, onClearAll = { clearHistory = true },
+            youtube = state.items.filterIsInstance<LibVideo>().filterNot { com.sourabh.jarvistube.data.ContentFilter.hides(it.video) },
+            onRemoveYoutube = { lib.removeFromHistory(it) }
+        )
         else libItems(state, vm, lib, inHistory = false, inPlaylist = detail != null, onRetry = { loader?.refresh() })
     }
-    if (detail != null || lib.tab != LibTab.History) LoadMoreEffect(listState, state.items.size) { loader?.more() }
+    LoadMoreEffect(listState, state.items.size) { loader?.more() }
 }
 
 private fun LazyListScope.libItems(

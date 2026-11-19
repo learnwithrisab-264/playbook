@@ -312,7 +312,7 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Never during a study session, multi-day lock, scheduled window or timed video lock. */
     val recommendedAllowed: Boolean
-        get() = AppSettings.showRecommended && !Graph.study.active && !Graph.study.lockActive
+        get() = !Graph.study.active && !Graph.study.lockActive
 
     private fun recommendedKeyNow() =
         "${com.sourabh.jarvistube.data.Session.dataKey}|${AppSettings.region}|${AppSettings.userTopics.joinToString(",")}"

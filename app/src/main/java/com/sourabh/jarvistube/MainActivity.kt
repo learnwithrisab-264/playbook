@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube
 
+import androidx.compose.material.icons.outlined.Subscriptions
+import androidx.compose.material.icons.rounded.Subscriptions
 import com.sourabh.jarvistube.ui.theme.Motion
 import android.Manifest
 import android.app.PictureInPictureParams
@@ -111,6 +113,8 @@ private enum class Tab(
     Home("Home", Icons.Rounded.Home, Icons.Outlined.Home),
     Study("Study", Icons.Rounded.School, Icons.Outlined.School),
     Shorts("Shorts", Icons.Rounded.PlayCircle, Icons.Outlined.PlayCircle),
+    /** Videos only from the channels you chose (My Channels). */
+    Feed("My Feed", Icons.Rounded.Subscriptions, Icons.Outlined.Subscriptions),
     You("You", Icons.Rounded.AccountCircle, Icons.Outlined.AccountCircle)
 }
 
@@ -366,8 +370,9 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
     // Home (recommendations or your channels), Shorts and You. Study lives in Settings; it takes
     // the whole screen only while a focus session runs.
     val tabs = Tab.entries.filter { (it != Tab.Shorts || (vm.shortsAllowed && AppSettings.showShorts)) && it != Tab.Study }
-    /** Home shows recommendations (the default) unless turned off, or during any session or lock. */
-    val homeRecommends = AppSettings.showRecommended && vm.recommendedAllowed
+    /** Home is recommendations; during a session or lock it shows only your channels instead. */
+    val homeRecommends = vm.recommendedAllowed
+    val feedState = rememberLazyListState()
     val shownTab = when {
         study.active -> Tab.Study
         tab !in tabs -> Tab.Home
@@ -437,6 +442,7 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
                             if (t == shownTab) barScope.launch {
                                 when (t) {
                                     Tab.Home -> (if (homeRecommends) recommendedState else homeState).animateScrollToItem(0)
+                                    Tab.Feed -> feedState.animateScrollToItem(0)
                                     Tab.Shorts -> shortsState.animateScrollToItem(0)
                                     else -> Unit
                                 }
@@ -463,6 +469,7 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
                                     when (t) {
                                         Tab.Home -> if (homeRecommends) RecommendedScreen(vm, recommendedState, bottom, onProfile = { tab = Tab.You })
                                             else HomeScreen(vm, homeState, bottom, onProfile = { tab = Tab.You })
+                                        Tab.Feed -> HomeScreen(vm, feedState, bottom, onProfile = { tab = Tab.You })
                                         Tab.Study -> StudyScreen(vm, lib, bottom)
                                         Tab.Shorts -> ShortsScreen(vm, shortsState, bottom, onProfile = { tab = Tab.You })
                                         Tab.You -> YouScreen(vm, lib, bottom, onSignIn = { showLogin = true })

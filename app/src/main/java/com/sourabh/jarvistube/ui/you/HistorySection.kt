@@ -51,18 +51,55 @@ private fun whenWatched(item: WatchedVideo, group: HistoryDay, zone: ZoneId): St
     return if (group == HistoryDay.Older) at.format(dateFormat) else at.format(timeFormat)
 }
 
-/** History saved on the phone: search, Today / Yesterday / Older groups, delete one, clear all. */
+/** One row of the merged history: watched in this app (exact time) or on YouTube (day only). */
+private class HistoryRow(
+    val video: com.sourabh.jarvistube.data.VideoItem,
+    val at: Long,
+    val local: WatchedVideo?,
+    val youtube: com.sourabh.jarvistube.data.LibVideo?
+)
+
+/**
+ * Your watch history as one list: what you watched in this app and your YouTube account's history,
+ * merged by day (Today / Yesterday / Older), a video only once. Search, delete one, clear all.
+ * YouTube only says which day a video was watched, so those sit at the top of their day in
+ * YouTube's own order, next to this app's videos with their exact times.
+ */
 fun LazyListScope.historySection(
     vm: TubeViewModel,
     query: String,
     onQuery: (String) -> Unit,
-    onClearAll: () -> Unit
+    onClearAll: () -> Unit,
+    youtube: List<com.sourabh.jarvistube.data.LibVideo> = emptyList(),
+    onRemoveYoutube: (com.sourabh.jarvistube.data.LibVideo) -> Unit = {}
 ) {
     val all = WatchHistory.items
     val zone = ZoneId.systemDefault()
     val now = System.currentTimeMillis()
-    val shown = if (query.isBlank()) all.toList()
-    else all.filter { it.video.title.contains(query.trim(), true) || it.video.channel.contains(query.trim(), true) }
+    val today = java.time.LocalDate.now(zone)
+    val startToday = today.atStartOfDay(zone).toInstant().toEpochMilli()
+    val startYesterday = today.minusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+    val localByUrl = all.associateBy { it.video.url }
+    val ytByUrl = youtube.associateBy { it.video.url }
+    // Where a YouTube-only video goes: by its day heading; without one, next to the app video
+    // YouTube listed just before it.
+    var anchor = now
+    val ytOnly = youtube.mapIndexedNotNull { i, lv ->
+        localByUrl[lv.video.url]?.let { anchor = it.watchedAt; return@mapIndexedNotNull null }
+        val g = lv.group?.trim()?.lowercase()
+        val at = when {
+            g == null -> anchor - 1
+            g == "today" -> now - i
+            g == "yesterday" -> startToday - 1 - i
+            else -> startYesterday - 1 - i
+        }
+        anchor = at
+        HistoryRow(lv.video, at, null, lv)
+    }
+    val rows = (all.map { HistoryRow(it.video, it.watchedAt, it, ytByUrl[it.video.url]) } + ytOnly)
+        .sortedByDescending { it.at }
+    val q = query.trim()
+    val shown = if (q.isEmpty()) rows else rows.filter { it.video.title.contains(q, true) || it.video.channel.contains(q, true) }
 
     item(key = "history-tools") {
         Row(
@@ -89,14 +126,14 @@ fun LazyListScope.historySection(
     if (shown.isEmpty()) {
         item(key = "history-empty") {
             Text(
-                if (all.isEmpty()) "Videos you watch will appear here." else "Nothing in your history matches that.",
+                if (rows.isEmpty()) "Videos you watch will appear here." else "Nothing in your history matches that.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
             )
         }
     }
-    val groups = shown.groupBy { historyDayOf(it.watchedAt, now, zone) }
+    val groups = shown.groupBy { historyDayOf(it.at, now, zone) }
     HistoryDay.entries.forEach { day ->
         val list = groups[day] ?: return@forEach
         item(key = "history-day-${day.name}") {
@@ -107,24 +144,29 @@ fun LazyListScope.historySection(
                 modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 8.dp)
             )
         }
-        items(list, key = { "h:" + it.video.url }) { item ->
+        items(list, key = { "h:" + it.video.url }) { row ->
             Row(
-                Modifier.fillMaxWidth().pressScale({ vm.play(item.video) })
+                Modifier.fillMaxWidth().pressScale({ vm.play(row.video) })
                     .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Thumb(item.video.thumb, Modifier.width(120.dp).height(68.dp).clip(Corners.medium))
+                Thumb(row.video.thumb, Modifier.width(120.dp).height(68.dp).clip(Corners.medium))
                 Spacer(Modifier.size(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(item.video.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(row.video.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    val whenText = row.local?.let { whenWatched(it, day, zone) } ?: "YouTube"
                     Text(
-                        listOf(item.video.channel, whenWatched(item, day, zone)).filter { it.isNotBlank() }.joinToString(" · "),
+                        listOf(row.video.channel, whenText).filter { it.isNotBlank() }.joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                 }
-                IconButton(onClick = { WatchHistory.remove(item.video.url) }) {
+                IconButton(onClick = {
+                    // Gone from both lists, so it doesn't come back from the other one.
+                    row.local?.let { WatchHistory.remove(it.video.url) }
+                    row.youtube?.let(onRemoveYoutube)
+                }) {
                     Icon(Icons.Rounded.Close, "Delete from history", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }

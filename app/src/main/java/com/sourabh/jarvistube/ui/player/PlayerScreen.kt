@@ -169,22 +169,9 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
         onDispose { activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
     }
 
-    // Ambient mode: when the details don't fill the page, the blank space goes above the video
-    // instead of below it, so the video's glow fills the top of the screen.
-    var freeSpace by remember(cur.video.url) { androidx.compose.runtime.mutableIntStateOf(0) }
-    val lift = AppSettings.ambient && AppSettings.glowAbove && !fs && android.os.Build.VERSION.SDK_INT >= 31 && !inPip
-    val shift by androidx.compose.animation.core.animateIntAsState(
-        if (lift) freeSpace else 0,
-        androidx.compose.animation.core.tween(com.sourabh.jarvistube.ui.theme.Motion.NORMAL * 2),
-        label = "shift"
-    )
-    // The status bar sits on black above the video: keep its icons white. When the glow sits
-    // there instead, the icons follow the theme like the rest of the app.
-    val overGlow = shift > 0
-    androidx.compose.runtime.LaunchedEffect(overGlow) {
-        com.sourabh.jarvistube.ui.theme.SystemBars.overVideo = !overGlow
-    }
+    // The status bar sits on black above the video: keep its icons white in every theme.
     androidx.compose.runtime.DisposableEffect(Unit) {
+        com.sourabh.jarvistube.ui.theme.SystemBars.overVideo = true
         onDispose { com.sourabh.jarvistube.ui.theme.SystemBars.overVideo = false }
     }
     // YouTube's pull-to-minimise: the player follows the finger down and shrinks; let go past the
@@ -217,12 +204,12 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
             contentDescription = null,
             contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
             filterQuality = androidx.compose.ui.graphics.FilterQuality.Low,
-            modifier = Modifier.fillMaxWidth().height(520.dp + with(androidx.compose.ui.platform.LocalDensity.current) { shift.toDp() })
+            modifier = Modifier.fillMaxWidth().height(520.dp)
                 .graphicsLayer { alpha = 0.75f }
                 .blur(24.dp, androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded)
         )
         Box(
-            Modifier.fillMaxWidth().height(540.dp + with(androidx.compose.ui.platform.LocalDensity.current) { shift.toDp() }).background(
+            Modifier.fillMaxWidth().height(540.dp).background(
                 androidx.compose.ui.graphics.Brush.verticalGradient(
                     0f to MaterialTheme.colorScheme.background.copy(alpha = 0.2f),
                     0.55f to MaterialTheme.colorScheme.background.copy(alpha = 0.55f),
@@ -247,8 +234,7 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
         com.sourabh.jarvistube.ui.study.LockExitDialogHost()
         PlayerMoreSheetHost(cur, ui)
         if (!fs) {
-            val barColor by androidx.compose.animation.animateColorAsState(if (overGlow) Color.Transparent else Color.Black, label = "bar")
-            Box(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(barColor))
+            Box(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(Color.Black))
         }
         // Fullscreen comments sit beside the video (it keeps playing on the left), as on YouTube.
         val comments = rememberComments(cur.video.url)
@@ -257,7 +243,7 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
         LaunchedEffect(fullscreen, landscape) { if (!fullscreen || !landscape) sideComments = false }
         androidx.compose.foundation.layout.Row(
             if (fs) Modifier.fillMaxSize()
-            else Modifier.offset { androidx.compose.ui.unit.IntOffset(0, shift) }.fillMaxWidth().aspectRatio(boxShape)
+            else Modifier.fillMaxWidth().aspectRatio(boxShape)
         ) {
         VideoBox(
             modifier = Modifier.weight(1f).fillMaxHeight(),
@@ -299,11 +285,7 @@ fun PlayerScreen(vm: TubeViewModel, ui: PlayerUi, inPip: Boolean) {
         }
         }
         if (!fs) {
-            Details(
-                vm, cur, ui,
-                Modifier.weight(1f).offset { androidx.compose.ui.unit.IntOffset(0, shift) },
-                onFreeSpace = { freeSpace = it }
-            )
+            Details(vm, cur, ui, Modifier.weight(1f))
         }
     }
     }

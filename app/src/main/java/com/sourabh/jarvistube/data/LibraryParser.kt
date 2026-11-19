@@ -8,7 +8,13 @@ sealed interface LibItem {
 }
 
 /** [feedbackToken] removes it from watch history; [setVideoId] identifies it inside a playlist. */
-data class LibVideo(val video: VideoItem, val feedbackToken: String? = null, val setVideoId: String? = null) : LibItem {
+data class LibVideo(
+    val video: VideoItem,
+    val feedbackToken: String? = null,
+    val setVideoId: String? = null,
+    /** The day heading YouTube put it under in watch history ("Today", "Yesterday", "Monday"...). */
+    val group: String? = null
+) : LibItem {
     override val key get() = "v:" + video.url
 }
 
@@ -32,6 +38,9 @@ object LibraryParser {
     fun parse(root: JSONObject): ParsedPage {
         val items = ArrayList<LibItem>()
         var token: String? = null
+        // Watch history comes in day sections; remember the heading for the videos under it.
+        var group: String? = null
+        fun tag(item: LibItem): LibItem = if (item is LibVideo && group != null) item.copy(group = group) else item
         fun walk(node: Any?) {
             when (node) {
                 is JSONObject -> {
@@ -40,9 +49,16 @@ object LibraryParser {
                         val k = keys.next()
                         val v = node.opt(k)
                         when (k) {
+                            "itemSectionRenderer" -> {
+                                val sec = v as? JSONObject
+                                val before = group
+                                sectionTitle(sec)?.let { group = it }
+                                walk(sec)
+                                if (sectionTitle(sec) == null) group = before
+                            }
                             "videoRenderer", "gridVideoRenderer", "compactVideoRenderer", "playlistVideoRenderer" ->
-                                (v as? JSONObject)?.let(::video)?.let(items::add)
-                            "lockupViewModel" -> (v as? JSONObject)?.let(::lockup)?.let(items::add)
+                                (v as? JSONObject)?.let(::video)?.let { items.add(tag(it)) }
+                            "lockupViewModel" -> (v as? JSONObject)?.let(::lockup)?.let { items.add(tag(it)) }
                             "gridPlaylistRenderer", "playlistRenderer" ->
                                 (v as? JSONObject)?.let(::playlist)?.let(items::add)
                             "channelRenderer", "gridChannelRenderer" ->
@@ -58,6 +74,33 @@ object LibraryParser {
         }
         walk(root)
         return ParsedPage(items, token)
+    }
+
+    /** A watch-history day heading ("Today", "Yesterday", "Monday", "12 Nov"), if this section has one. */
+    private fun sectionTitle(sec: JSONObject?): String? {
+        val header = sec?.optJSONObject("header") ?: return null
+        fun text(o: JSONObject?): String? {
+            o ?: return null
+            o.optString("simpleText").takeIf { it.isNotBlank() }?.let { return it }
+            o.optString("content").takeIf { it.isNotBlank() }?.let { return it }
+            val runs = o.optJSONArray("runs") ?: return null
+            return (0 until runs.length()).joinToString("") { runs.optJSONObject(it)?.optString("text").orEmpty() }.ifBlank { null }
+        }
+        header.optJSONObject("itemSectionHeaderRenderer")?.let { text(it.optJSONObject("title"))?.let { t -> return t } }
+        // Newer layouts: any "title" text inside the header.
+        var found: String? = null
+        fun look(n: Any?) {
+            if (found != null) return
+            when (n) {
+                is JSONObject -> {
+                    n.optJSONObject("title")?.let { text(it) }?.let { found = it; return }
+                    for (key in n.keys()) look(n.opt(key))
+                }
+                is org.json.JSONArray -> for (i in 0 until n.length()) look(n.opt(i))
+            }
+        }
+        look(header)
+        return found
     }
 
     /** Shorts out of a Shorts search response, plus the token for the next page. */

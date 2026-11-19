@@ -1,5 +1,8 @@
 package com.sourabh.jarvistube.ui.you
 
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.ClosedCaption
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Interests
 import androidx.compose.material.icons.rounded.FormatColorFill
 
@@ -86,6 +89,11 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     var topicsDialog by remember { mutableStateOf(false) }
+    /** "root" is the main list; every area has its own page. */
+    var page by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("root") }
+    androidx.activity.compose.BackHandler(enabled = page != "root" && !vm.playerExpanded) { page = "root" }
+    var clearWatch by remember { mutableStateOf(false) }
+    if (clearWatch) ClearHistoryDialog(onDismiss = { clearWatch = false })
     if (topicsDialog) TopicsDialog(vm, onDismiss = { topicsDialog = false })
     var regionDialog by remember { mutableStateOf(false) }
     var qualityDialog by remember { mutableStateOf(false) }
@@ -104,10 +112,88 @@ fun SettingsScreen(
         Modifier.fillMaxSize().statusBarsPadding(),
         contentPadding = PaddingValues(bottom = bottomPadding + 16.dp)
     ) {
-        item { SubPageHeader("Settings", onBack, large = true) }
+        item {
+            SubPageHeader(
+                when (page) {
+                    "account" -> "Account"; "feed" -> "Feed and topics"; "look" -> "Appearance"
+                    "playback" -> "Playback"; "captions" -> "Captions"; "privacy" -> "Privacy"
+                    else -> "Settings"
+                },
+                onBack = { if (page == "root") onBack() else page = "root" },
+                large = true
+            )
+        }
 
+        // ---- The main page: your account, then one row per area. Each opens its own page.
+        if (page == "root") {
+            item {
+                val me = lib.account
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+                        .clip(com.sourabh.jarvistube.ui.theme.Corners.large)
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                        .clickable { if (lib.signedIn) page = "account" else onSignIn() }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Avatar(me?.name ?: me?.email ?: "?", 52, me?.photo)
+                    Spacer(Modifier.size(14.dp))
+                    androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+                        Text(me?.name ?: "Sign in", style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                        Text(
+                            me?.email ?: "Your subscriptions, playlists and YouTube history",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1
+                        )
+                    }
+                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            item { Spacer(Modifier.size(8.dp)) }
+            item {
+                SettingsGroup {
+                    CategoryRow(Icons.Rounded.Interests, "Feed and topics",
+                        if (AppSettings.userTopics.isEmpty()) "Region, topics, Shorts" else AppSettings.userTopics.take(3).joinToString(", ")) { page = "feed" }
+                    CategoryRow(Icons.Rounded.Palette, "Appearance",
+                        com.sourabh.jarvistube.ui.theme.EpicTheme.of(AppSettings.themeKey).title + " · " + AppSettings.appearanceName) { page = "look" }
+                    CategoryRow(Icons.Rounded.PlayCircle, "Playback",
+                        AppSettings.qualityLabel(AppSettings.defaultQuality) + " · SponsorBlock " + (if (Graph.player.sponsorBlock) "on" else "off")) { page = "playback" }
+                    CategoryRow(Icons.Rounded.ClosedCaption, "Captions", "Look, size, colour and spoken-word highlight") { page = "captions" }
+                }
+            }
+            item { Spacer(Modifier.size(8.dp)) }
+            item {
+                SettingsGroup {
+                    CategoryRow(Icons.Rounded.School, "Study and focus", "Plan, focus sessions, Lock Study Session, limits", onClick = onOpenStudy)
+                    CategoryRow(Icons.Rounded.Lock, "Privacy", "Watch and search history") { page = "privacy" }
+                }
+            }
+            // ---- About, and the maker's mark: quiet, centred, at the very end.
+        item {
+            androidx.compose.foundation.layout.Column(
+                Modifier.fillMaxWidth().padding(top = 32.dp, bottom = 36.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                androidx.compose.foundation.Image(
+                    androidx.compose.ui.res.painterResource(com.sourabh.jarvistube.R.drawable.osmium_badge), null,
+                    Modifier.size(44.dp).clip(Corners.medium)
+                )
+                Spacer(Modifier.size(12.dp))
+                Text("YouTube 0.1", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    "Ad-free, distraction-free YouTube for learning",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.size(8.dp))
+                Text("ClearVision.Co", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text("Made for focus.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        }
+
+        if (page == "account") {
         // ---- Account: who you are, first.
-        item { SectionHeader("Account") }
         item {
             SettingsGroup {
                 // Every Google account added to PlayBook. Tap one to switch; ✕ signs out of just that one.
@@ -157,8 +243,10 @@ fun SettingsScreen(
             }
         }
 
+        }
+
+        if (page == "look") {
         // ---- Look & feel: themes from the Ramayana and the Mahabharata, each with its meaning.
-        item { SectionHeader("Look & feel") }
         item { ThemeGallery() }
         item {
             SettingsGroup {
@@ -186,8 +274,10 @@ fun SettingsScreen(
             }
         }
 
+        }
+
+        if (page == "playback") {
         // ---- Playback
-        item { SectionHeader("Playback") }
         item {
             SettingsGroup {
                 SettingRow(
@@ -195,12 +285,6 @@ fun SettingsScreen(
                     "Upright, like YouTube. \"Details, comments & related\" takes you to the normal page.",
                     onClick = { AppSettings.updateStartUpright(!AppSettings.startUpright) }
                 ) { Switch(checked = AppSettings.startUpright, onCheckedChange = { AppSettings.updateStartUpright(it) }) }
-                SettingRow(
-                    Icons.Rounded.WbTwilight, "Glow above the video",
-                    if (AppSettings.ambient) "When the page is short, the empty space moves above the video and the ambient glow fills it."
-                    else "Needs Ambient mode (Look & feel).",
-                    onClick = { AppSettings.updateGlowAbove(!AppSettings.glowAbove) }
-                ) { Switch(checked = AppSettings.glowAbove, onCheckedChange = { AppSettings.updateGlowAbove(it) }, enabled = AppSettings.ambient) }
                 SettingRow(
                     Icons.Rounded.HighQuality, "Default quality", AppSettings.qualityLabel(AppSettings.defaultQuality),
                     onClick = { qualityDialog = true }
@@ -222,8 +306,10 @@ fun SettingsScreen(
             }
         }
 
+        }
+
+        if (page == "captions") {
         // ---- Captions: English and Hindi, one clean line.
-        item { SectionHeader("Captions") }
         item {
             SettingsGroup {
                 // Live preview on a video-like background; changes below show here and on the video at once.
@@ -263,17 +349,13 @@ fun SettingsScreen(
             }
         }
 
+        }
+
+        if (page == "feed") {
         // ---- Home & tabs
-        item { SectionHeader("Home & tabs") }
         item {
             SettingsGroup {
                 SettingRow(Icons.Rounded.Public, "Region", AppSettings.regionName, onClick = { regionDialog = true })
-                SettingRow(
-                    Icons.Rounded.Explore, "Recommendations on Home",
-                    if (AppSettings.showRecommended) "On: recommended videos from your topics. Off: only My Channels. Always My Channels during study."
-                    else "Off: Home shows only videos from My Channels.",
-                    onClick = { AppSettings.updateShowRecommended(!AppSettings.showRecommended) }
-                ) { Switch(checked = AppSettings.showRecommended, onCheckedChange = { AppSettings.updateShowRecommended(it) }) }
                 SettingRow(
                     Icons.Rounded.Interests, "Your topics",
                     if (AppSettings.userTopics.isEmpty()) "None yet: recommendations come from your YouTube account. Tap to pick."
@@ -288,26 +370,20 @@ fun SettingsScreen(
             }
         }
 
-        // ---- Study: sessions, locks, plan and limits, all in one page.
-        item { SectionHeader("Study") }
+        // ---- Focus: the Shorts block now lives here (it left the You tab).
+        item { SectionHeader("Block Shorts for a while") }
+        item { com.sourabh.jarvistube.ui.shorts.ShortsBlockCard() }
+
+        }
+
+        if (page == "privacy") {
+        // ---- Privacy
         item {
             SettingsGroup {
                 SettingRow(
-                    Icons.Rounded.School, "Study and focus",
-                    "Your plan, focus sessions, Lock Study Session, daily limit and study channels.",
-                    onClick = onOpenStudy
+                    Icons.Rounded.History, "Clear watch history", "${com.sourabh.jarvistube.data.WatchHistory.items.size} videos watched in this app",
+                    onClick = { clearWatch = true }
                 )
-            }
-        }
-
-        // ---- Focus: the Shorts block now lives here (it left the You tab).
-        item { SectionHeader("Focus") }
-        item { com.sourabh.jarvistube.ui.shorts.ShortsBlockCard() }
-
-        // ---- Privacy
-        item { SectionHeader("Privacy") }
-        item {
-            SettingsGroup {
                 SettingRow(
                     Icons.Rounded.History, "Clear search history", "${vm.recents.size} saved searches",
                     onClick = {
@@ -318,28 +394,8 @@ fun SettingsScreen(
             }
         }
 
-        // ---- About, and the maker's mark: quiet, centred, at the very end.
-        item {
-            androidx.compose.foundation.layout.Column(
-                Modifier.fillMaxWidth().padding(top = 32.dp, bottom = 36.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                androidx.compose.foundation.Image(
-                    androidx.compose.ui.res.painterResource(com.sourabh.jarvistube.R.drawable.osmium_badge), null,
-                    Modifier.size(44.dp).clip(Corners.medium)
-                )
-                Spacer(Modifier.size(12.dp))
-                Text("YouTube 0.1", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-                Text(
-                    "Ad-free, distraction-free YouTube for learning",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.size(8.dp))
-                Text("ClearVision.Co", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                Text("Made for focus.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
         }
+
     }
 
     if (regionDialog) {
@@ -476,4 +532,13 @@ internal fun SettingsGroup(content: @Composable () -> Unit) {
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(vertical = 4.dp)
     ) { content() }
+}
+
+
+/** A row on the main Settings page that opens one area's page. */
+@Composable
+private fun CategoryRow(icon: ImageVector, title: String, summary: String, onClick: () -> Unit) {
+    SettingRow(icon, title, summary, onClick = onClick) {
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }

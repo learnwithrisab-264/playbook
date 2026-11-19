@@ -76,9 +76,7 @@ internal fun Details(
     vm: TubeViewModel,
     now: NowPlaying,
     ui: PlayerUi,
-    modifier: Modifier,
-    /** Empty space left under the details (px), so the page can move it above the video instead. */
-    onFreeSpace: (Int) -> Unit = {}
+    modifier: Modifier
 ) {
     val context = LocalContext.current
     val info = now.info
@@ -106,7 +104,6 @@ internal fun Details(
     }
     // Comments take the place of the details under the video, as on YouTube; the video keeps playing.
     if (commentsOpen) {
-        androidx.compose.runtime.LaunchedEffect(Unit) { onFreeSpace(0) }
         CommentsPanel(
             comments, links,
             channelName = info?.uploaderName ?: now.video.channel,
@@ -118,16 +115,6 @@ internal fun Details(
     }
 
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-    // How much blank page is left under the last item when everything fits on screen.
-    val free by remember(listState) {
-        androidx.compose.runtime.derivedStateOf {
-            val li = listState.layoutInfo
-            val last = li.visibleItemsInfo.lastOrNull()
-            if (last == null || li.visibleItemsInfo.size < li.totalItemsCount || listState.firstVisibleItemScrollOffset > 0) 0
-            else (li.viewportEndOffset - li.afterContentPadding - (last.offset + last.size)).coerceAtLeast(0)
-        }
-    }
-    androidx.compose.runtime.LaunchedEffect(free) { onFreeSpace(free) }
     LazyColumn(modifier.navigationBarsPadding(), state = listState, contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) {
         item {
             Column(Modifier.padding(horizontal = 12.dp, vertical = 12.dp)) {
