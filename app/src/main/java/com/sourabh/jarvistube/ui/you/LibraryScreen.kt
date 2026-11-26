@@ -104,6 +104,8 @@ fun LibraryScreen(
     var newPlaylist by remember { mutableStateOf(false) }
     var historyQuery by remember { mutableStateOf("") }
     var clearHistory by remember { mutableStateOf(false) }
+    /** "YT History": only the YouTube account's history. */
+    var ytOnly by remember { mutableStateOf(false) }
     if (clearHistory) ClearHistoryDialog(onDismiss = { clearHistory = false })
     if (accountSheet) {
         AccountSheet(lib, onAddAccount = { lib.prepareAddAccount(); onSignIn() }, onDismiss = { accountSheet = false })
@@ -119,14 +121,16 @@ fun LibraryScreen(
             item { YouTopBar(lib, onSwitch = { accountSheet = true }, onOpenDownloads, onOpenSettings) }
             stickyHeader {
                 Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background).padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    val segments = listOf("History", "Playlists", "Subscriptions")
-                    val chosen = when (lib.tab) {
-                        LibTab.History -> 0
-                        LibTab.Playlists -> 1
-                        else -> 2
+                    val segments = listOf("History", "YT History", "Playlists", "Subscriptions")
+                    val chosen = when {
+                        lib.tab == LibTab.History && ytOnly -> 1
+                        lib.tab == LibTab.History -> 0
+                        lib.tab == LibTab.Playlists -> 2
+                        else -> 3
                     }
                     Segmented(segments, chosen) { i ->
-                        lib.selectTab(listOf(LibTab.History, LibTab.Playlists, LibTab.Channels)[i])
+                        ytOnly = i == 1
+                        lib.selectTab(listOf(LibTab.History, LibTab.History, LibTab.Playlists, LibTab.Channels)[i])
                     }
                 }
             }
@@ -173,14 +177,15 @@ fun LibraryScreen(
                 }
             }
         }
-        val historyShown = detail == null && lib.tab == LibTab.History
+        val historyShown = detail == null && lib.tab == LibTab.History && !ytOnly
         // History: this app's and your YouTube account's, merged into one list.
         if (historyShown) historySection(
             vm, historyQuery, { historyQuery = it }, onClearAll = { clearHistory = true },
             youtube = state.items.filterIsInstance<LibVideo>().filterNot { com.sourabh.jarvistube.data.ContentFilter.hides(it.video) },
             onRemoveYoutube = { lib.removeFromHistory(it) }
         )
-        else libItems(state, vm, lib, inHistory = false, inPlaylist = detail != null, onRetry = { loader?.refresh() })
+        // YT History: just the YouTube account's list, each with "Remove from watch history".
+        else libItems(state, vm, lib, inHistory = detail == null && lib.tab == LibTab.History, inPlaylist = detail != null, onRetry = { loader?.refresh() })
     }
     LoadMoreEffect(listState, state.items.size) { loader?.more() }
 }

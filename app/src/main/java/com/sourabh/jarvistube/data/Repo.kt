@@ -122,20 +122,41 @@ object Repo {
     }
 }
 
-/** Paged video search. Shorts are filtered out (distraction-free by default). */
-class SearchSession(private val query: String, private val shorts: Boolean = false) {
+/**
+ * Paged video search. Shorts are filtered out (distraction-free by default).
+ * With [asApp] it searches the way the YouTube app does (all results, not only the "videos"
+ * filter): the same ranking you'd see there, plus the best-matching channel and YouTube's
+ * spelling correction. Pages that the content filter empties are skipped, so results never thin out.
+ */
+class SearchSession(private val query: String, private val shorts: Boolean = false, private val asApp: Boolean = false) {
     private var extractor: SearchExtractor? = null
     private var next: Page? = null
 
     val hasMore: Boolean get() = next != null
+    /** The channel your words name, shown above the videos ([asApp] only). */
+    var topChannel: ChannelResult? = null; private set
+    /** What YouTube searched instead, when it corrected the spelling. */
+    var correctedTo: String? = null; private set
 
     suspend fun loadFirst(): List<VideoItem> = withContext(Dispatchers.IO) {
-        val ex = ServiceList.YouTube.getSearchExtractor(query, listOf("videos"), "")
+        val ex = ServiceList.YouTube.getSearchExtractor(query, if (asApp) emptyList() else listOf("videos"), "")
         ex.fetchPage()
         extractor = ex
         val page = ex.initialPage
         next = page.nextPage
-        page.items.toVideos(shorts)
+        if (asApp) {
+            correctedTo = runCatching { ex.searchSuggestion.takeIf { ex.isCorrectedSearch && it.isNotBlank() } }.getOrNull()
+            topChannel = page.items.filterIsInstance<org.schabi.newpipe.extractor.channel.ChannelInfoItem>()
+                .firstOrNull { matches(it.name) }
+                ?.let { c ->
+                    ChannelResult(
+                        c.url, c.name,
+                        runCatching { c.thumbnails.maxByOrNull { it.width }?.url }.getOrNull()?.let { if (it.startsWith("//")) "https:$it" else it },
+                        c.subscriberCount
+                    )
+                }
+        }
+        fill(page.items.toVideos(shorts))
     }
 
     suspend fun loadMore(): List<VideoItem> = withContext(Dispatchers.IO) {
@@ -143,9 +164,36 @@ class SearchSession(private val query: String, private val shorts: Boolean = fal
         val n = next ?: return@withContext emptyList()
         val page = ex.getPage(n)
         next = page.nextPage
-        page.items.toVideos(shorts)
+        fill(page.items.toVideos(shorts))
+    }
+
+    /** Keeps reading pages (up to three more) until there are enough videos to show. */
+    private fun fill(first: List<VideoItem>): List<VideoItem> {
+        if (!asApp) return first
+        val got = first.toMutableList()
+        var tries = 0
+        while (got.size < 10 && tries < 3) {
+            val ex = extractor ?: break
+            val n = next ?: break
+            val page = runCatching { ex.getPage(n) }.getOrNull() ?: break
+            next = page.nextPage
+            got += page.items.toVideos(shorts)
+            tries++
+        }
+        return got.distinctBy { it.url }
+    }
+
+    /** The channel is what you meant if its name matches your words (ignoring spaces and case). */
+    private fun matches(name: String): Boolean {
+        fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
+        val n = norm(name)
+        val q = norm(query)
+        return n.isNotEmpty() && q.length >= 3 && (n == q || n.startsWith(q) || q.startsWith(n) || q.contains(n))
     }
 }
+
+/** A channel found by search. */
+data class ChannelResult(val url: String, val name: String, val avatar: String?, val subscribers: Long)
 
 /**
  * Paged Trending kiosk for the region NewPipe was set up with (AppSettings.region). Falls back

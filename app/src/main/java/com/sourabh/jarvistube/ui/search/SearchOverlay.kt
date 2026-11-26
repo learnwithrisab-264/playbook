@@ -1,5 +1,6 @@
 package com.sourabh.jarvistube.ui.search
 
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -145,6 +146,41 @@ fun SearchOverlay(vm: TubeViewModel, bottomPadding: Dp = 0.dp) {
                 )
             } else {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 4.dp, bottom = bottomPadding + 24.dp)) {
+                vm.searchCorrected?.let { fixed ->
+                    item(key = "corrected") {
+                        Text(
+                            "Showing results for \"$fixed\"",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+                vm.searchChannel?.let { c ->
+                    item(key = "channel:" + c.url) {
+                        // The channel you searched for, like YouTube shows it at the top.
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+                                .clip(com.sourabh.jarvistube.ui.theme.Corners.large)
+                                .background(MaterialTheme.colorScheme.surfaceContainer)
+                                .clickable { vm.openChannel(c.url, c.name) }
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            com.sourabh.jarvistube.ui.common.Avatar(c.name, 56, c.avatar)
+                            Spacer(Modifier.size(14.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(c.name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                                if (c.subscribers >= 0) Text(
+                                    "${com.sourabh.jarvistube.ui.common.compact(c.subscribers)} subscribers",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text("View channel", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
                 feedItems(vm.results, onRetry = { vm.submitSearch(submitted!!) }, onPlay = vm::play)
             }
             LoadMoreEffect(listState, vm.results.items.size, vm::loadMoreSearch)

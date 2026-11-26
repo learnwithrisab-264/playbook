@@ -4,7 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /** The three feeds that each remember what you have seen, separately. */
-enum class Feed { MyFeed, Recommended, Shorts }
+/** Feeds remembered on the phone. [YtHistory] is the YouTube account history, kept so it opens at once. */
+enum class Feed { MyFeed, Recommended, Shorts, YtHistory }
 
 private val VIDEO_ID = Regex("(?:v=|/shorts/|youtu\\.be/)([\\w-]{11})")
 

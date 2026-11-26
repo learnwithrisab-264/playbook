@@ -42,7 +42,9 @@ class LibLoader(
     private val scope: CoroutineScope,
     private val browseId: String,
     private val params: String? = null,
-    private val onExpired: () -> Unit
+    private val onExpired: () -> Unit,
+    /** Saved on the phone so the list shows instantly next time, then refreshes quietly. */
+    private val cache: com.sourabh.jarvistube.data.Feed? = null
 ) {
     var state by mutableStateOf(LibFeed(loading = true)); private set
     var started = false; private set
@@ -57,8 +59,17 @@ class LibLoader(
     fun refresh() {
         started = true
         job?.cancel()
-        state = LibFeed(loading = true)
-        job = scope.launch { state = fetch(null, emptyList()) }
+        // The last copy shows straight away while the fresh one loads.
+        val saved = if (state.items.isEmpty() && cache != null)
+            com.sourabh.jarvistube.data.FeedStore.load(cache)?.items?.map { LibVideo(it) }.orEmpty() else state.items
+        state = LibFeed(items = saved, loading = true)
+        job = scope.launch {
+            val fresh = fetch(null, emptyList())
+            state = if (fresh.error != null && fresh.items.isEmpty()) fresh.copy(items = saved) else fresh
+            if (cache != null && fresh.error == null) {
+                com.sourabh.jarvistube.data.FeedStore.save(cache, fresh.items.filterIsInstance<LibVideo>().map { it.video })
+            }
+        }
     }
 
     /** Drops one item locally after YouTube confirmed its removal. */
@@ -105,12 +116,17 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     val accounts: List<Account> get() = Session.accounts
 
     private val loaders = LibTab.entries.associateWith {
-        LibLoader(viewModelScope, it.browseId, onExpired = ::signOut)
+        LibLoader(
+            viewModelScope, it.browseId, onExpired = ::signOut,
+            cache = if (it == LibTab.History) com.sourabh.jarvistube.data.Feed.YtHistory else null
+        )
     }
 
     init {
         // Fill in name / email / photo for any saved account that is missing them.
         Session.accounts.filter { it.email == null || it.photo == null }.forEach { loadProfile(it) }
+        // History starts loading when the app opens, so it is ready before you reach the You tab.
+        ensure(LibTab.History)
     }
 
     fun loader(t: LibTab): LibLoader = loaders.getValue(t)

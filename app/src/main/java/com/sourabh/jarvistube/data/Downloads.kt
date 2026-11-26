@@ -15,6 +15,7 @@ import com.sourabh.jarvistube.Graph
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -40,7 +41,7 @@ data class SavedItem(
     val sizeBytes: Long
 )
 
-data class DlProgress(val title: String, val fraction: Float, val stage: String, val failed: Boolean = false)
+data class DlProgress(val title: String, val fraction: Float, val stage: String, val failed: Boolean = false, val paused: Boolean = false)
 
 /** One choice in the download sheet; [quality] is the height (0 with [audioOnly]). */
 data class DlOption(val label: String, val quality: Int, val audioOnly: Boolean, val bytes: Long)
@@ -60,6 +61,9 @@ object Downloads {
 
     private val queue = ArrayDeque<Req>()
     private val jobs = HashMap<String, Job>()
+    /** Paused downloads: their part files stay, so Resume carries on where they stopped. */
+    private val paused = HashMap<String, Req>()
+    private val pausing = HashSet<String>()
     private lateinit var appCtx: Context
     private lateinit var dir: File
 
@@ -133,9 +137,43 @@ object Downloads {
     }
 
     fun cancel(key: String) {
+        pausing.remove(key)
         jobs[key]?.cancel()
         queue.removeAll { it.key == key }
+        paused.remove(key)?.let { deleteParts(it) }
         active.remove(key)
+    }
+
+    /** Stops a download for now, keeping what has arrived. */
+    fun pause(key: String) {
+        val waiting = queue.firstOrNull { it.key == key }
+        if (waiting != null) {
+            queue.remove(waiting)
+            paused[key] = waiting
+            active[key]?.let { active[key] = it.copy(stage = "Paused", paused = true) }
+            return
+        }
+        if (jobs[key] == null) return
+        pausing.add(key)
+        jobs[key]?.cancel()
+    }
+
+    /** Carries on a paused download from where it stopped. */
+    fun resume(key: String) {
+        val r = paused.remove(key) ?: return
+        active[key]?.let { active[key] = it.copy(stage = "Resuming", paused = false) }
+        queue.addFirst(r)
+        appCtx.startForegroundService(Intent(appCtx, DownloadService::class.java))
+    }
+
+    private fun baseName(r: Req): String {
+        val id = SponsorBlock.videoId(r.video.url) ?: r.video.url.hashCode().toString()
+        return r.video.title.replace(Regex("[^\\p{L}\\p{N} ._-]"), "").trim().take(60).ifEmpty { "video" } + " [$id]"
+    }
+
+    private fun deleteParts(r: Req) {
+        val base = baseName(r)
+        listOf("$base.m4a.part", "$base.mp4.part", "$base.v.part", "$base.a.part").forEach { File(dir, it).delete() }
     }
 
     fun delete(item: SavedItem) {
@@ -159,18 +197,33 @@ object Downloads {
     // ---------------------------------------------------------------- work
 
     private class Tracker(val key: String, val title: String, val total: Long) {
-        var done = 0L
-        var stage = "Downloading"
-        fun add(n: Int) {
+        @Volatile var done = 0L
+        @Volatile var stage = "Downloading"
+        private var shownAt = 0L
+        private val startedAt = android.os.SystemClock.elapsedRealtime()
+        private var startDone = -1L
+        /** Progress shows about four times a second, not on every 64 KB: the list stays smooth. */
+        @Synchronized fun add(n: Int) {
+            if (startDone < 0) startDone = done
             done += n
-            active[key] = DlProgress(title, if (total > 0) (done.toFloat() / total).coerceIn(0f, 1f) else -1f, stage)
+            val now = android.os.SystemClock.elapsedRealtime()
+            if (now - shownAt < 250 && (total <= 0 || done < total)) return
+            shownAt = now
+            val secs = (now - startedAt) / 1000f
+            val speed = if (secs > 0.5f) ((done - startDone) / secs).toLong() else 0L
+            val text = if (speed > 0) "$stage · ${formatSpeed(speed)}" else stage
+            val p = DlProgress(title, if (total > 0) (done.toFloat() / total).coerceIn(0f, 1f) else -1f, text)
+            android.os.Handler(android.os.Looper.getMainLooper()).post { if (active[key]?.paused != true) active[key] = p }
         }
     }
 
+    private fun formatSpeed(bps: Long): String =
+        if (bps >= 1_000_000) String.format(java.util.Locale.US, "%.1f MB/s", bps / 1_000_000f) else "${bps / 1000} KB/s"
+
     private suspend fun process(r: Req) {
-        val id = SponsorBlock.videoId(r.video.url) ?: r.video.url.hashCode().toString()
-        val base = r.video.title.replace(Regex("[^\\p{L}\\p{N} ._-]"), "").trim().take(60).ifEmpty { "video" } + " [$id]"
+        val base = baseName(r)
         val temps = ArrayList<File>()
+        var keepParts = false
         try {
             val out: File
             if (r.audioOnly) {
@@ -195,10 +248,13 @@ object Downloads {
                     val t = Tracker(r.key, r.video.title, if (cv > 0 && ca > 0) cv + ca else 0)
                     val vf = File(dir, "$base.v.part").also(temps::add)
                     val af = File(dir, "$base.a.part").also(temps::add)
-                    t.stage = "Downloading video"
-                    fetch(v.content, vf, t)
-                    t.stage = "Downloading audio"
-                    fetch(a.content, af, t)
+                    // Picture and sound arrive together, so the whole thing finishes sooner.
+                    t.stage = "Downloading"
+                    coroutineScope {
+                        val vj = async { fetch(v.content, vf, t) }
+                        val aj = async { fetch(a.content, af, t) }
+                        vj.await(); aj.await()
+                    }
                     active[r.key] = DlProgress(r.video.title, -1f, "Merging")
                     withContext(Dispatchers.IO) { mux(vf, af, out) }
                 }
@@ -217,12 +273,18 @@ object Downloads {
             persist()
             active.remove(r.key)
         } catch (e: CancellationException) {
-            active.remove(r.key)
+            if (pausing.remove(r.key)) {
+                // Paused: keep the parts and the place in the list.
+                keepParts = true
+                paused[r.key] = r
+                val p = active[r.key]
+                active[r.key] = DlProgress(r.video.title, p?.fraction ?: -1f, "Paused", paused = true)
+            } else active.remove(r.key)
             throw e
         } catch (e: Exception) {
             active[r.key] = DlProgress(r.video.title, 0f, e.message ?: "Download failed", failed = true)
         } finally {
-            temps.forEach { it.delete() }
+            if (!keepParts) temps.forEach { it.delete() }
         }
     }
 
@@ -233,7 +295,7 @@ object Downloads {
         val aBytes = audio?.let { clen(it.content) } ?: 0L
         val heights = (info.videoOnlyStreams + info.videoStreams)
             .filter { it.isUrl && it.height > 0 && com.sourabh.jarvistube.player.VideoCodecs.mimeOf(it) == com.sourabh.jarvistube.player.VideoCodecs.AVC }
-            .map { it.height }.distinct().sortedDescending()
+            .map { player.qualityOf(it) }.distinct().sortedDescending()
         val videos = heights.mapNotNull { h ->
             val v = player.pickVideo(info, h, avcOnly = true)?.takeIf { player.qualityOf(it) == h } ?: return@mapNotNull null
             if (v.isVideoOnly && audio == null) return@mapNotNull null
@@ -252,10 +314,14 @@ object Downloads {
     /** Chunked download (googlevideo throttles single long requests). */
     private suspend fun fetch(url: String, dest: File, t: Tracker) = withContext(Dispatchers.IO) {
         val chunk = 9_900_000L
-        var offset = 0L
+        // A paused download carries on from what it already has.
+        var offset = if (dest.exists()) dest.length() else 0L
+        val total = clen(url)
+        if (offset > 0) synchronized(t) { t.done += offset }
+        if (total in 1..offset) return@withContext
         var finished = false
-        dest.outputStream().buffered().use { os ->
-            val buf = ByteArray(64 * 1024)
+        java.io.FileOutputStream(dest, offset > 0).buffered(256 * 1024).use { os ->
+            val buf = ByteArray(128 * 1024)
             while (!finished) {
                 currentCoroutineContext().ensureActive()
                 val req = Request.Builder()

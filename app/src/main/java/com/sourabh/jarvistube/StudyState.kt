@@ -384,7 +384,10 @@ class StudyState(context: Context) {
         get() = if (lockEndAt == 0L) 0L else com.sourabh.jarvistube.lock.lockLeftMs(
             lockEndAt - com.sourabh.jarvistube.data.TrustedClock.now(),
             lockFloor - (android.os.SystemClock.elapsedRealtime() - lockFloorAt),
-            com.sourabh.jarvistube.data.TrustedClock.reliable
+            // Always the longer of the two: the floor only counts down while the phone is on, so
+            // switching the phone off (or changing its clock) never shortens a lock. The session
+            // picks up again after a restart with the time that was left.
+            clockTrusted = false
         )
 
     var lockActive by mutableStateOf(lockRemainingMs > 0L); private set

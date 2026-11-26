@@ -642,7 +642,7 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
 
         searchJob?.cancel()
         searchShowsShorts = false
-        val session = SearchSession(text).also { searchSession = it }
+        val session = SearchSession(text, asApp = true).also { searchSession = it }
         val shortsSession = com.sourabh.jarvistube.data.ShortsSearch(text).also { shortsSearch = it }
         shortsSearchJob?.cancel()
         shortsSearchJob = viewModelScope.launch {
@@ -651,10 +651,18 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         }
         searchJob = viewModelScope.launch {
             results = FeedState(loading = true)
+            searchChannel = null
+            searchCorrected = null
             results = runCatchingFeed { FeedState(items = session.loadFirst().distinctBy { it.url }) }
+            searchChannel = session.topChannel
+            searchCorrected = session.correctedTo
             results.items.take(4).forEach { com.sourabh.jarvistube.data.Repo.prefetch(it.url) }
         }
     }
+
+    /** The channel your search names, and YouTube's spelling correction, shown above the results. */
+    var searchChannel by mutableStateOf<com.sourabh.jarvistube.data.ChannelResult?>(null); private set
+    var searchCorrected by mutableStateOf<String?>(null); private set
 
     fun loadMoreSearch() {
         val session = searchSession ?: return

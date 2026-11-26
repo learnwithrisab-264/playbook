@@ -22,6 +22,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.runtime.getValue
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material3.Icon
@@ -75,9 +78,21 @@ fun SavedScreen(vm: TubeViewModel, bottomPadding: Dp, onBack: () -> Unit) {
                     )
                     if (!p.failed) {
                         Spacer(Modifier.height(8.dp))
-                        if (p.fraction >= 0) LinearProgressIndicator(progress = { p.fraction }, Modifier.fillMaxWidth())
+                        if (p.fraction >= 0) {
+                            // Glides to each new value instead of jumping.
+                            val shown by androidx.compose.animation.core.animateFloatAsState(p.fraction, label = "dl")
+                            LinearProgressIndicator(progress = { shown }, Modifier.fillMaxWidth())
+                        }
                         else LinearProgressIndicator(Modifier.fillMaxWidth())
                     }
+                }
+                // Pause / Resume, then Cancel.
+                if (!p.failed) IconButton(onClick = { if (p.paused) Downloads.resume(key) else Downloads.pause(key) }) {
+                    Icon(
+                        if (p.paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                        if (p.paused) "Resume" else "Pause",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
                 IconButton(onClick = { Downloads.cancel(key) }) { Icon(Icons.Rounded.Close, "Cancel") }
             }
