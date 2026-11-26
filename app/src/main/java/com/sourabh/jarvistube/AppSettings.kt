@@ -198,7 +198,7 @@ object AppSettings {
 
     /** A session, Lock Study Session, daily-limit lock or filter lock keeps the Study tab in the bar. */
     val studyTabRequired: Boolean
-        get() = Graph.study.let { it.active || it.lockActive || it.limitLocked || it.filterLocked }
+        get() = Graph.study.let { it.active || it.lockActive || it.limitLocked }
 
     val studyTabShown: Boolean get() = showStudy || studyTabRequired
 

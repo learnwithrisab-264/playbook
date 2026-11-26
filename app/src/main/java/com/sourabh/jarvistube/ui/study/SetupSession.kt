@@ -78,7 +78,6 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp, onPlay: (com
     var showImport by remember { mutableStateOf(false) }
     var lockDialog by remember { mutableStateOf(false) }
     var daysDialog by remember { mutableStateOf(false) }
-    var filterLockDialog by remember { mutableStateOf(false) }
     val canStart = study.allChannelNames.isNotEmpty()
     fun needChannels() =
         android.widget.Toast.makeText(context, "Add a channel below first.", android.widget.Toast.LENGTH_SHORT).show()
@@ -201,28 +200,6 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp, onPlay: (com
             }
         }
 
-        // 2. Music & entertainment filter, lockable for days.
-        item {
-            SectionCard("Block music & entertainment") {
-                val forced = study.lockActive || study.filterLocked
-                ToggleRow(
-                    "Filter is ${if (study.entertainmentBlocked) "on" else "off"}",
-                    when {
-                        study.filterLocked -> "Locked on until ${lockDate(study.filterLockUntil)}."
-                        study.lockActive -> "Always on while a lock is running."
-                        else -> "Hides songs, films, gaming and suggestive videos. Always on during focus."
-                    },
-                    study.entertainmentBlocked,
-                    enabled = !forced
-                ) { study.updateBlockEntertainment(it) }
-                OutlinedButton(onClick = { filterLockDialog = true }, shape = CircleShape, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Rounded.Lock, null, Modifier.size(18.dp))
-                    Spacer(Modifier.size(8.dp))
-                    Text(if (study.filterLocked) "Lock for more days" else "Lock it on for days")
-                }
-            }
-        }
-
         // 3. Daily limit for watching outside focus time.
         item {
             SectionCard("Daily time limit") {
@@ -328,14 +305,6 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp, onPlay: (com
             confirmLabel = "Start & lock",
             onConfirm = { until -> study.startLongLock(until); daysDialog = false },
             onDismiss = { daysDialog = false }
-        )
-    }
-    if (filterLockDialog) {
-        DaysWheelDialog(
-            title = if (study.filterLocked) "Lock for more days" else "Lock the filter on",
-            from = maxOf(study.filterLockUntil, com.sourabh.jarvistube.data.TrustedClock.now()),
-            onConfirm = { d -> study.lockFilter(d); filterLockDialog = false },
-            onDismiss = { filterLockDialog = false }
         )
     }
     if (lockDialog) {

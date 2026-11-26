@@ -179,6 +179,15 @@ private fun LockDurationDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) 
                         Text(stringResource(R.string.step_2_allow_display_over_other_apps))
                     }
                 }
+                // Realme/Oppo/Xiaomi stop apps from starting after a restart unless "Auto launch"
+                // is allowed: without it, switching the phone off and on would end the lock.
+                TextButton(onClick = {
+                    AppGuard.open(
+                        context,
+                        android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:" + context.packageName))
+                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                }) { Text("Once: allow Auto launch, so the lock comes back after switching the phone off") }
                 // Scrolls sideways so no chip is squeezed into a column of letters.
                 Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TopicChip("2 min", hours == 0 && minutes == 2) { hours = 0; minutes = 2 }

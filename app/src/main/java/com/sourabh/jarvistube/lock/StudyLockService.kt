@@ -115,8 +115,12 @@ class StudyLockService : Service() {
 /** A session still running after a restart carries on. */
 class LockBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
-        if (Graph.study.lockActive) StudyLockService.start(context)
+        if (Graph.study.lockActive) {
+            // The phone was switched off during a lock: the lock carries on with the time that was
+            // left (time switched off never counts), and the locked video opens straight away.
+            StudyLockService.start(context)
+            runCatching { context.startActivity(studyIntent(context)) }
+        }
     }
 }
 

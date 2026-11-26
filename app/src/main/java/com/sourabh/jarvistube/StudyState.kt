@@ -115,29 +115,9 @@ class StudyState(context: Context) {
     /** date -> focused seconds, last 14 days. */
     val history = androidx.compose.runtime.mutableStateMapOf<String, Int>()
 
-    // Music/film/entertainment filter. The switch is the user's choice in free time, but it is
-    // always enforced while a study session or a video lock is running.
-    var blockEntertainment by mutableStateOf(p.getBoolean("blockEnt", true)); private set
-    /** Filter lock: the filter stays on until this time, whatever the switch says. */
-    var filterLockUntil by mutableLongStateOf(p.getLong("filterLockUntil", 0L)); private set
-    val filterLocked: Boolean get() = filterLockUntil > com.sourabh.jarvistube.data.TrustedClock.now()
-    val entertainmentBlocked: Boolean get() = blockEntertainment || active || lockActive || filterLocked
-
-    /** Locks the filter on for [days] more days (added to a running lock, never shortening it). */
-    fun lockFilter(days: Int) {
-        if (days <= 0) return
-        filterLockUntil = maxOf(filterLockUntil, com.sourabh.jarvistube.data.TrustedClock.now()) + days * 86_400_000L
-        blockEntertainment = true
-        p.edit().putLong("filterLockUntil", filterLockUntil).putBoolean("blockEnt", true).commit()
-    }
-
-    /** Returns false if a running session/lock forbids turning the filter off. */
-    fun updateBlockEntertainment(on: Boolean): Boolean {
-        if (!on && (active || lockActive || filterLocked)) return false
-        blockEntertainment = on
-        p.edit().putBoolean("blockEnt", on).apply()
-        return true
-    }
+    // The music/film/entertainment filter applies only while a focus session or a lock runs.
+    // (There is no free-time switch or filter lock any more.)
+    val entertainmentBlocked: Boolean get() = active || lockActive
 
 
     private fun loadHistory() {
