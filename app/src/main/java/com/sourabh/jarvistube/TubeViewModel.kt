@@ -151,7 +151,7 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun play(video: VideoItem) {
-        (com.sourabh.jarvistube.data.ContentFilter.blockReason(null, video.channel, video.title)
+        (com.sourabh.jarvistube.data.ContentFilter.blockReason(null, video.channel, video.title, video.url)
             ?: Graph.study.blockReason(video))?.let {
             Toast.makeText(getApplication(), it, Toast.LENGTH_LONG).show()
             return
@@ -500,7 +500,7 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
 
     /** The same checks as play(), without opening the normal player. */
     fun playShort(video: VideoItem) {
-        val reason = ContentFilter.blockReason(null, video.channel, video.title) ?: Graph.study.blockReason(video)
+        val reason = ContentFilter.blockReason(null, video.channel, video.title, video.url) ?: Graph.study.blockReason(video)
         if (reason != null) Toast.makeText(getApplication(), reason, Toast.LENGTH_LONG).show()
         else {
             SeenVideos.mark(Feed.Shorts, listOf(video.url))

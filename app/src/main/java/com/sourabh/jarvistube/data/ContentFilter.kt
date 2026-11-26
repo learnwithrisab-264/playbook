@@ -120,7 +120,10 @@ object ContentFilter {
     fun filter(videos: List<VideoItem>): List<VideoItem> = videos.filterNot(::hides)
 
     /** Reason to refuse playback once YouTube's category is known, or null. */
-    fun blockReason(category: String?, channel: String, title: String): String? {
+    fun blockReason(category: String?, channel: String, title: String, url: String? = null): String? {
+        // The video you locked yourself in with always plays, whatever its title or category.
+        val study = runCatching { com.sourabh.jarvistube.Graph.study }.getOrNull()
+        if (url != null && study != null && study.lockActive && url == study.lockUrl) return null
         if (!enforcing() || trusted(channel)) return null
         if (suggestivePatterns.any { it.containsMatchIn(title) }) {
             return "Blocked: this video contains suggestive or non-educational content."

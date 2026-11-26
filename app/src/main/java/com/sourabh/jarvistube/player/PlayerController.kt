@@ -302,7 +302,7 @@ class PlayerController(val app: Context, http: OkHttpClient) {
      * lock / break / daily free-time limit. Null = allowed.
      */
     private fun blockReason(v: VideoItem): String? =
-        com.sourabh.jarvistube.data.ContentFilter.blockReason(null, v.channel, v.title) ?: Graph.study.blockReason(v)
+        com.sourabh.jarvistube.data.ContentFilter.blockReason(null, v.channel, v.title, v.url) ?: Graph.study.blockReason(v)
 
     /** Plays the next allowed item in the queue. Returns false if nothing was played. */
     fun playNext(): Boolean {
@@ -580,7 +580,7 @@ class PlayerController(val app: Context, http: OkHttpClient) {
             val info = Repo.streamInfo(video.url)
             // Second filter layer: YouTube's own category, known only now.
             com.sourabh.jarvistube.data.ContentFilter.blockReason(
-                info.category, info.uploaderName.orEmpty(), info.name.orEmpty()
+                info.category, info.uploaderName.orEmpty(), info.name.orEmpty(), video.url
             )?.let { reason ->
                 player.stop()
                 preparedUrl = null
