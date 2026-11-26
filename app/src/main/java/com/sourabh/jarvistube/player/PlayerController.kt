@@ -408,10 +408,23 @@ class PlayerController(val app: Context, http: OkHttpClient) {
     private var ownSeekTo = -1L
 
     private fun checkSkip(pos: Long): Boolean {
-        val s = com.sourabh.jarvistube.data.segmentToSkip(segments.filter { it !in watchAnyway }, pos, skipCategories) ?: return false
-        ownSeekTo = (s.end * 1000).toLong()
+        val skippable = segments.filter { it !in watchAnyway && it.category in skipCategories }
+        val s = com.sourabh.jarvistube.data.segmentToSkip(skippable, pos, skipCategories) ?: return false
+        // Segments that touch (sponsor, then intro, then self-promo) go in one jump, not three.
+        var end = s.end
+        val labels = linkedSetOf(s.label)
+        while (true) {
+            val more = skippable.firstOrNull { it.start <= end + 1.0 && it.end > end } ?: break
+            end = more.end
+            labels += more.label
+        }
+        ownSeekTo = (end * 1000).toLong()
+        // Land exactly at the end. The usual nearest-keyframe seek could land back inside the
+        // segment (e.g. 1:13 for one ending at 1:16) and skip again and again: the stutter.
+        player.setSeekParameters(androidx.media3.exoplayer.SeekParameters.EXACT)
         player.seekTo(ownSeekTo)
-        showNotice("Skipped ${s.label} (${((s.end - s.start) + 0.5).toInt()} s)")
+        player.setSeekParameters(androidx.media3.exoplayer.SeekParameters.CLOSEST_SYNC)
+        showNotice("Skipped ${labels.joinToString(" + ")} (${((end - s.start) + 0.5).toInt()} s)")
         return true
     }
 
