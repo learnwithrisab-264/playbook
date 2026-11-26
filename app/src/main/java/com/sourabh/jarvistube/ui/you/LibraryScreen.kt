@@ -178,12 +178,8 @@ fun LibraryScreen(
             }
         }
         val historyShown = detail == null && lib.tab == LibTab.History && !ytOnly
-        // History: this app's and your YouTube account's, merged into one list.
-        if (historyShown) historySection(
-            vm, historyQuery, { historyQuery = it }, onClearAll = { clearHistory = true },
-            youtube = state.items.filterIsInstance<LibVideo>().filterNot { com.sourabh.jarvistube.data.ContentFilter.hides(it.video) },
-            onRemoveYoutube = { lib.removeFromHistory(it) }
-        )
+        // History: only what you watched in this app. The YouTube account's list is in YT History.
+        if (historyShown) historySection(vm, historyQuery, { historyQuery = it }, onClearAll = { clearHistory = true })
         // YT History: just the YouTube account's list, each with "Remove from watch history".
         else libItems(state, vm, lib, inHistory = detail == null && lib.tab == LibTab.History, inPlaylist = detail != null, onRetry = { loader?.refresh() })
     }
