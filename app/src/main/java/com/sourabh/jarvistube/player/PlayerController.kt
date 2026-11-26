@@ -206,6 +206,16 @@ class PlayerController(val app: Context, http: OkHttpClient) {
                 else autoRecoveries = 0
             }
 
+            override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+                // You dragged the seek bar into a segment on purpose: let it play this time.
+                if (reason != Player.DISCONTINUITY_REASON_SEEK) return
+                val mine = ownSeekTo >= 0 && kotlin.math.abs(newPosition.positionMs - ownSeekTo) < 1500
+                ownSeekTo = -1
+                if (mine) return
+                val p = newPosition.positionMs
+                watchAnyway = watchAnyway + segments.filter { p >= (it.start * 1000).toLong() && p < (it.end * 1000).toLong() }
+            }
+
             override fun onRenderedFirstFrame() {
                 _firstFrameUrl.value = _now.value?.video?.url
             }
@@ -239,15 +249,24 @@ class PlayerController(val app: Context, http: OkHttpClient) {
                 }
             }
         }
-        // SponsorBlock skipping + periodic resume-position saving.
+        // Periodic resume-position saving.
         scope.launch {
-            var tick = 0
             while (true) {
-                delay(400)
-                if (!player.isPlaying) continue
-                tick++
-                if (sponsorBlock) checkSkip(player.currentPosition)
-                if (tick % 12 == 0) savePosition()
+                delay(4800)
+                if (player.isPlaying) savePosition()
+            }
+        }
+        // SponsorBlock: instead of looking every 0.4 s (which let a bit of each segment play,
+        // more at 2x speed), it waits exactly until the next segment starts, then jumps.
+        scope.launch {
+            while (true) {
+                if (!sponsorBlock || !player.isPlaying || segments.isEmpty()) { delay(250); continue }
+                val pos = player.currentPosition
+                if (checkSkip(pos)) { delay(300); continue }
+                val next = segments.firstOrNull { it.category in skipCategories && it !in watchAnyway && it.start * 1000 > pos }
+                val speed = player.playbackParameters.speed.coerceAtLeast(0.25f)
+                val wait = next?.let { ((it.start * 1000 - pos) / speed).toLong() } ?: 400L
+                delay(wait.coerceIn(10L, 400L))
             }
         }
     }
@@ -383,10 +402,17 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         player.seekTo(0)
     }
 
-    private fun checkSkip(pos: Long) {
-        val s = com.sourabh.jarvistube.data.segmentToSkip(segments, pos, skipCategories) ?: return
-        player.seekTo((s.end * 1000).toLong())
+    /** Segments you sought into yourself: they play instead of being skipped (this video only). */
+    private var watchAnyway: Set<SkipSegment> = emptySet()
+    /** Where the last skip jumped to, so that jump isn't mistaken for your own seek. */
+    private var ownSeekTo = -1L
+
+    private fun checkSkip(pos: Long): Boolean {
+        val s = com.sourabh.jarvistube.data.segmentToSkip(segments.filter { it !in watchAnyway }, pos, skipCategories) ?: return false
+        ownSeekTo = (s.end * 1000).toLong()
+        player.seekTo(ownSeekTo)
         showNotice("Skipped ${s.label} (${((s.end - s.start) + 0.5).toInt()} s)")
+        return true
     }
 
     private fun showNotice(msg: String, ms: Long = 3000) {
@@ -613,6 +639,7 @@ class PlayerController(val app: Context, http: OkHttpClient) {
             prepare(info, video, preferredQuality, startMs)
             SponsorBlock.videoId(video.url)?.let { id ->
                 scope.launch {
+                    watchAnyway = emptySet()
                     segments = runCatching { SponsorBlock.segments(id) }.getOrDefault(emptyList())
                 }
             }
