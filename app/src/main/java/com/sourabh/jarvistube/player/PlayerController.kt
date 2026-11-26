@@ -368,10 +368,7 @@ class PlayerController(val app: Context, http: OkHttpClient) {
         if (Graph.study.lockActive) return null // only the locked video may play
         val seen = history.map { it.url }.toSet() + cur.video.url
         fun ok(v: VideoItem) = v.url !in seen && v.durationSec !in 1L..60L && blockReason(v) == null
-        val related = cur.info?.relatedItems.orEmpty()
-            .filterIsInstance<org.schabi.newpipe.extractor.stream.StreamInfoItem>()
-            .map { it.toVideoItem() }
-            .let(com.sourabh.jarvistube.data.ContentFilter::filter)
+        val related = com.sourabh.jarvistube.data.Related.of(cur.info, cur.video)
         related.firstOrNull(::ok)?.let { return it }
         // The channel's uploads: the one just older than this video, else any not played yet.
         val channelUrl = cur.info?.uploaderUrl?.takeIf { it.isNotBlank() } ?: cur.video.channelUrl ?: return null
@@ -650,6 +647,7 @@ class PlayerController(val app: Context, http: OkHttpClient) {
                 if (subtitleOptionsOf(info).any { it.id == lang }) setSubtitle(lang, remember = false)
             }
             prepare(info, video, preferredQuality, startMs)
+            com.sourabh.jarvistube.data.Related.prefetch(info, video)
             SponsorBlock.videoId(video.url)?.let { id ->
                 scope.launch {
                     watchAnyway = emptySet()

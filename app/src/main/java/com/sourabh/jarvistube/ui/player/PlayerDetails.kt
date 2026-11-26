@@ -366,10 +366,8 @@ internal fun Details(
             }
         }
         item {
-            val related = info?.relatedItems.orEmpty()
-                .filterIsInstance<org.schabi.newpipe.extractor.stream.StreamInfoItem>()
-                .filter { it.contentAvailability != org.schabi.newpipe.extractor.stream.ContentAvailability.MEMBERSHIP && it.contentAvailability != org.schabi.newpipe.extractor.stream.ContentAvailability.PAID }
-                .filter { it.duration !in 1L..60L }
+            // Same topic as this video (see Related), not YouTube's loose "people also watch" mix.
+            val related = com.sourabh.jarvistube.data.Related.of(info, now.video)
             val locked = Graph.study.active
             if (locked) {
                 Text(
@@ -418,16 +416,7 @@ internal fun Details(
                         }
                         Icon(Icons.Rounded.ExpandLess, "Hide related videos", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    related.forEach { r ->
-                        val v = com.sourabh.jarvistube.data.VideoItem(
-                            url = r.url, title = r.name, channel = r.uploaderName.orEmpty(),
-                            thumb = r.thumbnails.bestUrl(),
-                            durationSec = r.duration, views = r.viewCount, uploaded = r.textualUploadDate,
-                            isLive = r.streamType == org.schabi.newpipe.extractor.stream.StreamType.LIVE_STREAM,
-                            avatar = runCatching { r.uploaderAvatars.bestUrl() }.getOrNull()
-                        )
-                        if (!com.sourabh.jarvistube.data.ContentFilter.hides(v)) VideoCard(v, onClick = { vm.play(v) })
-                    }
+                    related.forEach { v -> VideoCard(v, onClick = { vm.play(v) }) }
                 }
             }
         }

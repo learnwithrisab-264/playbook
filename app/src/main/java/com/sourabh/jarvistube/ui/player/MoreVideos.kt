@@ -58,22 +58,9 @@ import com.sourabh.jarvistube.ui.theme.OnVideo
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.extractor.stream.StreamType
 
-/** YouTube's related videos for this one, without Shorts and without what the content filter hides. */
+/** Related videos on this one's topic, without Shorts and without what the content filter hides. */
 internal fun relatedVideos(now: NowPlaying): List<VideoItem> =
-    now.info?.relatedItems.orEmpty()
-        .filterIsInstance<StreamInfoItem>()
-        .filter { it.duration !in 1L..60L }
-        .filter { it.contentAvailability != org.schabi.newpipe.extractor.stream.ContentAvailability.MEMBERSHIP && it.contentAvailability != org.schabi.newpipe.extractor.stream.ContentAvailability.PAID }
-        .map { r ->
-            VideoItem(
-                url = r.url, title = r.name, channel = r.uploaderName.orEmpty(),
-                thumb = r.thumbnails.bestUrl(),
-                durationSec = r.duration, views = r.viewCount, uploaded = r.textualUploadDate,
-                isLive = r.streamType == StreamType.LIVE_STREAM,
-                avatar = runCatching { r.uploaderAvatars.bestUrl() }.getOrNull()
-            )
-        }
-        .filterNot(ContentFilter::hides)
+    com.sourabh.jarvistube.data.Related.of(now.info, now.video)
 
 /**
  * "More videos" in fullscreen, as on YouTube: a strip over the bottom of the video with All (related
@@ -97,7 +84,7 @@ internal fun MoreVideosPanel(now: NowPlaying, onPlay: (VideoItem) -> Unit, onClo
             .filter { it.url != now.video.url && !it.isShort && !ContentFilter.hides(it) }
             .take(50).toList()
         1 -> fromChannel.orEmpty()
-        else -> remember(now.info) { relatedVideos(now) }
+        else -> com.sourabh.jarvistube.data.Related.of(now.info, now.video)
     }
 
     Column(
