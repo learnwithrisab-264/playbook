@@ -363,8 +363,9 @@ object Downloads {
             val vOut = muxer.addTrack(vEx.getTrackFormat(vt))
             val aOut = muxer.addTrack(aEx.getTrackFormat(at))
             muxer.start()
-            copySamples(vEx, muxer, vOut)
-            copySamples(aEx, muxer, aOut)
+            // Picture and sound written side by side in time order: much faster than all of one
+            // then all of the other, which makes the MP4 writer buffer the whole first track.
+            copyInterleaved(vEx, vOut, aEx, aOut, muxer)
             muxer.stop()
         } finally {
             runCatching { muxer.release() }
@@ -378,6 +379,30 @@ object Downloads {
             if (ex.getTrackFormat(i).getString(android.media.MediaFormat.KEY_MIME).orEmpty().startsWith(prefix)) return i
         }
         throw IOException("Missing $prefix track")
+    }
+
+    private fun copyInterleaved(vEx: MediaExtractor, vOut: Int, aEx: MediaExtractor, aOut: Int, muxer: MediaMuxer) {
+        val buf = ByteBuffer.allocateDirect(4 * 1024 * 1024)
+        val info = MediaCodec.BufferInfo()
+        var vDone = false
+        var aDone = false
+        while (!vDone || !aDone) {
+            // Whichever track is behind in time goes next.
+            val useVideo = !vDone && (aDone || vEx.sampleTime <= aEx.sampleTime)
+            val ex = if (useVideo) vEx else aEx
+            buf.clear()
+            val size = ex.readSampleData(buf, 0)
+            if (size < 0) {
+                if (useVideo) vDone = true else aDone = true
+                continue
+            }
+            info.set(
+                0, size, ex.sampleTime,
+                if (ex.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC != 0) MediaCodec.BUFFER_FLAG_KEY_FRAME else 0
+            )
+            muxer.writeSampleData(if (useVideo) vOut else aOut, buf, info)
+            ex.advance()
+        }
     }
 
     private fun copySamples(ex: MediaExtractor, muxer: MediaMuxer, outTrack: Int) {

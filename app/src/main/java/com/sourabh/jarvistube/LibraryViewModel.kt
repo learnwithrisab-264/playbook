@@ -125,8 +125,8 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     init {
         // Fill in name / email / photo for any saved account that is missing them.
         Session.accounts.filter { it.email == null || it.photo == null }.forEach { loadProfile(it) }
-        // History starts loading when the app opens, so it is ready before you reach the You tab.
-        ensure(LibTab.History)
+        // History starts loading shortly after the app opens, so it is ready before you reach the You tab.
+        viewModelScope.launch { kotlinx.coroutines.delay(1500); ensure(LibTab.History) }
     }
 
     fun loader(t: LibTab): LibLoader = loaders.getValue(t)
@@ -137,7 +137,11 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun ensure(t: LibTab = tab) {
-        if (signedIn && !loader(t).started) loader(t).refresh()
+        val l = loader(t)
+        // Also again when an earlier try came back empty (for example at app start, before the
+        // login was ready), so the list never stays blank.
+        val empty = l.state.items.isEmpty() && !l.state.loading
+        if (signedIn && (!l.started || empty)) l.refresh()
     }
 
     fun openDetail(d: LibDetail) {

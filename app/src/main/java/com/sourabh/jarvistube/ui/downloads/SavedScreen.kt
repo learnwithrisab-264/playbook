@@ -87,7 +87,9 @@ fun SavedScreen(vm: TubeViewModel, bottomPadding: Dp, onBack: () -> Unit) {
                     }
                 }
                 // Pause / Resume, then Cancel.
-                if (!p.failed) IconButton(onClick = { if (p.paused) Downloads.resume(key) else Downloads.pause(key) }) {
+                // Not while merging or saving: those finish in a moment and can't be split.
+                val pausable = !p.failed && !p.stage.startsWith("Merging") && !p.stage.startsWith("Saving")
+                if (pausable) IconButton(onClick = { if (p.paused) Downloads.resume(key) else Downloads.pause(key) }) {
                     Icon(
                         if (p.paused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
                         if (p.paused) "Resume" else "Pause",
