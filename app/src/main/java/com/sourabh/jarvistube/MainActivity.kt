@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -422,6 +423,7 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
     val barHeight = if (study.active) 0.dp else BAR_HEIGHT + 0.5.dp
     val miniPad = if (showMini) 72.dp else 0.dp
     val statusInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val imeInset = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
 
     CompositionLocalProvider(
         LocalOpenChannel provides { v: com.sourabh.jarvistube.data.VideoItem ->
@@ -514,7 +516,9 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
                 FloatingPlayer(
                     it, ui,
                     topInset = statusInset,
-                    bottomInset = if (overlayOpen) navInset else navInset + barHeight,
+                    // The keyboard (search) covers the screen rather than shrinking it, so the
+                    // window rises above it instead of hiding underneath, then settles back.
+                    bottomInset = maxOf(if (overlayOpen) navInset else navInset + barHeight, imeInset),
                     onExpand = { vm.playerExpanded = true }
                 )
             }
