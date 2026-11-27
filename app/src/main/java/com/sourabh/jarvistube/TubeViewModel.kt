@@ -505,6 +505,9 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         if (reason != null) Toast.makeText(getApplication(), reason, Toast.LENGTH_LONG).show()
         else {
             SeenVideos.mark(Feed.Shorts, listOf(video.url))
+            // A Short is a video: out of music mode (or it would play without picture and
+            // land in the Music tab's Recently played).
+            Graph.player.leaveMusic()
             Graph.player.play(video)
         }
     }
