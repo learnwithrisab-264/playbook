@@ -62,6 +62,39 @@ object InnerTube {
         }
     }
 
+    private val AD_MARKS = listOf("adSlot", "adClientParams", "adPlacement", "AD_BADGE", "promotedSparkles", "adBadge", "\"isAd\":true")
+
+    /**
+     * The start of the signed-in account's own Shorts feed (what the YouTube app's Shorts tab
+     * plays): a token for [reelSequence]. "CA8=" with a seedless start asks for "Shorts for you".
+     */
+    suspend fun reelSeed(): String? {
+        val json = post(
+            "reel/reel_item_watch",
+            JSONObject().put("params", "CA8=").put("inputType", "REEL_WATCH_INPUT_TYPE_SEEDLESS")
+                .put("disablePlayerResponse", true)
+        )
+        return json.optString("sequenceContinuation").ifEmpty { null }
+    }
+
+    /** One page of the account's Shorts feed: video ids, and the token for the page after. */
+    suspend fun reelSequence(params: String): Pair<List<String>, String?> {
+        val json = post("reel/reel_watch_sequence", JSONObject().put("sequenceParams", params))
+        val ids = ArrayList<String>()
+        val entries = json.optJSONArray("entries") ?: JSONArray()
+        for (i in 0 until entries.length()) {
+            val entry = entries.optJSONObject(i) ?: continue
+            // Promoted Shorts (ads) are left out.
+            val raw = entry.toString()
+            if (AD_MARKS.any { raw.contains(it) }) continue
+            forEach(entry, "reelWatchEndpoint") { e ->
+                e.optString("videoId").takeIf { it.isNotEmpty() }?.let(ids::add)
+            }
+        }
+        val next = find(json.optJSONObject("continuationEndpoint"), "continuationCommand")?.optString("token")?.ifEmpty { null }
+        return ids.distinct() to next
+    }
+
     // ---- account ----
 
     /** Name, email, @handle and photo of saved account [account] (the active one by default). */

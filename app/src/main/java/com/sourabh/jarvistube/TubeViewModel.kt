@@ -513,8 +513,18 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     /** Like Recommended: never during a study session, multi-day lock, schedule or video lock. */
     val shortsAllowed: Boolean get() = !Graph.study.active && !Graph.study.lockActive
 
+    /** Signed in, Shorts come from the YouTube account (see AccountShorts); otherwise from topics. */
+    private var accountShorts: com.sourabh.jarvistube.data.AccountShorts? = null
+    /** The account had nothing new: topic searches carry on until the next refresh. */
+    private var accountShortsDone = false
+
+    /** The saved list belongs to where it came from: this account, or topics for the region. */
+    private fun shortsTag() =
+        if (com.sourabh.jarvistube.data.Session.isSignedIn) "account:" + com.sourabh.jarvistube.data.Session.dataKey
+        else AppSettings.region
+
     private fun saveShorts() {
-        if (shorts.error == null) FeedStore.save(Feed.Shorts, shorts.items, AppSettings.region)
+        if (shorts.error == null) FeedStore.save(Feed.Shorts, shorts.items, shortsTag())
     }
 
     /** Readies the first Shorts, so tapping one starts at once instead of after 2-3 seconds. */
@@ -525,7 +535,7 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     fun ensureShorts() {
         if (shortsSessions.isNotEmpty() || shorts.items.isNotEmpty() || shorts.loading) return
         // New Shorts load only without a saved list: never just by opening the tab.
-        val saved = FeedStore.load(Feed.Shorts, AppSettings.region)?.items?.let(ContentFilter::filter).orEmpty()
+        val saved = FeedStore.load(Feed.Shorts, shortsTag())?.items?.let(ContentFilter::filter).orEmpty()
         if (saved.isEmpty()) return loadShorts()
         shorts = FeedState(items = saved)
         prepareFirstShorts()
@@ -542,10 +552,41 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         return got.shuffled()
     }
 
-    /** What Pull to refresh runs. */
+    /** What Pull to refresh runs. Signed in: the account's Shorts; if that fails, topic searches. */
     fun loadShorts() {
         if (!shortsAllowed) return
         shortsJob?.cancel()
+        accountShortsDone = false
+        if (com.sourabh.jarvistube.data.Session.isSignedIn) {
+            val src = com.sourabh.jarvistube.data.AccountShorts().also { accountShorts = it }
+            shortsJob = viewModelScope.launch {
+                shorts = shorts.copy(loading = true, error = null)
+                val got = try {
+                    src.next()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    emptyList()
+                }
+                val fresh = SeenVideos.pick(Feed.Shorts, got, 8)
+                if (fresh.isNotEmpty()) {
+                    shorts = FeedState(items = fresh)
+                    saveShorts()
+                    prepareFirstShorts()
+                } else {
+                    accountShorts = null
+                    accountShortsDone = true
+                    loadTopicShorts()
+                }
+            }
+            return
+        }
+        accountShorts = null
+        loadTopicShorts()
+    }
+
+    /** Shorts from searches on your topics (signed out, or when the account gives none). */
+    private fun loadTopicShorts() {
         val sessions = newShortsSessions()
         shortsSessions = sessions
         shortsJob = viewModelScope.launch {
@@ -582,6 +623,20 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     fun loadMoreShorts() {
         val cur = shorts
         if (!shortsAllowed || cur.loading || cur.loadingMore || cur.items.isEmpty()) return
+        // Signed in: more of the account's own Shorts feed while it lasts.
+        val acct = accountShorts
+            ?: if (com.sourabh.jarvistube.data.Session.isSignedIn && !accountShortsDone) com.sourabh.jarvistube.data.AccountShorts().also { accountShorts = it } else null
+        if (acct != null && acct.hasMore) {
+            shortsJob = viewModelScope.launch {
+                shorts = cur.copy(loadingMore = true)
+                val more = runCatching { acct.next() }.getOrDefault(emptyList())
+                    .let { SeenVideos.unseen(Feed.Shorts, it) }.filterNot { it in cur.items }
+                shorts = cur.copy(items = (cur.items + more).distinctBy { it.url }, loadingMore = false)
+                if (more.isEmpty() || !acct.hasMore) { accountShorts = null; accountShortsDone = true }
+                saveShorts()
+            }
+            return
+        }
         // Searches that have run out are replaced by new ones, so the list never ends.
         val sessions = shortsSessions.filter { it.hasMore }.ifEmpty { newShortsSessions().also { shortsSessions = it } }
         shortsJob = viewModelScope.launch {
