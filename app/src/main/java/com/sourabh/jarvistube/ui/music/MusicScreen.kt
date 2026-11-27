@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sourabh.jarvistube.Graph
 import com.sourabh.jarvistube.data.Music
+import com.sourabh.jarvistube.data.MusicForYou
 import com.sourabh.jarvistube.data.SongList
 import com.sourabh.jarvistube.data.VideoItem
 import com.sourabh.jarvistube.ui.common.Thumb
@@ -86,13 +87,14 @@ fun MusicScreen(bottomPadding: Dp) {
     var query by rememberSaveable { mutableStateOf("") }
     var list by remember { mutableStateOf<SongList?>(null) }
 
-    fun open(title: String, search: String) {
+    /** Opens a song list: a search, a mood, or a mix / playlist made for you. */
+    fun openWith(title: String, load: suspend () -> List<VideoItem>) {
         focus.clearFocus()
         val l = SongList(title)
         list = l
         scope.launch {
             try {
-                l.songs = Music.songs(search)
+                l.songs = load()
                 if (l.songs.isEmpty()) l.error = "No songs found."
             } catch (e: Exception) {
                 l.error = "Couldn't load songs. Check your connection."
@@ -101,6 +103,13 @@ fun MusicScreen(bottomPadding: Dp) {
             }
         }
     }
+
+    fun open(title: String, search: String) = openWith(title) { Music.songs(search) }
+
+    // Made for you: mixes from what you play here, and YouTube Music's picks for your account.
+    val mixes = remember(Music.recent.firstOrNull()?.url, Music.recent.size) { MusicForYou.localMixes() }
+    val signedIn = com.sourabh.jarvistube.data.Session.isSignedIn
+    LaunchedEffect(signedIn) { MusicForYou.loadShelves() }
 
     fun play(song: VideoItem, all: List<VideoItem>, source: String) {
         val reason = com.sourabh.jarvistube.data.ContentFilter.blockReason(null, song.channel, song.title, song.url)
@@ -157,6 +166,57 @@ fun MusicScreen(bottomPadding: Dp) {
                                 Spacer(Modifier.height(8.dp))
                                 Text(s.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(s.channel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                }
+            }
+            if (mixes.isNotEmpty()) {
+                item { SectionTitle("Made for you") }
+                item {
+                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        items(mixes, key = { "mix:" + it.title }) { m ->
+                            MixCard(m.title, m.subtitle, m.art) { openWith(m.title, m.load) }
+                        }
+                    }
+                }
+            }
+            // YouTube Music's home for your account: what you listen to on YouTube shapes it.
+            if (signedIn && (MusicForYou.shelves.isNotEmpty() || MusicForYou.shelvesLoading)) {
+                item {
+                    Text(
+                        "From your YouTube account",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 16.dp, top = 24.dp)
+                    )
+                }
+                if (MusicForYou.shelves.isEmpty()) item {
+                    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                }
+            }
+            MusicForYou.shelves.take(8).forEach { shelf ->
+                item(key = "shelf:" + shelf.title) {
+                    Text(
+                        shelf.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp)
+                    )
+                }
+                item(key = "shelfRow:" + shelf.title) {
+                    val songs = shelf.cards.filter { it.isSong }.map { it.asSong() }
+                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        items(shelf.cards, key = { c -> "c:" + (c.videoId ?: "") + (c.playlistId ?: "") + (c.albumId ?: "") + c.title }) { c ->
+                            MixCard(c.title, c.subtitle, c.art, small = c.isSong) {
+                                if (c.isSong) {
+                                    val song = c.asSong()
+                                    play(song, songs, shelf.title)
+                                    // Then songs like it, so the music carries on (like Spotify's autoplay).
+                                    scope.launch {
+                                        val more = runCatching { MusicForYou.radio(song) }.getOrDefault(emptyList())
+                                        if (Graph.player.musicMode) Graph.player.enqueueAll(more.take(30))
+                                    }
+                                }
+                                else openWith(c.title) { MusicForYou.open(c) }
                             }
                         }
                     }
@@ -275,3 +335,30 @@ internal fun SongRow(s: VideoItem, onClick: () -> Unit, onQueue: (() -> Unit)? =
 
 internal fun duration(sec: Long): String? =
     if (sec <= 0) null else "%d:%02d".format(sec / 60, sec % 60)
+
+/** A square cover with its name under it, for mixes, playlists and songs made for you. */
+@Composable
+private fun MixCard(title: String, subtitle: String, art: String?, small: Boolean = false, onClick: () -> Unit) {
+    val size = if (small) 132.dp else 150.dp
+    Column(Modifier.width(size).clickable(onClick = onClick)) {
+        Box(Modifier.size(size).clip(RoundedCornerShape(6.dp))) {
+            Thumb(art, Modifier.fillMaxSize())
+            if (!small) {
+                // The mix's name on a band of colour along the bottom, like Spotify's Daily Mixes.
+                Box(
+                    Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                        .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))))
+                        .padding(start = 10.dp, end = 10.dp, top = 24.dp, bottom = 8.dp)
+                ) {
+                    Text(title, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        if (small) Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2, overflow = TextOverflow.Ellipsis
+        )
+    }
+}

@@ -52,12 +52,13 @@ object Music {
 
     fun init(context: Context) {
         prefs = context.getSharedPreferences("music", Context.MODE_PRIVATE)
+        MusicForYou.init(context)
         runCatching {
             val arr = JSONArray(prefs.getString("recent", "[]"))
             for (i in 0 until arr.length()) {
                 val o = arr.getJSONObject(i)
                 // Shorts that slipped in before (no length, or a minute or less) are dropped.
-                if (o.optLong("dur") <= 60) continue
+                if (o.optLong("dur") in 1..60) continue
                 recent += VideoItem(
                     url = o.getString("url"), title = o.getString("title"), channel = o.optString("artist"),
                     thumb = o.optString("art").ifEmpty { null }, durationSec = o.optLong("dur"),
@@ -66,6 +67,7 @@ object Music {
             }
         }
         save()
+        MusicForYou.seedIfEmpty(recent.toList())
         // Every song that plays in music mode (tapped, or next in line) counts as played.
         scope.launch {
             Graph.player.now.collect { n ->
@@ -76,8 +78,10 @@ object Music {
 
     private fun remember(song: VideoItem) {
         // Only songs: never a Short or a video that played while music mode was on.
-        if (song.isShort || song.durationSec <= 60) return
+        if (song.isShort || song.durationSec in 1..60) return
         if (recent.firstOrNull()?.url == song.url) return
+        // Counts towards "Made for you" (only songs played in the Music tab).
+        MusicForYou.played(song)
         recent.removeAll { it.url == song.url }
         recent.add(0, song)
         while (recent.size > 30) recent.removeAt(recent.lastIndex)
