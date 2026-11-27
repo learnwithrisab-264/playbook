@@ -83,6 +83,8 @@ import kotlinx.coroutines.withContext
 /** Whether the big music player is open (the mini bar shows otherwise). */
 object MusicUi {
     var playerOpen by mutableStateOf(false)
+    /** The full-screen synced lyrics (Lyrics.kt), above the player. */
+    var lyricsOpen by mutableStateOf(false)
 }
 
 private val Ink = Color(0xFF121212)
@@ -90,7 +92,7 @@ private val Soft = Color(0xFFB3B3B3)
 
 /** The song's main colour, taken from its art, for the player's background (Spotify style). */
 @Composable
-private fun artColor(url: String?): Color {
+internal fun artColor(url: String?): Color {
     var c by remember(url) { mutableStateOf(Color(0xFF404040)) }
     LaunchedEffect(url) {
         if (url == null) return@LaunchedEffect
@@ -164,7 +166,7 @@ fun MusicPlayerScreen(ui: PlayerUi, onClose: () -> Unit) {
     val n: NowPlaying = now ?: run { LaunchedEffect(Unit) { onClose() }; return }
     val tint = artColor(n.video.thumb)
     var queueOpen by remember { mutableStateOf(false) }
-    BackHandler(onBack = onClose)
+    BackHandler(enabled = !MusicUi.lyricsOpen, onBack = onClose)
 
     Box(
         Modifier.fillMaxSize()
@@ -188,14 +190,15 @@ fun MusicPlayerScreen(ui: PlayerUi, onClose: () -> Unit) {
                 IconButton(onClick = { queueOpen = true }) { Icon(Icons.AutoMirrored.Rounded.QueueMusic, "Up next", tint = Color.White) }
             }
 
-            Spacer(Modifier.weight(1f))
-            // The cover: swipe left for the next song, right for the one before.
+            // The cover: swipe left for the next song, right for the one before. It takes the
+            // space that's left, so the lyrics card below always fits.
             var drag by remember { mutableFloatStateOf(0f) }
+            Box(Modifier.weight(1f).fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
             AnimatedContent(
                 targetState = n.video.url,
                 transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) },
                 label = "cover",
-                modifier = Modifier.fillMaxWidth().aspectRatio(1f)
+                modifier = Modifier.aspectRatio(1f)
                     .pointerInput(Unit) {
                         detectHorizontalDragGestures(
                             onDragEnd = {
@@ -211,7 +214,7 @@ fun MusicPlayerScreen(ui: PlayerUi, onClose: () -> Unit) {
                     Modifier.fillMaxSize().shadow(24.dp, RoundedCornerShape(8.dp)).clip(RoundedCornerShape(8.dp))
                 )
             }
-            Spacer(Modifier.weight(1f))
+            }
 
             // Title and artist.
             Text(
@@ -266,9 +269,14 @@ fun MusicPlayerScreen(ui: PlayerUi, onClose: () -> Unit) {
             n.error?.let {
                 Text(it, color = Color(0xFFFF8A80), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(12.dp))
+            // Lyrics, like Spotify's card under the controls: the line being sung; tap for all.
+            LyricsCard(n.video, tint, onOpen = { MusicUi.lyricsOpen = true })
+            Spacer(Modifier.height(16.dp))
         }
     }
+
+    if (MusicUi.lyricsOpen) LyricsScreen(n.video, ui, tint, onClose = { MusicUi.lyricsOpen = false })
 
     if (queueOpen) {
         ModalBottomSheet(onDismissRequest = { queueOpen = false }, containerColor = Color(0xFF181818)) {
@@ -305,14 +313,14 @@ private fun QueueRow(s: VideoItem, onClick: () -> Unit, onRemove: () -> Unit) {
     }
 }
 
-private fun clock(ms: Long): String {
+internal fun clock(ms: Long): String {
     val s = (ms / 1000).coerceAtLeast(0)
     return "%d:%02d".format(s / 60, s % 60)
 }
 
 /** Spotify's slim seek line: a thin track, a white fill and a small dot; tap or drag to move. */
 @Composable
-private fun SeekLine(frac: Float, onSeek: (Float) -> Unit, onSeekDone: () -> Unit) {
+internal fun SeekLine(frac: Float, onSeek: (Float) -> Unit, onSeekDone: () -> Unit) {
     var width by remember { mutableFloatStateOf(1f) }
     Box(
         Modifier.fillMaxWidth().height(28.dp)

@@ -536,7 +536,7 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
             enter = slideInVertically(tween(Motion.NORMAL)) { it } + fadeIn(tween(Motion.FAST)),
             exit = slideOutVertically(tween(Motion.NORMAL)) { it } + fadeOut(tween(Motion.FAST))
         ) {
-            com.sourabh.jarvistube.ui.music.MusicPlayerScreen(ui, onClose = { com.sourabh.jarvistube.ui.music.MusicUi.playerOpen = false })
+            com.sourabh.jarvistube.ui.music.MusicPlayerScreen(ui, onClose = { com.sourabh.jarvistube.ui.music.MusicUi.playerOpen = false; com.sourabh.jarvistube.ui.music.MusicUi.lyricsOpen = false })
         }
 
         // In-app picture-in-picture: above the tabs, search and pages; below the full player.
