@@ -32,6 +32,7 @@ class JarvisTubeApp : Application() {
         NewPipe.init(AppDownloader(client), AppSettings.localization(), AppSettings.contentCountry())
         Graph.player = PlayerController(this, client)
         Graph.study = StudyState(this)
+        com.sourabh.jarvistube.data.Music.init(this)
         com.sourabh.jarvistube.data.Downloads.init(this)
         com.sourabh.jarvistube.data.StudyChannels.init(this)
         com.sourabh.jarvistube.data.WatchHistory.init(this)

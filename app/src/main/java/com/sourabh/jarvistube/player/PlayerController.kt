@@ -171,6 +171,8 @@ class PlayerController(val app: Context, http: OkHttpClient) {
     var sponsorBlock by mutableStateOf(prefs.getBoolean("sponsorBlock", true)); private set
     /** "Listen" mode: sound only. The video track isn't loaded at all (saves data and battery). Remembered. */
     var audioOnly by mutableStateOf(prefs.getBoolean("audioOnly", false)); private set
+    /** True while songs from the Music tab are playing. Your Listen setting is left as it is. */
+    var musicMode by mutableStateOf(false); private set
     var sleepEndAt by mutableLongStateOf(0L); private set
     private var sleepJob: Job? = null
     /** SponsorBlock segments of the loaded video, for skipping and the seek-bar marks. */
@@ -488,7 +490,34 @@ class PlayerController(val app: Context, http: OkHttpClient) {
     /** With the video track disabled ExoPlayer stops downloading the separate video stream. */
     private fun applyAudioOnly() {
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-            .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, audioOnly).build()
+            .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, audioOnly || musicMode).build()
+    }
+
+    // ---- Music tab: songs play as sound only, in the Spotify-style player, not the video player.
+    /** Where the songs came from, shown as "Playing from …" in the music player. */
+    var musicSource by mutableStateOf(""); private set
+
+    /** Plays [song] from the Music tab, with [upNext] queued after it. */
+    fun playMusic(song: VideoItem, upNext: List<VideoItem>, source: String) {
+        musicSource = source
+        if (!musicMode) { musicMode = true; applyAudioOnly() }
+        queue.clear()
+        enqueueAll(upNext.filter { it.url != song.url })
+        play(song)
+    }
+
+    /** A video was chosen: back to the normal video player. */
+    fun leaveMusic() {
+        if (!musicMode) return
+        musicMode = false
+        applyAudioOnly()
+    }
+
+    /** Shuffles what's up next. */
+    fun shuffleQueue() {
+        val mixed = queue.shuffled()
+        queue.clear()
+        queue.addAll(mixed)
     }
 
     /** minutes = 0 cancels the timer. */

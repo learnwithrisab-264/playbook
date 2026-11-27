@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube
 
+import androidx.compose.material.icons.outlined.LibraryMusic
+import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material.icons.rounded.Subscriptions
 import com.sourabh.jarvistube.ui.theme.Motion
@@ -116,6 +118,8 @@ private enum class Tab(
     Shorts("Shorts", Icons.Rounded.PlayCircle, Icons.Outlined.PlayCircle),
     /** Videos only from the channels you chose (My Channels). */
     Feed("My Feed", Icons.Rounded.Subscriptions, Icons.Outlined.Subscriptions),
+    /** Spotify-style music: songs from YouTube Music, sound only. */
+    Music("Music", Icons.Rounded.LibraryMusic, Icons.Outlined.LibraryMusic),
     You("You", Icons.Rounded.AccountCircle, Icons.Outlined.AccountCircle)
 }
 
@@ -328,7 +332,7 @@ class MainActivity : ComponentActivity() {
         // No picture-in-picture during a study lock: the locked video stays full-screen. A video
         // in the in-app floating window carries on in system PiP when you leave the app.
         // In Listen mode there is no picture to float: the sound simply carries on in the background.
-        val showingVideo = !Graph.player.audioOnly && vm.shortsViewer == null
+        val showingVideo = !Graph.player.audioOnly && !Graph.player.musicMode && vm.shortsViewer == null
         if (showingVideo && Graph.player.player.isPlaying && !Graph.study.lockActive) {
             enterPictureInPictureMode(
                 pipParams()
@@ -355,9 +359,9 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
     val ui = rememberPlayerUi(controller.player)
     // Keep the display on while a video is actually playing (not for audio-only).
     val window = (androidx.compose.ui.platform.LocalContext.current as? android.app.Activity)?.window
-    LaunchedEffect(ui.isPlaying, controller.audioOnly) {
+    LaunchedEffect(ui.isPlaying, controller.audioOnly, controller.musicMode) {
         val flag = android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
-        if (ui.isPlaying && !controller.audioOnly) window?.addFlags(flag) else window?.clearFlags(flag)
+        if (ui.isPlaying && !controller.audioOnly && !controller.musicMode) window?.addFlags(flag) else window?.clearFlags(flag)
     }
     var tab by rememberSaveable { mutableStateOf(Tab.Home) }
     val homeState = rememberLazyListState()
@@ -370,7 +374,10 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
     // scheduled window or timed video lock (the bar stays visible during a video lock).
     // Home (recommendations or your channels), Shorts and You. Study lives in Settings; it takes
     // the whole screen only while a focus session runs.
-    val tabs = Tab.entries.filter { (it != Tab.Shorts || (vm.shortsAllowed && AppSettings.showShorts)) && it != Tab.Study }
+    val tabs = Tab.entries.filter {
+        (it != Tab.Shorts || (vm.shortsAllowed && AppSettings.showShorts)) && it != Tab.Study &&
+            (it != Tab.Music || (!study.active && !study.lockActive))
+    }
     /** Home is recommendations; during a session or lock it shows only your channels instead. */
     val homeRecommends = vm.recommendedAllowed
     val feedState = rememberLazyListState()
@@ -386,6 +393,10 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
     LaunchedEffect(tabs) { if (tab !in tabs) tab = Tab.Home }
 
     LaunchedEffect(now == null) { if (now == null) vm.playerExpanded = false }
+    // A video took over (or playback stopped): the music player closes.
+    LaunchedEffect(controller.musicMode, now == null) {
+        if (!controller.musicMode || now == null) com.sourabh.jarvistube.ui.music.MusicUi.playerOpen = false
+    }
 
     // Lock Study Session: (re)open the locked video full-screen, including after a crash or reboot.
     // Runs again if the player ever closes, or anything else hides it, while the session runs.
@@ -418,10 +429,12 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
     // mode (nothing to show) the bottom mini-player bar is used instead. Never during a study
     // lock, where the locked video stays full-screen.
     val collapsed = now != null && !expanded && !inPip && !study.lockActive && vm.shortsViewer == null
-    val showFloating = collapsed && !controller.audioOnly
-    val showMini = collapsed && controller.audioOnly
+    val music = controller.musicMode
+    val showFloating = collapsed && !controller.audioOnly && !music
+    val showMini = collapsed && controller.audioOnly && !music
+    val showMusicBar = collapsed && music && !com.sourabh.jarvistube.ui.music.MusicUi.playerOpen
     val barHeight = if (study.active) 0.dp else BAR_HEIGHT + 0.5.dp
-    val miniPad = if (showMini) 72.dp else 0.dp
+    val miniPad = if (showMini || showMusicBar) 72.dp else 0.dp
     val statusInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val imeInset = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
 
@@ -475,6 +488,7 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
                                         Tab.Study -> StudyScreen(vm, lib, bottom)
                                         Tab.Shorts -> ShortsScreen(vm, shortsState, bottom, onProfile = { tab = Tab.You })
                                         Tab.You -> YouScreen(vm, lib, bottom, onSignIn = { showLogin = true })
+                                        Tab.Music -> com.sourabh.jarvistube.ui.music.MusicScreen(bottom)
                                     }
                                 }
                             }
@@ -504,6 +518,25 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
                 .padding(bottom = if (overlayOpen) navInset else navInset + barHeight)
         ) {
             now?.let { MiniPlayer(it, ui, onExpand = { vm.playerExpanded = true }) }
+        }
+
+        // Music: the slim bar above the tabs, and the big Spotify-style player.
+        AnimatedVisibility(
+            visible = showMusicBar,
+            enter = slideInVertically(tween(Motion.NORMAL)) { it } + fadeIn(tween(Motion.FAST)),
+            exit = slideOutVertically(tween(Motion.NORMAL)) { it } + fadeOut(tween(Motion.FAST)),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = if (overlayOpen) navInset else navInset + barHeight)
+        ) {
+            com.sourabh.jarvistube.ui.music.MusicMiniBar(ui, onOpen = { com.sourabh.jarvistube.ui.music.MusicUi.playerOpen = true })
+        }
+        AnimatedVisibility(
+            visible = music && now != null && com.sourabh.jarvistube.ui.music.MusicUi.playerOpen && !inPip,
+            enter = slideInVertically(tween(Motion.NORMAL)) { it } + fadeIn(tween(Motion.FAST)),
+            exit = slideOutVertically(tween(Motion.NORMAL)) { it } + fadeOut(tween(Motion.FAST))
+        ) {
+            com.sourabh.jarvistube.ui.music.MusicPlayerScreen(ui, onClose = { com.sourabh.jarvistube.ui.music.MusicUi.playerOpen = false })
         }
 
         // In-app picture-in-picture: above the tabs, search and pages; below the full player.

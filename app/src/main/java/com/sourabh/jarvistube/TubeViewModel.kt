@@ -156,11 +156,13 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
             Toast.makeText(getApplication(), it, Toast.LENGTH_LONG).show()
             return
         }
+        Graph.player.leaveMusic()
         Graph.player.play(video)
         playerExpanded = true
     }
 
     fun playLocal(item: com.sourabh.jarvistube.data.SavedItem) {
+        Graph.player.leaveMusic()
         val probe = VideoItem(item.url, item.title, item.channel, item.thumb, item.durationSec, -1, null, false)
         Graph.study.blockReason(probe)?.let {
             Toast.makeText(getApplication(), it, Toast.LENGTH_LONG).show()
