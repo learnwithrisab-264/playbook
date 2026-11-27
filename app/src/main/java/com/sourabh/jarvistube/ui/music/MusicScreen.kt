@@ -91,6 +91,9 @@ fun MusicScreen(bottomPadding: Dp) {
     var list by remember { mutableStateOf<SongList?>(null) }
 
     var newPlaylist by remember { mutableStateOf(false) }
+    /** A search you made: its results page (Songs, Artists, Albums, Playlists). */
+    var searching by rememberSaveable { mutableStateOf<String?>(null) }
+    var showYear by remember { mutableStateOf(false) }
     if (newPlaylist) NewPlaylistDialog(onDismiss = { newPlaylist = false })
 
     /** Opens one of your own lists (Liked Songs, Downloaded, a playlist): it stays up to date. */
@@ -127,6 +130,15 @@ fun MusicScreen(bottomPadding: Dp) {
 
     BackHandler(enabled = list != null && !MusicUi.playerOpen && MusicUi.artist == null) { list = null }
 
+    if (showYear) {
+        YearInMusicScreen(bottomPadding, onBack = { showYear = false })
+        return
+    }
+    if (list == null && searching != null) {
+        MusicSearchPage(searching!!, bottomPadding, onBack = { searching = null }, openWith = { t, load -> openWith(t, load) })
+        return
+    }
+
     LazyColumn(
         Modifier.fillMaxSize().statusBarsPadding().imePadding(),
         contentPadding = PaddingValues(bottom = bottomPadding + 16.dp)
@@ -148,7 +160,7 @@ fun MusicScreen(bottomPadding: Dp) {
                         if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Rounded.Close, "Clear") }
                     },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { if (query.isNotBlank()) open("\"${query.trim()}\"", query.trim()) }),
+                    keyboardActions = KeyboardActions(onSearch = { if (query.isNotBlank()) { focus.clearFocus(); searching = query.trim() } }),
                     shape = RoundedCornerShape(10.dp),
                     colors = TextFieldDefaults.colors(
                         focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent
@@ -184,6 +196,7 @@ fun MusicScreen(bottomPadding: Dp) {
                     }
                 }
             }
+            item { YearCard(onOpen = { showYear = true }) }
             if (Music.recent.isNotEmpty()) {
                 item { SectionTitle("Recently played") }
                 item {

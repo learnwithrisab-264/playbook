@@ -192,6 +192,7 @@ fun MusicPlayerScreen(ui: PlayerUi, onClose: () -> Unit) {
                     Text(controller.musicSource.ifBlank { "Music" }, color = Color.White, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 IconButton(onClick = { queueOpen = true }) { Icon(Icons.AutoMirrored.Rounded.QueueMusic, "Up next", tint = Color.White) }
+                MusicPlayerMenu()
             }
 
             // The cover: swipe left for the next song, right for the one before. It takes the

@@ -54,6 +54,7 @@ object Music {
         prefs = context.getSharedPreferences("music", Context.MODE_PRIVATE)
         MusicForYou.init(context)
         MusicLibrary.init(context)
+        MusicVolume.init(context)
         runCatching {
             val arr = JSONArray(prefs.getString("recent", "[]"))
             for (i in 0 until arr.length()) {

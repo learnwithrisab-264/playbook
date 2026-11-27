@@ -44,6 +44,16 @@ data class ArtistPage(
     val singles: List<MusicCard>
 )
 
+/** Your year in music: plays, minutes, top songs (with plays) and top artists (name, plays, picture). */
+data class YearStats(
+    val year: Int,
+    val plays: Int,
+    val minutes: Long,
+    val topSongs: List<Pair<VideoItem, Int>>,
+    val topArtists: List<Triple<String, Int, String?>>,
+    val differentSongs: Int
+)
+
 /** A mix made from what you play in this app, opened like a playlist. */
 data class LocalMix(val title: String, val subtitle: String, val art: String?, val load: suspend () -> List<VideoItem>)
 
@@ -62,6 +72,10 @@ object MusicForYou {
 
     /** Plays per song (url → count and the song), newest last played first. */
     private val plays = LinkedHashMap<String, Pair<Int, VideoItem>>()
+
+    /** Every play with its time and length, for "Your year in music". */
+    private class Play(val url: String, val at: Long, val sec: Long)
+    private val log = ArrayList<Play>()
 
     /** Account shelves, loaded once per app run (and on refresh). */
     var shelves by mutableStateOf<List<MusicShelf>>(emptyList()); private set
@@ -82,6 +96,19 @@ object MusicForYou {
                 plays[v.url] = o.optInt("n", 1) to v
             }
         }
+        runCatching {
+            val arr = JSONArray(prefs.getString("log", "[]"))
+            for (i in 0 until arr.length()) {
+                val a = arr.optJSONArray(i) ?: continue
+                log += Play(a.optString(0), a.optLong(1), a.optLong(2))
+            }
+        }
+        // Plays counted before the log existed count as this year's.
+        if (log.isEmpty() && plays.isNotEmpty()) {
+            val now = System.currentTimeMillis()
+            plays.values.forEach { (n, v) -> repeat(n) { log += Play(v.url, now, v.durationSec) } }
+            saveLog()
+        }
     }
 
     /** First run: what you already played (Recently played) starts your counts. */
@@ -94,6 +121,9 @@ object MusicForYou {
         if (!::prefs.isInitialized) return
         val before = plays.remove(song.url)
         plays[song.url] = ((before?.first ?: 0) + 1) to song
+        log += Play(song.url, System.currentTimeMillis(), song.durationSec)
+        while (log.size > 5000) log.removeAt(0)
+        saveLog()
         while (plays.size > 300) plays.remove(plays.keys.first())
         val arr = JSONArray()
         plays.values.forEach { (n, v) ->
@@ -101,6 +131,28 @@ object MusicForYou {
                 .put("art", v.thumb.orEmpty()).put("dur", v.durationSec).put("n", n))
         }
         prefs.edit().putString("plays", arr.toString()).apply()
+    }
+
+    private fun saveLog() {
+        val arr = JSONArray()
+        log.forEach { arr.put(JSONArray().put(it.url).put(it.at).put(it.sec)) }
+        prefs.edit().putString("log", arr.toString()).apply()
+    }
+
+    /** "Your year in music": what you played in the Music tab during [year]. */
+    fun yearStats(year: Int = java.time.Year.now().value): YearStats {
+        val zone = java.time.ZoneId.systemDefault()
+        val inYear = log.filter { java.time.Instant.ofEpochMilli(it.at).atZone(zone).year == year }
+        val songOf = plays.mapValues { it.value.second }
+        val bySong = inYear.groupingBy { it.url }.eachCount()
+        val topSongs = bySong.entries.sortedByDescending { it.value }.mapNotNull { e -> songOf[e.key]?.let { it to e.value } }
+        val byArtist = inYear.mapNotNull { songOf[it.url] }.groupBy { mainArtist(it) }.filterKeys { it.isNotBlank() }
+        val topArtists = byArtist.entries.sortedByDescending { it.value.size }.map { (name, list) ->
+            Triple(name, list.size, list.groupingBy { it.url }.eachCount().maxByOrNull { it.value }?.key?.let { songOf[it]?.thumb })
+        }
+        // A song without a known length counts as three minutes.
+        val minutes = inYear.sumOf { if (it.sec > 0) it.sec else 180L } / 60
+        return YearStats(year, inYear.size, minutes, topSongs.take(5), topArtists.take(5), bySong.size)
     }
 
     private fun mainArtist(v: VideoItem) = v.channel.split(",", "&", " x ", " feat", " ft.").first().trim()
@@ -145,6 +197,71 @@ object MusicForYou {
             b.getOrNull(i)?.let(out::add)
         }
         return out
+    }
+
+    /**
+     * How loud YouTube measured this song, in dB against its normal level (positive = louder).
+     * Used by "Even volume"; null if it isn't known.
+     */
+    suspend fun loudnessDb(videoId: String): Double? = withContext(Dispatchers.IO) {
+        runCatching {
+            // YouTube's iOS client still returns the song's measured loudness without sign-in.
+            val body = JSONObject().put("videoId", videoId).put(
+                "context", JSONObject().put("client", JSONObject().put("clientName", "IOS").put("clientVersion", "20.03.02").put("hl", "en"))
+            )
+            val req = Request.Builder().url("https://www.youtube.com/youtubei/v1/player?prettyPrint=false")
+                .post(body.toString().toRequestBody("application/json".toMediaType()))
+                .header("User-Agent", "com.google.ios.youtube/20.03.02 (iPhone16,2; U; CPU iOS 18_2_1 like Mac OS X;)")
+                .build()
+            val json = Graph.http.newCall(req).execute().use { JSONObject(it.body?.string() ?: return@runCatching null) }
+            val cfg = json.optJSONObject("playerConfig")?.optJSONObject("audioConfig") ?: return@runCatching null
+            val track = cfg.optDouble("trackAbsoluteLoudnessLkfs", cfg.optDouble("perceptualLoudnessDb", Double.NaN))
+            val target = cfg.optDouble("loudnessTargetLkfs", -14.0)
+            when {
+                !track.isNaN() -> track - target
+                else -> cfg.optDouble("loudnessDb", Double.NaN).takeIf { !it.isNaN() }
+            }
+        }.getOrNull()
+    }
+
+    // ---- Search: songs (best match first), artists, albums, playlists ----
+
+    /** Songs for what you typed, the ones naming your words (title and artist) first. */
+    suspend fun searchSongs(query: String): List<VideoItem> {
+        val words = query.lowercase().split(Regex("\\s+")).filter { it.length >= 2 }
+        val found = Music.songs(query)
+        return found.withIndex().sortedWith(compareBy({ -score(it.value, words) }, { it.index })).map { it.value }
+    }
+
+    private fun score(v: VideoItem, words: List<String>): Int {
+        val t = (v.title + " " + v.channel).lowercase()
+        return words.count { t.contains(it) }
+    }
+
+    suspend fun searchArtists(query: String): List<MusicCard> = searchItems(query, "music_artists") { item ->
+        (item as? org.schabi.newpipe.extractor.channel.ChannelInfoItem)?.let {
+            MusicCard(it.name, "Artist", Music.art(it.thumbnails.maxByOrNull { t -> t.width }?.url))
+        }
+    }
+
+    suspend fun searchAlbums(query: String): List<MusicCard> = searchItems(query, "music_albums", ::listCard)
+    suspend fun searchPlaylists(query: String): List<MusicCard> = searchItems(query, "music_playlists", ::listCard)
+
+    private fun listCard(item: org.schabi.newpipe.extractor.InfoItem): MusicCard? {
+        val p = item as? org.schabi.newpipe.extractor.playlist.PlaylistInfoItem ?: return null
+        val id = p.url.substringAfter("list=", "").substringBefore("&").ifEmpty { return null }
+        return MusicCard(
+            p.name, listOfNotNull(p.uploaderName?.removeSuffix(" - Topic")?.ifBlank { null }, if (p.streamCount > 0) "${p.streamCount} songs" else null).joinToString(" • "),
+            Music.art(p.thumbnails.maxByOrNull { it.width }?.url), playlistId = id
+        )
+    }
+
+    private suspend fun searchItems(
+        query: String, filter: String, map: (org.schabi.newpipe.extractor.InfoItem) -> MusicCard?
+    ): List<MusicCard> = withContext(Dispatchers.IO) {
+        val ex = org.schabi.newpipe.extractor.ServiceList.YouTube.getSearchExtractor(query, listOf(filter), "")
+        ex.fetchPage()
+        ex.initialPage.items.mapNotNull(map)
     }
 
     /** "Song radio": YouTube Music's endless list of songs like [song]. */
