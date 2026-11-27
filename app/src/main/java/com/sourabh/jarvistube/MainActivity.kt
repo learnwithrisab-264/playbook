@@ -453,6 +453,8 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
                         Spacer(Modifier.navigationBarsPadding())
                     } else {
                         BottomBar(tabs, current = shownTab, onSelect = { t ->
+                            // Switching tabs leaves an open artist page (it belongs to Music).
+                            com.sourabh.jarvistube.ui.music.MusicUi.artist = null
                             // Tapping the tab you're on takes its feed back to the top.
                             if (t == shownTab) barScope.launch {
                                 when (t) {
@@ -518,6 +520,22 @@ private fun AppRoot(vm: TubeViewModel, inPip: Boolean) {
                 .padding(bottom = if (overlayOpen) navInset else navInset + barHeight)
         ) {
             now?.let { MiniPlayer(it, ui, onExpand = { vm.playerExpanded = true }) }
+        }
+
+        // Music: an artist's page (from "Go to artist" or the player), under the music bar.
+        // The tabs stay visible below it.
+        AnimatedVisibility(
+            visible = com.sourabh.jarvistube.ui.music.MusicUi.artist != null && !inPip,
+            enter = slideInVertically(tween(Motion.NORMAL)) { it / 8 } + fadeIn(tween(Motion.FAST)),
+            exit = fadeOut(tween(Motion.FAST)),
+            modifier = Modifier.padding(bottom = navInset + barHeight)
+        ) {
+            com.sourabh.jarvistube.ui.music.MusicUi.artist?.let { name ->
+                com.sourabh.jarvistube.ui.music.ArtistScreen(
+                    name, bottomPadding = miniPad,
+                    onBack = { com.sourabh.jarvistube.ui.music.MusicUi.artist = null }
+                )
+            }
         }
 
         // Music: the slim bar above the tabs, and the big Spotify-style player.

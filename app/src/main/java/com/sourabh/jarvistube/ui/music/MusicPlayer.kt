@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.music
 
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Favorite
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -85,6 +87,8 @@ object MusicUi {
     var playerOpen by mutableStateOf(false)
     /** The full-screen synced lyrics (Lyrics.kt), above the player. */
     var lyricsOpen by mutableStateOf(false)
+    /** The artist page being shown (MusicLibraryUi.ArtistScreen), or null. */
+    var artist by mutableStateOf<String?>(null)
 }
 
 private val Ink = Color(0xFF121212)
@@ -216,12 +220,32 @@ fun MusicPlayerScreen(ui: PlayerUi, onClose: () -> Unit) {
             }
             }
 
-            // Title and artist.
-            Text(
-                n.video.title, color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
-                maxLines = 1, modifier = Modifier.fillMaxWidth().basicMarquee()
-            )
-            Text(n.video.channel, color = Soft, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // Title and artist (tap for their page), with the heart for Liked Songs.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        n.video.title, color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+                        maxLines = 1, modifier = Modifier.fillMaxWidth().basicMarquee()
+                    )
+                    Text(
+                        n.video.channel, color = Soft, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.clickable(enabled = n.video.channel.isNotBlank()) {
+                            MusicUi.artist = firstArtist(n.video.channel)
+                            onClose()
+                        }
+                    )
+                }
+                val liked = com.sourabh.jarvistube.data.MusicLibrary.isLiked(n.video.url)
+                IconButton(onClick = {
+                    val now = com.sourabh.jarvistube.data.MusicLibrary.toggleLike(n.video)
+                    Toast.makeText(context, if (now) "Added to Liked Songs" else "Removed from Liked Songs", Toast.LENGTH_SHORT).show()
+                }) {
+                    Icon(
+                        if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, "Like",
+                        tint = if (liked) SpotGreen else Color.White, modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
             Spacer(Modifier.height(16.dp))
 
             // Seek bar: follows the song, and you can drag it.

@@ -1,5 +1,8 @@
 package com.sourabh.jarvistube.ui.music
 
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.DownloadDone
+import androidx.compose.material.icons.rounded.Favorite
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -87,6 +90,15 @@ fun MusicScreen(bottomPadding: Dp) {
     var query by rememberSaveable { mutableStateOf("") }
     var list by remember { mutableStateOf<SongList?>(null) }
 
+    var newPlaylist by remember { mutableStateOf(false) }
+    if (newPlaylist) NewPlaylistDialog(onDismiss = { newPlaylist = false })
+
+    /** Opens one of your own lists (Liked Songs, Downloaded, a playlist): it stays up to date. */
+    fun openLive(title: String, playlist: String? = null, live: () -> List<VideoItem>) {
+        focus.clearFocus()
+        list = SongList(title, playlist, live).also { it.loading = false }
+    }
+
     /** Opens a song list: a search, a mood, or a mix / playlist made for you. */
     fun openWith(title: String, load: suspend () -> List<VideoItem>) {
         focus.clearFocus()
@@ -111,18 +123,9 @@ fun MusicScreen(bottomPadding: Dp) {
     val signedIn = com.sourabh.jarvistube.data.Session.isSignedIn
     LaunchedEffect(signedIn) { MusicForYou.loadShelves() }
 
-    fun play(song: VideoItem, all: List<VideoItem>, source: String) {
-        val reason = com.sourabh.jarvistube.data.ContentFilter.blockReason(null, song.channel, song.title, song.url)
-            ?: Graph.study.blockReason(song)
-        if (reason != null) {
-            Toast.makeText(context, reason, Toast.LENGTH_LONG).show()
-            return
-        }
-        val i = all.indexOfFirst { it.url == song.url }
-        Graph.player.playMusic(song, if (i >= 0) all.drop(i + 1) else emptyList(), source)
-    }
+    fun play(song: VideoItem, all: List<VideoItem>, source: String) = playSong(context, song, all, source)
 
-    BackHandler(enabled = list != null && !MusicUi.playerOpen) { list = null }
+    BackHandler(enabled = list != null && !MusicUi.playerOpen && MusicUi.artist == null) { list = null }
 
     LazyColumn(
         Modifier.fillMaxSize().statusBarsPadding().imePadding(),
@@ -152,6 +155,34 @@ fun MusicScreen(bottomPadding: Dp) {
                     ),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                 )
+            }
+            item { SectionTitle("Your library") }
+            item {
+                val lib = com.sourabh.jarvistube.data.MusicLibrary
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    item(key = "liked") {
+                        LibraryTile(
+                            "Liked Songs", songsText(lib.liked.size), null,
+                            colors = listOf(Color(0xFF450AF5), Color(0xFF8E8EE5)), icon = Icons.Rounded.Favorite
+                        ) { openLive("Liked Songs") { lib.liked.toList() } }
+                    }
+                    item(key = "downloaded") {
+                        val n = com.sourabh.jarvistube.data.Downloads.saved.count { it.audioOnly }
+                        LibraryTile(
+                            "Downloaded", songsText(n) + ", play offline", null,
+                            colors = listOf(Color(0xFF0B7A3E), Color(0xFF1ED760)), icon = Icons.Rounded.DownloadDone
+                        ) { openLive("Downloaded") { lib.downloaded() } }
+                    }
+                    items(lib.playlistNames, key = { "pl:$it" }) { name ->
+                        val songs = lib.playlists[name].orEmpty()
+                        LibraryTile(name, "Playlist · " + songsText(songs.size), songs.firstOrNull()?.thumb, icon = Icons.Rounded.MusicNote) {
+                            openLive(name, playlist = name) { lib.playlists[name].orEmpty() }
+                        }
+                    }
+                    item(key = "newPlaylist") {
+                        LibraryTile("New playlist", "Make your own", null, icon = Icons.Rounded.Add) { newPlaylist = true }
+                    }
+                }
             }
             if (Music.recent.isNotEmpty()) {
                 item { SectionTitle("Recently played") }
@@ -254,27 +285,35 @@ fun MusicScreen(bottomPadding: Dp) {
                 }
             }
         } else {
+            val songs = l.live?.invoke() ?: l.songs
             item {
-                Row(Modifier.padding(start = 4.dp, end = 16.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(start = 4.dp, end = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { list = null }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
-                    Text(l.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        l.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)
+                    )
+                    if (l.playlist != null) TextButton(onClick = {
+                        com.sourabh.jarvistube.data.MusicLibrary.deletePlaylist(l.playlist)
+                        list = null
+                    }) { Text("Delete playlist") }
                 }
             }
-            if (l.songs.isNotEmpty()) item {
+            if (songs.isNotEmpty()) item {
                 // Shuffle and the big green Play, like a Spotify playlist page.
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("${l.songs.size} songs", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                    Text(songsText(songs.size), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
                     IconButton(onClick = {
-                        val mixed = l.songs.shuffled()
+                        val mixed = songs.shuffled()
                         play(mixed.first(), mixed, l.title)
                     }) { Icon(Icons.Rounded.Shuffle, "Shuffle play", modifier = Modifier.size(28.dp)) }
                     Spacer(Modifier.width(8.dp))
                     Box(
                         Modifier.size(56.dp).clip(CircleShape).background(SpotGreen)
-                            .clickable { play(l.songs.first(), l.songs, l.title) },
+                            .clickable { play(songs.first(), songs, l.title) },
                         contentAlignment = Alignment.Center
                     ) { Icon(Icons.Rounded.PlayArrow, "Play", tint = Color.Black, modifier = Modifier.size(34.dp)) }
                 }
@@ -283,14 +322,21 @@ fun MusicScreen(bottomPadding: Dp) {
                 l.loading -> item {
                     Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 }
-                l.error != null && l.songs.isEmpty() -> item {
+                l.error != null && songs.isEmpty() -> item {
                     Text(l.error!!, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(24.dp))
                 }
-                else -> items(l.songs, key = { "song:" + it.url }) { s ->
-                    SongRow(s, onClick = { play(s, l.songs, l.title) }, onQueue = {
-                        Graph.player.enqueue(s)
-                        Toast.makeText(context, "Added to queue", Toast.LENGTH_SHORT).show()
-                    })
+                songs.isEmpty() && l.live != null -> item {
+                    Text(
+                        when (l.title) {
+                            "Liked Songs" -> "Songs you like show here. Tap the heart in the player, or ⋮ › Add to Liked Songs."
+                            "Downloaded" -> "Songs you download (⋮ › Download) play here without internet."
+                            else -> "Add songs with ⋮ › Add to playlist."
+                        },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(24.dp)
+                    )
+                }
+                else -> items(songs, key = { "song:" + it.url }) { s ->
+                    SongRow(s, onClick = { play(s, songs, l.title) }, playlist = l.playlist)
                 }
             }
         }
@@ -307,7 +353,7 @@ private fun SectionTitle(text: String) {
 
 /** One song: square art, title (green while it plays), artist and length. */
 @Composable
-internal fun SongRow(s: VideoItem, onClick: () -> Unit, onQueue: (() -> Unit)? = null) {
+internal fun SongRow(s: VideoItem, onClick: () -> Unit, playlist: String? = null) {
     val now by Graph.player.now.collectAsStateWithLifecycle()
     val playing = Graph.player.musicMode && now?.video?.url == s.url
     Row(
@@ -321,15 +367,26 @@ internal fun SongRow(s: VideoItem, onClick: () -> Unit, onQueue: (() -> Unit)? =
                 s.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 color = if (playing) SpotGreen else MaterialTheme.colorScheme.onSurface
             )
-            Text(
-                listOfNotNull(s.channel.ifBlank { null }, duration(s.durationSec)).joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1, overflow = TextOverflow.Ellipsis
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Saved for offline: a small green arrow, like Spotify's.
+                val p = com.sourabh.jarvistube.data.MusicLibrary.progress(s)
+                if (com.sourabh.jarvistube.data.MusicLibrary.offline(s.url) != null) {
+                    Icon(Icons.Rounded.DownloadDone, "Downloaded", tint = SpotGreen, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                } else if (p != null) {
+                    CircularProgressIndicator(
+                        progress = { if (p < 0f) 0f else p }, modifier = Modifier.size(12.dp), strokeWidth = 2.dp, color = SpotGreen
+                    )
+                    Spacer(Modifier.width(4.dp))
+                }
+                Text(
+                    listOfNotNull(s.channel.ifBlank { null }, duration(s.durationSec)).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                )
+            }
         }
-        if (onQueue != null) IconButton(onClick = onQueue) {
-            Icon(Icons.AutoMirrored.Rounded.QueueMusic, "Add to queue", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        SongMenu(s, playlist)
     }
 }
 
@@ -362,3 +419,5 @@ private fun MixCard(title: String, subtitle: String, art: String?, small: Boolea
         )
     }
 }
+
+internal fun songsText(n: Int) = if (n == 1) "1 song" else "$n songs"

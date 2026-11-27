@@ -53,6 +53,7 @@ object Music {
     fun init(context: Context) {
         prefs = context.getSharedPreferences("music", Context.MODE_PRIVATE)
         MusicForYou.init(context)
+        MusicLibrary.init(context)
         runCatching {
             val arr = JSONArray(prefs.getString("recent", "[]"))
             for (i in 0 until arr.length()) {
@@ -132,7 +133,13 @@ object Music {
 }
 
 /** What the Music tab shows: a mood's (or search's) songs, loading state and errors. */
-class SongList(val title: String) {
+class SongList(
+    val title: String,
+    /** Set for your own playlist: its songs can be removed, the playlist deleted. */
+    val playlist: String? = null,
+    /** Lists that change while open (Liked Songs, Downloaded, a playlist) read from here. */
+    val live: (() -> List<VideoItem>)? = null
+) {
     var songs by mutableStateOf<List<VideoItem>>(emptyList())
     var loading by mutableStateOf(true)
     var error by mutableStateOf<String?>(null)

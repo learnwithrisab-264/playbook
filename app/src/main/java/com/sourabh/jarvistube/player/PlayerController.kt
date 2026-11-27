@@ -538,6 +538,14 @@ class PlayerController(val app: Context, http: OkHttpClient) {
 
     /** [record] = remember the outgoing item for Previous (false when Previous itself plays). */
     fun play(video: VideoItem, record: Boolean = true) {
+        // Music tab: a song saved for offline plays from the phone (no data, no waiting).
+        if (musicMode && _now.value?.video?.url != video.url) {
+            com.sourabh.jarvistube.data.MusicLibrary.offline(video.url)?.let { saved ->
+                if (record) _now.value?.video?.let { out -> history.removeAll { it.url == out.url }; history.addLast(out) }
+                playLocal(saved)
+                return
+            }
+        }
         if (_now.value?.video?.url == video.url && _now.value?.error == null) {
             player.playWhenReady = true
             return

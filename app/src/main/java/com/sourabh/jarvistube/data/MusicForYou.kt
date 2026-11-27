@@ -35,6 +35,15 @@ data class MusicCard(
     )
 }
 
+/** An artist's page on YouTube Music: top songs, albums and singles. */
+data class ArtistPage(
+    val name: String,
+    val art: String?,
+    val songs: List<VideoItem>,
+    val albums: List<MusicCard>,
+    val singles: List<MusicCard>
+)
+
 /** A mix made from what you play in this app, opened like a playlist. */
 data class LocalMix(val title: String, val subtitle: String, val art: String?, val load: suspend () -> List<VideoItem>)
 
@@ -168,11 +177,37 @@ object MusicForYou {
     }
 
     /** An album's songs: its playlist, then the queue. */
-    suspend fun album(albumId: String): List<VideoItem> {
+    suspend fun album(albumId: String, artist: String = "", art: String? = null): List<VideoItem> {
         val json = post("browse", JSONObject().put("browseId", albumId))
+        // The album's own track list (its first shelf), not the "More by" and other sections.
+        val tracks = ArrayList<VideoItem>()
+        var shelfDone = false
+        forEach(json, "musicShelfRenderer") { shelf ->
+            if (shelfDone) return@forEach
+            shelfDone = true
+            val items = shelf.optJSONArray("contents") ?: return@forEach
+            for (i in 0 until items.length()) {
+                val r = items.optJSONObject(i)?.optJSONObject("musicResponsiveListItemRenderer") ?: continue
+                val cols = r.optJSONArray("flexColumns") ?: continue
+                fun col(k: Int) = runs(cols.optJSONObject(k)?.optJSONObject("musicResponsiveListItemFlexColumnRenderer")?.optJSONObject("text"))
+                val id = r.optJSONObject("playlistItemData")?.optString("videoId")?.ifEmpty { null } ?: continue
+                val title = col(0).ifEmpty { continue }
+                val length = runs(r.optJSONArray("fixedColumns")?.optJSONObject(0)
+                    ?.optJSONObject("musicResponsiveListItemFixedColumnRenderer")?.optJSONObject("text"))
+                tracks += VideoItem(
+                    url = "https://www.youtube.com/watch?v=$id", title = title,
+                    channel = col(1).ifEmpty { artist },
+                    thumb = Music.art(lastThumb(r.optJSONObject("thumbnail"))) ?: art,
+                    durationSec = clockSeconds(length), views = -1, uploaded = null, isLive = false
+                )
+            }
+        }
+        if (tracks.isNotEmpty()) return tracks.filterNot(ContentFilter::hides)
+        // Otherwise the album's playlist (its ids start with OLAK5uy).
         var pid: String? = null
-        forEach(json, "watchPlaylistEndpoint") { if (pid == null) pid = it.optString("playlistId").ifEmpty { null } }
-        if (pid == null) forEach(json, "watchEndpoint") { if (pid == null) pid = it.optString("playlistId").ifEmpty { null } }
+        forEach(json, "watchPlaylistEndpoint") { w ->
+            w.optString("playlistId").takeIf { it.startsWith("OLAK5uy") && pid == null }?.let { pid = it }
+        }
         return pid?.let { queue(null, it) }.orEmpty()
     }
 
@@ -230,6 +265,65 @@ object MusicForYou {
             browse.startsWith("MPRE") -> MusicCard(title, subtitle, art, albumId = browse)
             else -> null // artists, podcasts: not songs
         }
+    }
+
+    /** The YouTube Music page of the artist called [name] (best match). */
+    suspend fun artist(name: String): ArtistPage {
+        val id = artistId(name) ?: throw java.io.IOException("Artist not found")
+        val json = post("browse", JSONObject().put("browseId", id))
+        // Header: name and picture.
+        var title = name
+        var art: String? = null
+        for (h in listOf("musicImmersiveHeaderRenderer", "musicVisualHeaderRenderer", "musicResponsiveHeaderRenderer")) {
+            var found = false
+            forEach(json, h) { hd ->
+                if (found) return@forEach
+                found = true
+                runs(hd.optJSONObject("title")).takeIf { it.isNotBlank() }?.let { title = it }
+                art = lastThumb(hd.optJSONObject("thumbnail") ?: hd.optJSONObject("foregroundThumbnail"))
+            }
+            if (found) break
+        }
+        // Top songs: the shelf, or (better) its full playlist.
+        val shelfSongs = ArrayList<VideoItem>()
+        var allSongs: String? = null
+        forEach(json, "musicShelfRenderer") { shelf ->
+            val items = shelf.optJSONArray("contents") ?: return@forEach
+            for (i in 0 until items.length()) {
+                items.optJSONObject(i)?.optJSONObject("musicResponsiveListItemRenderer")?.let(::songCard)?.let { shelfSongs += it.asSong() }
+            }
+            if (allSongs == null) forEach(shelf.optJSONObject("title"), "browseEndpoint") { b ->
+                b.optString("browseId").takeIf { it.startsWith("VL") }?.let { allSongs = it.removePrefix("VL") }
+            }
+            if (allSongs == null) forEach(shelf.optJSONObject("bottomEndpoint"), "browseEndpoint") { b ->
+                b.optString("browseId").takeIf { it.startsWith("VL") }?.let { allSongs = it.removePrefix("VL") }
+            }
+        }
+        val songs = allSongs?.let { runCatching { queue(null, it) }.getOrNull() }?.takeIf { it.size > shelfSongs.size } ?: shelfSongs
+        // Albums and singles.
+        val albums = ArrayList<MusicCard>()
+        val singles = ArrayList<MusicCard>()
+        forEach(json, "musicCarouselShelfRenderer") { shelf ->
+            val t = runs(shelf.optJSONObject("header")?.optJSONObject("musicCarouselShelfBasicHeaderRenderer")?.optJSONObject("title")).lowercase()
+            val target = when {
+                t.startsWith("album") -> albums
+                t.startsWith("single") -> singles
+                else -> return@forEach
+            }
+            val items = shelf.optJSONArray("contents") ?: return@forEach
+            for (i in 0 until items.length()) items.optJSONObject(i)?.optJSONObject("musicTwoRowItemRenderer")?.let(::twoRowCard)?.let(target::add)
+        }
+        return ArtistPage(title, art, songs.distinctBy { it.url }, albums, singles)
+    }
+
+    /** The artist's channel id on YouTube Music, from a search for artists. */
+    private suspend fun artistId(name: String): String? = withContext(Dispatchers.IO) {
+        val ex = org.schabi.newpipe.extractor.ServiceList.YouTube.getSearchExtractor(name, listOf("music_artists"), "")
+        ex.fetchPage()
+        val items = ex.initialPage.items.filterIsInstance<org.schabi.newpipe.extractor.channel.ChannelInfoItem>()
+        fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
+        val best = items.firstOrNull { norm(it.name) == norm(name) } ?: items.firstOrNull()
+        best?.url?.substringAfter("/channel/")?.substringBefore("?")?.takeIf { it.startsWith("UC") }
     }
 
     /** The songs behind a card that isn't a single song. */
