@@ -50,7 +50,7 @@ object Related {
         val onTopic = scored.filter { it.second >= 2 }.sortedByDescending { it.second }.map { it.first }
         val searched = if (topic.query.isBlank()) emptyList() else runCatching {
             SearchSession(topic.query).loadFirst()
-        }.getOrDefault(emptyList()).filter { !it.membersOnly && !it.isShort }
+        }.getOrDefault(emptyList()).filter { !it.membersOnly && !it.isShort && topic.score(it) >= 2 }
 
         // Search results and on-topic related videos, taking turns.
         val out = LinkedHashMap<String, VideoItem>()
@@ -65,7 +65,7 @@ object Related {
         val sameTitle = squash(info.name ?: video.title)
         out.values.removeAll { squash(it.title) == sameTitle }
         // Too few? Fill up with the closest of the rest.
-        if (out.size < 12) scored.sortedByDescending { it.second }.forEach { (v, _) ->
+        if (out.size < 12) scored.filter { it.second > 0 }.sortedByDescending { it.second }.forEach { (v, _) ->
             if (out.size < 20 && v.url != video.url) out.putIfAbsent(v.url, v)
         }
         return out.values.toList()
@@ -77,26 +77,38 @@ object Related {
             .filter { !it.isShort && !it.membersOnly && it.url != video.url }
             .filterNot(ContentFilter::hides)
 
-    /** What the video is about: its title words (strongest), tags and channel. */
-    private class Topic(val weights: Map<String, Int>, val channel: String, val query: String) {
+    /**
+     * What the video is about. "Core" words are title words the description or tags repeat
+     * (for "nobody wants your AI app..." that's "AI" and "app"): a video must share one of them,
+     * so a title that happens to share "nobody wants" (a Netflix show) doesn't count.
+     */
+    private class Topic(val weights: Map<String, Int>, val core: Set<String>, val channel: String, val query: String) {
         fun score(v: VideoItem): Int {
-            var s = words(v.title).distinct().sumOf { weights[it] ?: 0 }
-            if (channel.isNotBlank() && v.channel.equals(channel, ignoreCase = true)) s += 2
-            return s
+            val ws = words(v.title).distinct()
+            val sameChannel = channel.isNotBlank() && v.channel.equals(channel, ignoreCase = true)
+            if (core.isNotEmpty() && ws.none { it in core }) return if (sameChannel) 2 else 0
+            return ws.sumOf { weights[it] ?: 0 } + if (sameChannel) 2 else 0
         }
 
         companion object {
             fun of(info: StreamInfo, video: VideoItem): Topic {
                 val title = info.name?.takeIf { it.isNotBlank() } ?: video.title
-                val titleWords = words(title)
-                val tagWords = info.tags.orEmpty().take(15).flatMap { words(it) }
+                val titleWords = words(title).distinct()
+                val tagWords = info.tags.orEmpty().take(15).flatMap { words(it) }.distinct()
+                // The description's opening lines, before links and sign-offs.
+                val about = runCatching { info.description?.content.orEmpty() }.getOrDefault("")
+                    .replace(Regex("<[^>]+>"), " ")
+                    .substringBefore("http").take(400)
+                val aboutWords = words(about).distinct().take(40)
+                val core = titleWords.filter { it in tagWords || it in aboutWords }.toSet()
                 val w = HashMap<String, Int>()
-                tagWords.forEach { w[it] = maxOf(w[it] ?: 0, 1) }
-                titleWords.forEach { w[it] = 2 }
-                // Search with the title's meaningful words; tags help when the title is vague.
-                val q = (titleWords.distinct().take(6) + tagWords.distinct().filter { it !in titleWords }.take(maxOf(0, 3 - titleWords.size)))
+                (tagWords + aboutWords).forEach { w[it] = maxOf(w[it] ?: 0, 1) }
+                titleWords.forEach { w[it] = if (it in core) 3 else 2 }
+                // Search with the core words first, then the rest of the title.
+                val q = (core.toList() + titleWords.filter { it !in core }).take(6)
+                    .let { if (it.size >= 3) it else it + (tagWords + aboutWords).filter { x -> x !in it }.take(3 - it.size) }
                     .joinToString(" ")
-                return Topic(w, info.uploaderName ?: video.channel, q)
+                return Topic(w, core, info.uploaderName ?: video.channel, q)
             }
         }
     }
@@ -105,11 +117,16 @@ object Related {
 
     private fun squash(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
 
-    /** Lowercase words worth matching: no filler words, plurals folded ("mashups" = "mashup"). */
+    /**
+     * Lowercase words worth matching: no filler words, plurals folded ("apps" = "app").
+     * Two-letter words count only in capitals, like "AI", "UI" or "VR".
+     */
     private fun words(s: String): List<String> =
-        WORD.findAll(s.lowercase()).map { it.value }
-            .filter { it.length >= 3 && it !in STOP && !(it.all(Char::isDigit) && it.length < 4) }
-            .map { if (it.length > 4 && it.endsWith('s') && !it.endsWith("ss")) it.dropLast(1) else it }
+        WORD.findAll(s).map { it.value }
+            .filter { it.length >= 3 || (it.length == 2 && it.all { c -> c.isUpperCase() }) }
+            .map { it.lowercase() }
+            .filter { it !in STOP && !(it.all(Char::isDigit) && it.length < 4) }
+            .map { if (it.length > 3 && it.endsWith('s') && !it.endsWith("ss")) it.dropLast(1) else it }
             .toList()
 
     private val STOP = setOf(

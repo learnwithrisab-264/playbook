@@ -26,6 +26,9 @@ object WatchHistory {
         Session.onDataKeyChange(::load)
     }
 
+    /** Reads the saved list again (the Refresh in History). */
+    fun reload() = load(Session.dataKey)
+
     private fun load(key: String) {
         storeKey = "items:$key"
         items.clear()

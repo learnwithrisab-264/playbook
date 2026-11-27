@@ -95,7 +95,8 @@ internal fun SetupSession(lib: LibraryViewModel, bottomPadding: Dp, onPlay: (com
                 if (onBack != null) androidx.compose.material3.IconButton(onClick = onBack, modifier = Modifier.padding(start = 0.dp)) {
                     androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.AutoMirrored.Rounded.ArrowBack, "Back")
                 }
-                Text(stringResource(R.string.study), style = MaterialTheme.typography.displaySmall)
+                // Opened from Settings it is "Saved", the name of the row that opens it.
+                Text(if (onBack != null) "Saved" else stringResource(R.string.study), style = MaterialTheme.typography.displaySmall)
                 Text(
                     "Lock yourself in. Only your channels play until the timer ends.",
                     style = MaterialTheme.typography.bodyMedium,

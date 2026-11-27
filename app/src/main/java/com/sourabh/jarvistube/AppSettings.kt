@@ -84,18 +84,18 @@ object AppSettings {
     var showStudy by mutableStateOf(true); private set
     /** Theme from the epics (ui/theme/Epic.kt); "agni" is PlayBook's original look. */
     var themeKey by mutableStateOf("agni"); private set
-    /** How things move: "leela", "shanti", "vayu" or "off". */
-    var motionStyle by mutableStateOf("leela"); private set
-    /** A light tap under the finger for choices. */
-    var haptics by mutableStateOf(true); private set
-    /** The video's colours glow softly behind the player, as YouTube's Ambient mode. */
-    var ambient by mutableStateOf(true); private set
+    /** How things move: always Shanti (calm, soft fades). No longer a setting. */
+    val motionStyle: String get() = "shanti"
+    /** A light tap under the finger for choices. Always on. */
+    val haptics: Boolean get() = true
+    /** The video's colours glow softly behind the player, as YouTube's Ambient mode. Always on. */
+    val ambient: Boolean get() = true
     /** Videos open in YouTube's upright full-screen view; "Details" goes to the normal page. */
     var startUpright by mutableStateOf(false); private set
     /** Full screen: swipe up/down on the left for brightness, on the right for volume. */
     var swipeAdjust by mutableStateOf(true); private set
-    /** The home-screen icon takes the theme's colours (ui/theme/AppIcon). */
-    var iconFollowsTheme by mutableStateOf(true); private set
+    /** The home-screen icon takes the theme's colours (ui/theme/AppIcon). Always on. */
+    val iconFollowsTheme: Boolean get() = true
     /** "dark" (default), "light" or "system" (follow the phone). */
     var appearance by mutableStateOf("dark"); private set
     val appearances = listOf("dark" to "Dark", "light" to "Light", "system" to "Follow the phone")
@@ -126,12 +126,8 @@ object AppSettings {
         showStudy = prefs.getBoolean("showStudy", true)
         appearance = prefs.getString("appearance", "dark") ?: "dark"
         themeKey = prefs.getString("theme", "agni") ?: "agni"
-        motionStyle = prefs.getString("motion", "leela") ?: "leela"
-        haptics = prefs.getBoolean("haptics", true)
-        ambient = prefs.getBoolean("ambient", true)
         startUpright = prefs.getBoolean("startUpright", false)
         swipeAdjust = prefs.getBoolean("swipeAdjust", true)
-        iconFollowsTheme = prefs.getBoolean("iconFollowsTheme", true)
         captionFont = prefs.getString("captionFont", "default") ?: "default"
         captionScale = prefs.getFloat("captionScale", 1f)
         captionColor = prefs.getLong("captionColor", 0xFFFFFFFF)
@@ -184,10 +180,6 @@ object AppSettings {
     }
 
     fun updateTheme(key: String) { themeKey = key; prefs.edit().putString("theme", key).apply() }
-    fun updateMotion(key: String) { motionStyle = key; prefs.edit().putString("motion", key).apply() }
-    fun updateHaptics(on: Boolean) { haptics = on; prefs.edit().putBoolean("haptics", on).apply() }
-    fun updateAmbient(on: Boolean) { ambient = on; prefs.edit().putBoolean("ambient", on).apply() }
-    fun updateIconFollowsTheme(on: Boolean) { iconFollowsTheme = on; prefs.edit().putBoolean("iconFollowsTheme", on).apply() }
     fun updateStartUpright(on: Boolean) { startUpright = on; prefs.edit().putBoolean("startUpright", on).apply() }
     fun updateSwipeAdjust(on: Boolean) { swipeAdjust = on; prefs.edit().putBoolean("swipeAdjust", on).apply() }
 

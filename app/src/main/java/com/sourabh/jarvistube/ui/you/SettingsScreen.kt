@@ -98,7 +98,6 @@ fun SettingsScreen(
     var regionDialog by remember { mutableStateOf(false) }
     var qualityDialog by remember { mutableStateOf(false) }
     var appearanceDialog by remember { mutableStateOf(false) }
-    var motionDialog by remember { mutableStateOf(false) }
     /** The account the ✕ was tapped on (asks before signing out of it). */
     var removeTarget by remember { mutableStateOf<com.sourabh.jarvistube.data.Account?>(null) }
     var speedDialog by remember { mutableStateOf(false) }
@@ -164,7 +163,7 @@ fun SettingsScreen(
             item { Spacer(Modifier.size(8.dp)) }
             item {
                 SettingsGroup {
-                    CategoryRow(Icons.Rounded.School, "Study and focus", "Plan, focus sessions, Lock Study Session, limits", onClick = onOpenStudy)
+                    CategoryRow(Icons.Rounded.School, "Saved", "Plan, focus sessions, Lock Study Session, limits", onClick = onOpenStudy)
                     CategoryRow(Icons.Rounded.Lock, "Privacy", "Watch and search history") { page = "privacy" }
                 }
             }
@@ -256,21 +255,6 @@ fun SettingsScreen(
                     else AppSettings.appearanceName,
                     onClick = { appearanceDialog = true }
                 )
-                val m = com.sourabh.jarvistube.ui.theme.MotionStyle.of(AppSettings.motionStyle)
-                SettingRow(Icons.Rounded.AutoAwesome, "Animation style", "${m.title}: ${m.meaning}", onClick = { motionDialog = true })
-                SettingRow(
-                    Icons.Rounded.Apps, "App icon follows theme",
-                    "The home-screen icon takes the theme's colours (applies when you leave the app).",
-                    onClick = { AppSettings.updateIconFollowsTheme(!AppSettings.iconFollowsTheme) }
-                ) { Switch(checked = AppSettings.iconFollowsTheme, onCheckedChange = { AppSettings.updateIconFollowsTheme(it) }) }
-                SettingRow(
-                    Icons.Rounded.Vibration, "Haptic touches", "A light tap under your finger when you choose something.",
-                    onClick = { AppSettings.updateHaptics(!AppSettings.haptics) }
-                ) { Switch(checked = AppSettings.haptics, onCheckedChange = { AppSettings.updateHaptics(it) }) }
-                SettingRow(
-                    Icons.Rounded.WbTwilight, "Ambient mode", "The video's colours glow softly behind the player.",
-                    onClick = { AppSettings.updateAmbient(!AppSettings.ambient) }
-                ) { Switch(checked = AppSettings.ambient, onCheckedChange = { AppSettings.updateAmbient(it) }) }
             }
         }
 
@@ -414,15 +398,6 @@ fun SettingsScreen(
                 vm.loadStudyFeed()
             },
             onDismiss = { regionDialog = false }
-        )
-    }
-    if (motionDialog) {
-        ChoiceDialog(
-            title = "Animation style",
-            options = com.sourabh.jarvistube.ui.theme.MotionStyle.entries.map { it.key to "${it.title}  ·  ${it.meaning}" },
-            selected = AppSettings.motionStyle,
-            onPick = { key -> motionDialog = false; AppSettings.updateMotion(key) },
-            onDismiss = { motionDialog = false }
         )
     }
     if (appearanceDialog) {

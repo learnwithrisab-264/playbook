@@ -1,5 +1,7 @@
 package com.sourabh.jarvistube.ui.you
 
+import kotlinx.coroutines.launch
+import androidx.compose.material.icons.rounded.Refresh
 import com.sourabh.jarvistube.R
 import androidx.compose.ui.res.stringResource
 import com.sourabh.jarvistube.ui.theme.Corners
@@ -112,6 +114,28 @@ fun LibraryScreen(
     }
     if (newPlaylist) NewPlaylistDialog(onCreate = { lib.createPlaylist(it) }, onDismiss = { newPlaylist = false })
 
+    // Refresh (pull down, or the button next to the tabs): History re-reads this app's list,
+    // YT History / Playlists / Subscriptions load again from YouTube. No relaunch needed.
+    val refreshScope = androidx.compose.runtime.rememberCoroutineScope()
+    var appRefreshing by remember { mutableStateOf(false) }
+    var ytRefreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(state.loading) { if (!state.loading) ytRefreshing = false }
+    val onRefresh: () -> Unit = {
+        if (detail == null && lib.tab == LibTab.History && !ytOnly) {
+            appRefreshing = true
+            com.sourabh.jarvistube.data.WatchHistory.reload()
+            refreshScope.launch { kotlinx.coroutines.delay(500); appRefreshing = false }
+        } else {
+            ytRefreshing = true
+            loader?.refresh()
+        }
+    }
+
+    androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+        isRefreshing = appRefreshing || (ytRefreshing && state.loading),
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize()
+    ) {
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize().statusBarsPadding().imePadding(),
@@ -128,9 +152,16 @@ fun LibraryScreen(
                         lib.tab == LibTab.Playlists -> 2
                         else -> 3
                     }
-                    Segmented(segments, chosen) { i ->
-                        ytOnly = i == 1
-                        lib.selectTab(listOf(LibTab.History, LibTab.History, LibTab.Playlists, LibTab.Channels)[i])
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) {
+                            Segmented(segments, chosen) { i ->
+                                ytOnly = i == 1
+                                lib.selectTab(listOf(LibTab.History, LibTab.History, LibTab.Playlists, LibTab.Channels)[i])
+                            }
+                        }
+                        IconButton(onClick = onRefresh) {
+                            Icon(androidx.compose.material.icons.Icons.Rounded.Refresh, "Refresh")
+                        }
                     }
                 }
             }
@@ -182,6 +213,7 @@ fun LibraryScreen(
         if (historyShown) historySection(vm, historyQuery, { historyQuery = it }, onClearAll = { clearHistory = true })
         // YT History: just the YouTube account's list, each with "Remove from watch history".
         else libItems(state, vm, lib, inHistory = detail == null && lib.tab == LibTab.History, inPlaylist = detail != null, onRetry = { loader?.refresh() })
+    }
     }
     LoadMoreEffect(listState, state.items.size) { loader?.more() }
 }
