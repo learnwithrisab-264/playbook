@@ -95,6 +95,8 @@ fun SettingsScreen(
     var clearWatch by remember { mutableStateOf(false) }
     if (clearWatch) ClearHistoryDialog(onDismiss = { clearWatch = false })
     if (topicsDialog) TopicsDialog(vm, onDismiss = { topicsDialog = false })
+    var shortsTopicsDialog by remember { mutableStateOf(false) }
+    if (shortsTopicsDialog) TopicsDialog(vm, onDismiss = { shortsTopicsDialog = false }, forShorts = true)
     var regionDialog by remember { mutableStateOf(false) }
     var qualityDialog by remember { mutableStateOf(false) }
     var appearanceDialog by remember { mutableStateOf(false) }
@@ -352,8 +354,18 @@ fun SettingsScreen(
                     onClick = { topicsDialog = true }
                 )
                 SettingRow(
+                    Icons.Rounded.Interests, "Your topics Shorts",
+                    when {
+                        AppSettings.shortsTopicsSame -> "Same as Your topics" +
+                            (if (AppSettings.userTopics.isEmpty()) " (none yet: from your YouTube account)" else ": " + AppSettings.userTopics.joinToString(", "))
+                        AppSettings.shortsTopics.isEmpty() -> "None: Shorts come from your YouTube account. Tap to pick."
+                        else -> AppSettings.shortsTopics.joinToString(", ")
+                    },
+                    onClick = { shortsTopicsDialog = true }
+                )
+                SettingRow(
                     Icons.Rounded.PlayCircle, "Show Shorts tab",
-                    "Shorts from your topics. Off hides the tab; Shorts in search still show.",
+                    "Shorts from your account or your Shorts topics. Off hides the tab; Shorts in search still show.",
                     onClick = { AppSettings.updateShowShorts(!AppSettings.showShorts) }
                 ) { Switch(checked = AppSettings.showShorts, onCheckedChange = { AppSettings.updateShowShorts(it) }) }
             }

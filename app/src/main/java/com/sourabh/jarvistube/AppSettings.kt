@@ -78,6 +78,12 @@ object AppSettings {
     var showRecommended by mutableStateOf(true); private set
     /** Topics you want to watch. When set, recommendations and Shorts come only from these. */
     val userTopics = androidx.compose.runtime.mutableStateListOf<String>()
+    /** Topics only for the Shorts tab ("Your topics Shorts"). None = Shorts from the YouTube account. */
+    val shortsTopics = androidx.compose.runtime.mutableStateListOf<String>()
+    /** "Same as Your topics": Shorts follow [userTopics] instead of [shortsTopics]. */
+    var shortsTopicsSame by mutableStateOf(false); private set
+    /** The topics the Shorts tab uses now (empty = your YouTube account's Shorts). */
+    val effectiveShortsTopics: List<String> get() = if (shortsTopicsSame) userTopics.toList() else shortsTopics.toList()
     /** The Shorts tab in the bottom bar. Off only hides the tab; Shorts in search stay. */
     var showShorts by mutableStateOf(true); private set
     /** The Study tab in the bottom bar. Hiding it never stops a session or lock: see [studyTabRequired]. */
@@ -122,6 +128,9 @@ object AppSettings {
         showRecommended = prefs.getBoolean("showRecommended", true)
         userTopics.clear()
         userTopics.addAll(prefs.getString("userTopics", "").orEmpty().split("\n").map { it.trim() }.filter { it.isNotEmpty() })
+        shortsTopics.clear()
+        shortsTopics.addAll(prefs.getString("shortsTopics", "").orEmpty().split("\n").map { it.trim() }.filter { it.isNotEmpty() })
+        shortsTopicsSame = prefs.getBoolean("shortsTopicsSame", false)
         showShorts = prefs.getBoolean("showShorts", true)
         showStudy = prefs.getBoolean("showStudy", true)
         appearance = prefs.getString("appearance", "dark") ?: "dark"
@@ -177,6 +186,14 @@ object AppSettings {
         userTopics.clear()
         userTopics.addAll(clean)
         prefs.edit().putString("userTopics", clean.joinToString("\n")).apply()
+    }
+
+    fun updateShortsTopics(topics: List<String>, same: Boolean) {
+        val clean = topics.map { it.trim() }.filter { it.isNotEmpty() }.distinctBy { it.lowercase() }
+        shortsTopics.clear()
+        shortsTopics.addAll(clean)
+        shortsTopicsSame = same
+        prefs.edit().putString("shortsTopics", clean.joinToString("\n")).putBoolean("shortsTopicsSame", same).apply()
     }
 
     fun updateTheme(key: String) { themeKey = key; prefs.edit().putString("theme", key).apply() }

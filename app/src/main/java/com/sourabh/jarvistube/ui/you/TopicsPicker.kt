@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -58,11 +59,16 @@ private val SUGGESTED = listOf(
 /**
  * Pick what you want to watch. Recommendations on Home and the Shorts tab then come only from
  * these topics. Saving with none chosen goes back to your YouTube home feed.
+ * With [forShorts] it picks "Your topics Shorts": topics only for the Shorts tab, or "Same as
+ * Your topics". None picked = Shorts from your YouTube account.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TopicsDialog(vm: TubeViewModel, onDismiss: () -> Unit) {
-    val chosen = remember { mutableStateListOf<String>().apply { addAll(AppSettings.userTopics) } }
+fun TopicsDialog(vm: TubeViewModel, onDismiss: () -> Unit, forShorts: Boolean = false) {
+    val chosen = remember {
+        mutableStateListOf<String>().apply { addAll(if (forShorts) AppSettings.shortsTopics else AppSettings.userTopics) }
+    }
+    var same by remember { mutableStateOf(forShorts && AppSettings.shortsTopicsSame) }
     var custom by remember { mutableStateOf("") }
     val touch = com.sourabh.jarvistube.ui.theme.rememberTouch()
     fun addCustom() {
@@ -73,27 +79,53 @@ fun TopicsDialog(vm: TubeViewModel, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Rounded.Interests, null, tint = MaterialTheme.colorScheme.primary) },
-        title = { Text("Your topics") },
+        title = { Text(if (forShorts) "Your topics Shorts" else "Your topics") },
         text = {
             Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState())) {
                 Text(
-                    "Recommendations and Shorts will come only from what you pick.",
+                    if (forShorts) "The Shorts tab will show Shorts only from what you pick. Pick none for Shorts from your YouTube account."
+                    else "Recommendations and Shorts will come only from what you pick.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (forShorts) {
+                    // Shorts can simply follow Your topics.
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 10.dp).clip(Corners.medium)
+                            .clickable { same = !same }.padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Same as Your topics", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                if (AppSettings.userTopics.isEmpty()) "No Your topics picked yet"
+                                else AppSettings.userTopics.joinToString(", "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        androidx.compose.material3.Switch(checked = same, onCheckedChange = { same = it })
+                    }
+                }
                 Spacer(Modifier.size(14.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val shown = if (same) AppSettings.userTopics.toList() else chosen.toList()
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = if (same) Modifier.alpha(0.5f) else Modifier
+                ) {
                     // Your own topics first, then the suggestions.
-                    (chosen.filter { c -> SUGGESTED.none { it.equals(c, true) } } + SUGGESTED).forEach { t ->
-                        val on = chosen.any { it.equals(t, true) }
+                    (shown.filter { c -> SUGGESTED.none { it.equals(c, true) } } + SUGGESTED).forEach { t ->
+                        val on = shown.any { it.equals(t, true) }
                         TopicToggle(t, on) {
-                            touch()
-                            if (on) chosen.removeAll { it.equals(t, true) } else chosen += t
+                            if (!same) {
+                                touch()
+                                if (on) chosen.removeAll { it.equals(t, true) } else chosen += t
+                            }
                         }
                     }
                 }
                 Spacer(Modifier.size(14.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                if (!same) Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
                         custom, { custom = it },
                         modifier = Modifier.weight(1f),
@@ -109,10 +141,23 @@ fun TopicsDialog(vm: TubeViewModel, onDismiss: () -> Unit) {
         },
         confirmButton = {
             Button(onClick = {
-                AppSettings.updateUserTopics(chosen.toList())
-                vm.topicsChanged()
+                if (forShorts) {
+                    AppSettings.updateShortsTopics(chosen.toList(), same)
+                    vm.shortsTopicsChanged()
+                } else {
+                    AppSettings.updateUserTopics(chosen.toList())
+                    vm.topicsChanged()
+                }
                 onDismiss()
-            }) { Text(if (chosen.isEmpty()) "Save (no topics)" else "Save ${chosen.size} topics") }
+            }) {
+                Text(
+                    when {
+                        same -> "Save"
+                        chosen.isEmpty() -> "Save (no topics)"
+                        else -> "Save ${chosen.size} topics"
+                    }
+                )
+            }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )

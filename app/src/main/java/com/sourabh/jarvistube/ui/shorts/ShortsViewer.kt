@@ -1,5 +1,9 @@
 package com.sourabh.jarvistube.ui.shorts
 
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.mutableStateOf
@@ -164,10 +168,32 @@ private fun ShortPage(
     val current = now?.takeIf { playing && it.video.url == video.url }
     val showVideo = current != null && !controller.audioOnly
 
-    // Double-tap to pause or play, as asked (a single tap does nothing, so scrolling stays calm).
+    // Double-tap to pause or play (a single tap does nothing, so scrolling stays calm).
+    // Press and hold near the left or right edge: 2x while you hold, like YouTube.
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var fast by remember { mutableStateOf(false) }
     Box(
         Modifier.fillMaxSize().background(Color.Black).pointerInput(current != null) {
-            detectTapGestures(onDoubleTap = { if (current != null) controller.togglePlay() })
+            detectTapGestures(
+                onDoubleTap = { if (current != null) controller.togglePlay() },
+                onPress = { o ->
+                    val edge = o.x < size.width * 0.2f || o.x > size.width * 0.8f
+                    if (current == null || !edge) return@detectTapGestures
+                    val before = controller.player.playbackParameters.speed
+                    val hold = scope.launch {
+                        kotlinx.coroutines.delay(350)
+                        fast = true
+                        controller.player.setPlaybackSpeed(2f)
+                        if (!controller.player.playWhenReady) controller.player.play()
+                    }
+                    tryAwaitRelease()
+                    hold.cancel()
+                    if (fast) {
+                        fast = false
+                        controller.player.setPlaybackSpeed(before)
+                    }
+                }
+            )
         }
     ) {
         if (showVideo) {
@@ -260,6 +286,17 @@ private fun ShortPage(
             }
         }
         if (current != null) ShortProgress(ui, Modifier.align(Alignment.BottomStart))
+        // While held: a "2x ▶▶" badge at the top, as YouTube shows it.
+        if (fast) Row(
+            Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 16.dp)
+                .clip(CircleShape).background(Color.Black.copy(alpha = 0.55f))
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("2x", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.size(4.dp))
+            Icon(Icons.Rounded.FastForward, null, tint = Color.White, modifier = Modifier.size(18.dp))
+        }
     }
 }
 

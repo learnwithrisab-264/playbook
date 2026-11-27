@@ -273,8 +273,7 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Subjects plus your own channels, each with a changing angle, so searches differ every time. */
-    private fun rotatedTerms(count: Int): List<String> {
-        val mine = AppSettings.userTopics.toList()
+    private fun rotatedTerms(count: Int, mine: List<String> = AppSettings.userTopics.toList()): List<String> {
         if (mine.isNotEmpty()) {
             // Your topics only: each one comes round in turn, sometimes as it is, sometimes with an
             // angle ("explained", "for beginners"), so the feed stays varied but on topic.
@@ -519,9 +518,25 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
     private var accountShortsDone = false
 
     /** The saved list belongs to where it came from: this account, or topics for the region. */
-    private fun shortsTag() =
-        if (com.sourabh.jarvistube.data.Session.isSignedIn) "account:" + com.sourabh.jarvistube.data.Session.dataKey
-        else AppSettings.region
+    private fun shortsTag() = when {
+        AppSettings.effectiveShortsTopics.isNotEmpty() ->
+            "topics:" + AppSettings.effectiveShortsTopics.joinToString(",").lowercase().hashCode() + ":" + AppSettings.region
+        com.sourabh.jarvistube.data.Session.isSignedIn -> "account:" + com.sourabh.jarvistube.data.Session.dataKey
+        else -> AppSettings.region
+    }
+
+    /** Shorts come from the account only when no Shorts topics are picked. */
+    private val shortsFromAccount: Boolean
+        get() = AppSettings.effectiveShortsTopics.isEmpty() && com.sourabh.jarvistube.data.Session.isSignedIn
+
+    /** "Your topics Shorts" changed: the Shorts tab starts again from them. */
+    fun shortsTopicsChanged() {
+        shortsJob?.cancel()
+        shortsSessions = emptyList()
+        accountShorts = null
+        shorts = FeedState()
+        if (shortsAllowed) loadShorts()
+    }
 
     private fun saveShorts() {
         if (shorts.error == null) FeedStore.save(Feed.Shorts, shorts.items, shortsTag())
@@ -541,7 +556,8 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         prepareFirstShorts()
     }
 
-    private fun newShortsSessions() = rotatedTerms(5).map {
+    /** Shorts searches: "Your topics Shorts" if picked, else Your topics, else the study pool. */
+    private fun newShortsSessions() = rotatedTerms(5, AppSettings.effectiveShortsTopics.ifEmpty { AppSettings.userTopics.toList() }).map {
         com.sourabh.jarvistube.data.ShortsSearch(it, com.sourabh.jarvistube.data.ShortsSearch.SORTS.random())
     }
 
@@ -557,7 +573,7 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         if (!shortsAllowed) return
         shortsJob?.cancel()
         accountShortsDone = false
-        if (com.sourabh.jarvistube.data.Session.isSignedIn) {
+        if (shortsFromAccount) {
             val src = com.sourabh.jarvistube.data.AccountShorts().also { accountShorts = it }
             shortsJob = viewModelScope.launch {
                 shorts = shorts.copy(loading = true, error = null)
@@ -625,7 +641,7 @@ class TubeViewModel(app: Application) : AndroidViewModel(app) {
         if (!shortsAllowed || cur.loading || cur.loadingMore || cur.items.isEmpty()) return
         // Signed in: more of the account's own Shorts feed while it lasts.
         val acct = accountShorts
-            ?: if (com.sourabh.jarvistube.data.Session.isSignedIn && !accountShortsDone) com.sourabh.jarvistube.data.AccountShorts().also { accountShorts = it } else null
+            ?: if (shortsFromAccount && !accountShortsDone) com.sourabh.jarvistube.data.AccountShorts().also { accountShorts = it } else null
         if (acct != null && acct.hasMore) {
             shortsJob = viewModelScope.launch {
                 shorts = cur.copy(loadingMore = true)
